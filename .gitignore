@@ -1,0 +1,21 @@
+# 환경변수 — API 키 등 민감 정보 절대 업로드 금지
+.env
+.env.local
+.env.production
+
+# OS 임시 파일
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 에디터 설정
+.vscode/
+.idea/
+*.suo
+*.user
+
+# 메타데이터 (Antigravity IDE 생성 파일)
+*.metadata.json
+
+# 로그
+*.log
