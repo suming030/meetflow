@@ -726,6 +726,7 @@ nav{
 ════════════════════════════════ -->
 <div class="page" id="page-track">
   <div class="up-wrap" style="max-width:800px;">
+    <button class="btn-ghost" style="margin-bottom:14px;" onclick="gp('projects')">← 프로젝트 목록</button>
     <div class="up-hd" style="text-align:center;">
       <h2>🚀 새 프로젝트 시작하기</h2>
       <p>어떤 활동인지 선택하면 그에 맞는 AI 온보딩과 마일스톤을 준비해 드려요</p>
@@ -762,9 +763,16 @@ nav{
 ════════════════════════════════ -->
 <div class="page" id="page-onboard">
   <div class="up-wrap" style="max-width:820px;">
+    <button class="btn-ghost" style="margin-bottom:14px;" onclick="gp('projects')">← 프로젝트 목록</button>
     <div class="up-hd">
       <h2 id="ob-title">🚀 온보딩</h2>
       <p id="ob-sub">아래 정보를 입력하면 AI가 마일스톤과 다음 회의 아젠다를 준비해 드려요.</p>
+    </div>
+
+    <div class="up-panel">
+      <div class="up-panel-ttl">🔀 프로젝트 유형</div>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">유형을 잘못 골랐다면 지금 바꿀 수 있어요. 바꾸면 입력 항목도 함께 바뀝니다.</p>
+      <div class="sample-row" id="ob-track-switch"></div>
     </div>
 
     <div id="ob-fields-team" style="display:none;"></div>
@@ -1344,7 +1352,8 @@ function renderOnboardPage(){
   if(!currentProject) return;
   const t=currentProject.track;
   document.getElementById('ob-title').textContent=`🚀 온보딩 — ${TRACK_LBL[t]}`;
-  document.getElementById('ob-sub').textContent='아래 정보를 입력하면 AI가 마일스톤과 다음 회의 아젠다를 준비해 드려요.';
+  document.getElementById('ob-sub').textContent='아는 만큼만 입력해도 괜찮아요. 채워진 정보만으로 AI가 마일스톤을 설계해 드려요.';
+  renderTrackSwitcher();
   ['team','contest','club'].forEach(k=>{ document.getElementById('ob-fields-'+k).style.display=(k===t)?'block':'none'; });
   document.getElementById('ob-fields-'+t).innerHTML=onboardFieldsHTML(t);
   document.getElementById('ob-actions').style.display='block';
@@ -1353,13 +1362,30 @@ function renderOnboardPage(){
   document.getElementById('ob-result').classList.remove('show');
   document.getElementById('ob-result').innerHTML='';
 }
+function renderTrackSwitcher(){
+  const el=document.getElementById('ob-track-switch'); if(!el||!currentProject) return;
+  el.innerHTML=['team','contest','club'].map(t=>{
+    const on=currentProject.track===t;
+    return `<button class="samp-btn" type="button" ${on?'style="background:var(--pk);color:#fff;border-color:var(--pk);"':''} onclick="changeProjectTrack('${t}')">${TRACK_LBL[t]}</button>`;
+  }).join('');
+}
+function changeProjectTrack(t){
+  if(!currentProject||currentProject.track===t) return;
+  if(currentProject.onboarding&&!confirm('유형을 바꾸면 기존 온보딩 결과가 삭제돼요. 계속할까요?')) return;
+  persistCurrentProject({track:t, onboarding:null, onboardStatus:'pending'});
+  renderProjectBadge();
+  renderProjectsGallery();
+  renderAll();
+  renderOnboardPage();
+  toast(`${TRACK_LBL[t]}(으)로 변경했어요.`,'success');
+}
 
 function docFieldHTML(id,label,placeholder,opts={}){
   const withPdf=opts.withPdf!==false;
   const rows=opts.rows||6;
   return `
     <div class="up-panel">
-      <div class="up-panel-ttl">${label}${opts.optional?' <span style="color:var(--hint);font-weight:500;">(선택)</span>':' *'}</div>
+      <div class="up-panel-ttl">${label} <span style="color:var(--hint);font-weight:500;">${opts.optional?'(선택)':'(권장)'}</span></div>
       <textarea id="${id}-ta" class="textarea" rows="${rows}" placeholder="${placeholder}" oninput="updateDocCC('${id}')"></textarea>
       <div class="input-row">
         <span class="char-ct" id="${id}-ct">0자</span>
@@ -1376,7 +1402,7 @@ function clubCadenceHTML(){
   const today=new Date().toISOString().split('T')[0];
   return `
     <div class="up-panel">
-      <div class="up-panel-ttl">🗓️ 정기모임 주기 *</div>
+      <div class="up-panel-ttl">🗓️ 정기모임 주기 <span style="color:var(--hint);font-weight:500;">(권장)</span></div>
       <div class="g2" style="margin-bottom:0;">
         <div>
           <div class="m-lbl">요일</div>
@@ -1474,10 +1500,14 @@ function collectOnboardInputs(t){
   };
   return {};
 }
+/* 개별 항목은 모두 선택 사항 — 분석할 내용이 하나도 없을 때만 막는다 */
 function onboardMissingField(t,inp){
-  if(t==='team'){ if(!inp.syllabus) return '강의계획서를 입력해주세요.'; if(!inp.brief) return '과제 안내문을 입력해주세요.'; }
-  if(t==='contest'){ if(!inp.guidelines) return '모집요강을 입력해주세요.'; if(!inp.rubric) return '심사기준을 입력해주세요.'; }
-  if(t==='club'){ if(!inp.history) return '작년 기수 활동내역을 입력해주세요.'; if(!inp.startDate) return '정기모임 시작일을 선택해주세요.'; }
+  const texts = t==='club'
+    ? [inp.history, inp.goals, inp.budget]
+    : Object.values(inp);
+  if(texts.every(v=>!v||!String(v).trim())){
+    return '최소 한 가지 정보는 입력해주세요. 아직 자료가 없다면 "나중에 하기"를 눌러도 돼요.';
+  }
   return null;
 }
 function showOnboardErr(msg){ document.getElementById('ob-err').style.display='flex'; document.getElementById('ob-err-msg').textContent=msg; }
@@ -1664,12 +1694,12 @@ function onboardPrompt(t,inputs,today){
 
 [강의계획서]
 """
-${inputs.syllabus}
+${inputs.syllabus||'(제공되지 않음)'}
 """
 
 [과제 안내문]
 """
-${inputs.brief}
+${inputs.brief||'(제공되지 않음)'}
 """
 
 [팀원 정보 (선택)]
@@ -1679,6 +1709,7 @@ ${inputs.members||'(제공되지 않음)'}
 
 규칙:
 - 오늘 날짜는 ${today}입니다. 상대적 날짜 표현은 이 날짜 기준으로 YYYY-MM-DD로 변환하세요.
+- "(제공되지 않음)"인 항목은 없는 것으로 보고, 주어진 정보만으로 최대한 유용한 결과를 만드세요. 근거가 없는 날짜는 지어내지 말고 null로 두세요.
 - 강의계획서에 명시된 중간발표일·최종제출일 등 고정 날짜는 milestones에 그대로 반영하고 임의로 추정하지 마세요. 날짜를 알 수 없으면 dueDate는 null.
 - 과제 안내문에서 요구되는 산출물(보고서·PPT·시연영상 등)을 deliverable에 구체적으로 적으세요.
 - 평가 배점표가 있으면 rubric을 채우고, 각 마일스톤이 해당하는 배점 항목을 rubricCategory로 태깅하세요. 배점표가 없으면 rubric은 빈 배열로 두세요.
@@ -1690,12 +1721,12 @@ ${inputs.members||'(제공되지 않음)'}
 
 [모집요강]
 """
-${inputs.guidelines}
+${inputs.guidelines||'(제공되지 않음)'}
 """
 
 [심사기준]
 """
-${inputs.rubric}
+${inputs.rubric||'(제공되지 않음)'}
 """
 
 [이전 수상작 (선택)]
@@ -1705,6 +1736,7 @@ ${inputs.pastWinners||'(제공되지 않음)'}
 
 규칙:
 - 오늘 날짜는 ${today}입니다.
+- "(제공되지 않음)"인 항목은 없는 것으로 보고, 주어진 정보만으로 최대한 유용한 결과를 만드세요. 근거가 없는 날짜는 지어내지 말고 null로 두세요.
 - 모집요강에서 제출 마감일을 찾아, 그 날짜로부터 역산해서 마일스톤을 설계하세요. (예: 마감 60일 전 아이디어 확정, 45일 전 프로토타입, 20일 전 발표자료, 7일 전 리허설 — 프로젝트 성격에 맞게 조정)
 - 각 마일스톤의 dueDate는 실제 YYYY-MM-DD로 계산해서 채우세요. 마감일을 찾을 수 없으면 dueDate는 null.
 - 심사기준의 배점 항목들을 rubric에 채우세요.
@@ -1716,7 +1748,7 @@ ${inputs.pastWinners||'(제공되지 않음)'}
 
 [작년 기수 활동내역]
 """
-${inputs.history}
+${inputs.history||'(제공되지 않음)'}
 """
 
 [이번 학기 목표 (선택)]
@@ -1733,6 +1765,7 @@ ${inputs.budget||'(제공되지 않음)'}
 
 규칙:
 - 오늘 날짜는 ${today}입니다.
+- "(제공되지 않음)"인 항목은 없는 것으로 보고, 주어진 정보만으로 최대한 유용한 결과를 만드세요. 근거가 없는 날짜는 지어내지 말고 null로 두세요.
 - recurringMeeting에는 위에 주어진 정기모임 정보를 그대로 반영하세요 (dayOfWeek, weeksCount는 숫자로).
 - 작년 기수 활동내역에서 반복되는 행사(MT, 정기공연, 전시회 등)를 찾아, 올해도 비슷한 시기에 있을 것으로 가정하고 eventMilestones에 준비 시작일(prepStartDate)과 행사 예상일(eventDate)을 추정해 넣으세요. 정확한 날짜를 모르면 notes에 "작년 대비 예상 시기"라고 설명하고 날짜는 null로 두세요.
 - 이번 학기 목표가 있으면 각각을 goalMilestones에 별도 항목으로 추가하세요.
