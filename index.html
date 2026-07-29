@@ -1067,6 +1067,7 @@ nav{
 <script>
 /* ──── 전역 상태 ──── */
 let history = [];
+let routeReady = false;
 let currentUser    = null;
 let currentProject = null;
 let selectedTrack   = null;
@@ -1134,6 +1135,8 @@ function handleAuthChange(user){
   renderProjectBadge();
   renderProjectsGallery();
   renderAll();
+  /* 로그인 상태가 확정된 뒤에 URL(해시)이 가리키는 화면을 복원 */
+  if(!routeReady){ routeReady=true; applyHash(); }
 }
 
 /* ──── 프로젝트 목록 (다중 프로젝트) ──── */
@@ -1278,22 +1281,46 @@ function handleDrop(e){
   if(text){ document.getElementById('meeting-input').value=text; updateCC(); toast('텍스트가 붙여넣어졌어요!','success'); }
 }
 
-/* ──── 페이지·탭 전환 ──── */
-function gp(id){
-  if(id==='upload'||id==='dash'||id==='projects'){
-    if(!currentUser){ toast('먼저 Google로 로그인해주세요!','error'); signInGoogle(); return; }
+/* ──── 페이지·탭 전환 (해시 라우팅 — 브라우저 뒤로가기 지원) ──── */
+const AUTH_PAGES=['upload','dash','projects','onboard','track'];
+let currentTab='overview';
+
+function gp(id,opts){
+  opts=opts||{};
+  if(AUTH_PAGES.includes(id)&&!currentUser){
+    if(opts.fromPop){ gp('landing',{fromPop:true}); return; }
+    toast('먼저 Google로 로그인해주세요!','error'); signInGoogle(); return;
   }
   if(id==='upload'||id==='dash'){
     if(!currentProject){ id='track'; }
     else if(currentProject.onboardStatus==='pending'){ id='onboard'; }
   }
   if(id==='onboard'&&!currentProject){ id='track'; }
+  if(!document.getElementById('page-'+id)) id='landing';
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   window.scrollTo(0,0);
   if(id==='onboard') renderOnboardPage();
   if(id==='projects') renderProjectsGallery();
+  if(id==='dash') sdt(opts.tab||currentTab,{silent:true});
+
+  syncRoute(id==='dash'?('dash/'+currentTab):id, opts.fromPop);
 }
+/* 주의: 이 스크립트의 전역 `history`(회의 이력 배열)가 window.history를 가리므로 반드시 window 경유 */
+function syncRoute(route,replace){
+  const url='#'+route;
+  if(location.hash===url) return;
+  if(replace) window.history.replaceState({route},'',url);
+  else        window.history.pushState({route},'',url);
+}
+function applyHash(){
+  const raw=(location.hash||'').replace(/^#/,'');
+  if(!raw){ gp('landing',{fromPop:true}); return; }
+  const [page,tab]=raw.split('/');
+  gp(page,{fromPop:true,tab});
+}
+window.addEventListener('popstate',applyHash);
 
 /* ──── 트랙 선택·프로젝트 생성 (0단계) ──── */
 function pickTrack(t){
@@ -1554,13 +1581,17 @@ function renderOnboardResult(){
         <div class="sum-txt">AI가 마일스톤과 다음 회의 아젠다를 준비했어요. 대시보드의 🧭 마일스톤 탭에서 확인하세요.</div>
       </div>
     </div>
-    <button class="btn-pk" onclick="gp('dash');sdt('milestones');">대시보드에서 확인하기 →</button>`;
+    <button class="btn-pk" onclick="gp('dash',{tab:'milestones'})">대시보드에서 확인하기 →</button>`;
 }
-function sdt(id){
+function sdt(id,opts){
+  opts=opts||{};
+  if(!document.getElementById('tab-'+id)) id='overview';
   document.querySelectorAll('#page-dash .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.sb-item[id^="sb-"]').forEach(s=>s.classList.remove('on'));
   document.getElementById('tab-'+id).classList.add('active');
   const sb=document.getElementById('sb-'+id); if(sb) sb.classList.add('on');
+  currentTab=id;
+  if(!opts.silent) syncRoute('dash/'+id,false);
 }
 
 /* ──── AI 분석 ──── */
