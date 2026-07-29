@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeetFlow AI — AI 기반 회의 업무 자동화</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -11,26 +13,26 @@
    CSS 변수 — 연분홍 테마
 ═══════════════════════════════════════ */
 :root {
-  --pk:          #E8498A;
-  --pk-dark:     #B5356A;
-  --pk-mid:      #F0A0C0;
-  --pk-light:    #FDE8F2;
-  --pk-bg:       #FFF5F9;
+  --pk:          #17A9C2;
+  --pk-dark:     #0E7F94;
+  --pk-mid:      #7FD8D0;
+  --pk-light:    #E1F7F3;
+  --pk-bg:       #F2FBFA;
   --teal:        #1D9E75; --teal-lt:   #E1F5EE;
   --amber:       #C07820; --amber-lt:  #FBF0DA;
-  --blue:        #185FA5; --blue-lt:   #E6F1FB;
+  --blue:        #4C5FD5; --blue-lt:   #ECEDFB;
   --green:       #3B6D11; --green-lt:  #EAF3DE;
   --red:         #A32D2D; --red-lt:    #FCEBEB;
   --violet:      #6B4FC8; --violet-lt: #EDE9FA;
-  --bg:          #FFF5F9;
+  --bg:          #F2FBFA;
   --surface:     #FFFFFF;
-  --bd:          rgba(232,73,138,.10);
-  --bd-s:        rgba(232,73,138,.22);
-  --text:        #1a1020;
-  --muted:       #7a5068;
-  --hint:        #c490ad;
-  --shadow-pk:   0 4px 18px rgba(232,73,138,.22);
-  --shadow-card: 0 2px 12px rgba(232,73,138,.07);
+  --bd:          rgba(23,169,194,.10);
+  --bd-s:        rgba(23,169,194,.22);
+  --text:        #0E2530;
+  --muted:       #4F7A82;
+  --hint:        #9BC7CC;
+  --shadow-pk:   0 4px 18px rgba(23,169,194,.22);
+  --shadow-card: 0 2px 12px rgba(23,169,194,.07);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
@@ -46,8 +48,6 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:var(--
 .btn-ghost:hover{border-color:var(--pk-mid);color:var(--pk-dark);}
 .btn-white{padding:14px 34px;background:#fff;color:var(--pk-dark);border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,.14);transition:all .2s;}
 .btn-white:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.18);}
-.btn-api  {padding:7px 14px;background:var(--pk-light);color:var(--pk-dark);border:1px solid var(--bd-s);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
-.btn-api:hover{background:var(--pk);color:#fff;}
 
 /* ── 페이지 토글 ── */
 .page{display:none;}.page.active{display:block;}
@@ -66,11 +66,19 @@ nav{
   box-shadow:0 1px 14px rgba(232,73,138,.06);
 }
 .nav-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;cursor:pointer;color:var(--text);}
+.nav-logo-img{height:26px;width:auto;display:block;}
+.hero-logo{height:56px;width:auto;display:block;margin:0 auto 24px;}
 .logo-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(232,73,138,.35);}
 .nav-links{display:flex;gap:28px;font-size:14px;color:var(--muted);}
 .nav-links span{cursor:pointer;transition:color .2s;font-weight:500;}
 .nav-links span:hover{color:var(--pk);}
 .nav-right{display:flex;align-items:center;gap:10px;}
+.nav-project{font-size:12px;font-weight:700;color:var(--pk-dark);background:var(--pk-light);border:1px solid var(--bd-s);padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s;}
+.nav-project:hover{background:var(--pk);color:#fff;}
+.user-chip{display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;background:var(--pk-bg);border:1px solid var(--bd-s);border-radius:20px;cursor:pointer;transition:all .2s;}
+.user-chip:hover{border-color:var(--pk);background:var(--pk-light);}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--pk-light);flex-shrink:0;}
+.user-name{font-size:12.5px;font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nav-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
 .dot{width:7px;height:7px;border-radius:50%;background:#e0dde8;flex-shrink:0;transition:background .3s;}
 .dot.on{background:var(--teal);}
@@ -80,7 +88,7 @@ nav{
 ══════════════════════ */
 .hero{
   text-align:center;padding:100px 40px 80px;
-  background:linear-gradient(160deg,#fff5f9 0%,#fff 55%,#f0f4ff 100%);
+  background:linear-gradient(160deg,#f2fbfa 0%,#fff 55%,#eaf6fb 100%);
   border-bottom:1px solid var(--bd);position:relative;overflow:hidden;
 }
 .hero::before{
@@ -156,7 +164,9 @@ nav{
   background:var(--surface);border:1px solid var(--bd);border-radius:18px;padding:28px;
   transition:border-color .2s,transform .2s,box-shadow .2s;
 }
-.feat-card:hover{border-color:var(--pk-mid);transform:translateY(-5px);box-shadow:0 10px 32px rgba(232,73,138,.13);}
+.feat-card:hover{border-color:var(--pk-mid);transform:translateY(-5px);box-shadow:0 10px 32px rgba(23,169,194,.13);}
+.track-card{cursor:pointer;}
+.track-card.sel{border-color:var(--pk);background:var(--pk-light);box-shadow:0 10px 32px rgba(23,169,194,.15);}
 .feat-ico{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;}
 .feat-card h3{font-size:15px;font-weight:700;margin-bottom:9px;}
 .feat-card p{font-size:13px;color:var(--muted);line-height:1.75;}
@@ -382,6 +392,7 @@ nav{
   display:flex;align-items:center;gap:10px;padding:9px 11px;
   border-radius:10px;font-size:13px;color:var(--muted);
   cursor:pointer;transition:all .15s;margin-bottom:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .sb-item:hover{background:var(--pk-bg);color:var(--text);}
 .sb-item.on{background:var(--pk-light);color:var(--pk-dark);font-weight:700;}
@@ -448,9 +459,9 @@ nav{
   padding:9px 14px;border-radius:10px;margin-bottom:10px;
   font-size:12px;font-weight:700;
 }
-.fc-week{background:#fef3f9;border:1px solid var(--bd-s);color:var(--pk-dark);}
+.fc-week{background:#E6F8F6;border:1px solid var(--bd-s);color:var(--pk-dark);}
 .fc-2w  {background:#fff8f0;border:1px solid rgba(192,120,32,.3);color:var(--amber);}
-.fc-mon {background:#f0f6ff;border:1px solid rgba(24,95,165,.2);color:var(--blue);}
+.fc-mon {background:#f0f0fc;border:1px solid rgba(76,95,213,.2);color:var(--blue);}
 .fc-later{background:#f0f9f4;border:1px solid rgba(29,158,117,.2);color:var(--teal);}
 .fc-none{background:#f6f4f9;border:1px solid rgba(107,79,200,.2);color:var(--violet);}
 .col-cnt{
@@ -548,22 +559,22 @@ nav{
 <!-- ══ NAV ══ -->
 <nav>
   <div class="nav-logo" onclick="gp('landing')">
-    <div class="logo-ico">🌸</div>
-    MeetFlow AI
+    <img src="assets/logo-horizontal.png" alt="MeetFlow" class="nav-logo-img">
   </div>
   <div class="nav-links">
     <span onclick="gp('landing');setTimeout(()=>document.querySelector('.section-wrap')?.scrollIntoView({behavior:'smooth'}),50)">기능</span>
     <span onclick="gp('landing');setTimeout(()=>document.querySelector('.how-bg')?.scrollIntoView({behavior:'smooth'}),50)">방법</span>
     <span onclick="gp('upload')">회의 분석</span>
-    <span onclick="gp('dash')">대시보드</span>
+    <span onclick="gp('projects')">대시보드</span>
   </div>
   <div class="nav-right">
+    <div class="nav-project" id="nav-project" style="display:none;" onclick="gp('dash')" title="현재 프로젝트 워크스페이스로 이동"></div>
     <div class="nav-status">
-      <div class="dot" id="status-dot"></div>
-      <span id="status-txt">API 키 없음</span>
+      <div class="dot on" id="status-dot"></div>
+      <span id="status-txt">Gemini 연결됨</span>
     </div>
-    <button class="btn-api" onclick="openApiModal()">🔑 API 키 설정</button>
     <button class="btn-pk btn-pk-sm" onclick="gp('upload')">✨ 무료로 시작하기</button>
+    <div id="auth-area"></div>
   </div>
 </nav>
 
@@ -574,13 +585,14 @@ nav{
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge">🌸 Gemini AI 기반 회의 업무 자동화</div>
+    <img src="assets/logo-full.png" alt="MeetFlow — Meet. Plan. Flow Together." class="hero-logo">
+    <div class="hero-badge">🌊 Gemini AI 기반 회의 업무 자동화</div>
     <h1>회의가 끝나면<br><em>업무가 자동으로 정리</em>돼요</h1>
     <p>회의 텍스트를 붙여넣으면 Gemini AI가 담당자·업무·마감일을 자동 추출하고,
        Action Item과 Task Flow로 팀 전체 업무를 한눈에 관리해 드려요.</p>
     <div class="hero-btns">
       <button class="btn-pk" style="font-size:15px;padding:14px 30px;" onclick="gp('upload')">✨ 회의 분석 시작하기 →</button>
-      <button class="btn-out" style="font-size:15px;padding:14px 30px;" onclick="gp('dash')">대시보드 보기</button>
+      <button class="btn-out" style="font-size:15px;padding:14px 30px;" onclick="gp('projects')">대시보드 보기</button>
     </div>
 
     <!-- 제품 미리보기 -->
@@ -595,7 +607,7 @@ nav{
       <div class="hp-body">
         <div class="hp-sidebar">
           <div class="hp-sb-logo">
-            <div class="hp-sb-ico">🌸</div>
+            <div class="hp-sb-ico">🌊</div>
             <span style="font-size:11px;font-weight:800;">MeetFlow</span>
           </div>
           <div class="hp-sb-item a">📊 대시보드</div>
@@ -667,8 +679,8 @@ nav{
       <div class="steps">
         <div class="step">
           <div class="step-n">1</div>
-          <h4>API 키 설정</h4>
-          <p>Google AI Studio에서 무료 Gemini API 키를 발급받아 입력하세요</p>
+          <h4>Google 로그인</h4>
+          <p>구글 계정으로 로그인하고 프로젝트 유형을 선택하세요</p>
         </div>
         <div class="step">
           <div class="step-n">2</div>
@@ -704,8 +716,79 @@ nav{
   <!-- CTA -->
   <div class="cta-sec">
     <h2>지금 바로 시작해 보세요</h2>
-    <p>Gemini API 키만 있으면 무료로 모든 기능을 사용할 수 있어요</p>
+    <p>구글 계정만 있으면 별도 설정 없이 무료로 모든 기능을 사용할 수 있어요</p>
     <button class="btn-white" onclick="gp('upload')">✨ 회의 분석 시작하기 →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     TRACK SELECT (0단계 — 프로젝트 생성)
+════════════════════════════════ -->
+<div class="page" id="page-track">
+  <div class="up-wrap" style="max-width:800px;">
+    <div class="up-hd" style="text-align:center;">
+      <h2>🚀 새 프로젝트 시작하기</h2>
+      <p>어떤 활동인지 선택하면 그에 맞는 AI 온보딩과 마일스톤을 준비해 드려요</p>
+    </div>
+
+    <div class="feat-grid" style="margin-bottom:18px;">
+      <div class="feat-card track-card" data-track="team" onclick="pickTrack('team')">
+        <div class="feat-ico" style="background:var(--pk-light);">🧑‍🤝‍🧑</div>
+        <h3>팀 프로젝트</h3>
+        <p>강의계획서·과제 안내문을 바탕으로 목표·역할·마일스톤을 자동으로 설계해 드려요.</p>
+      </div>
+      <div class="feat-card track-card" data-track="contest" onclick="pickTrack('contest')">
+        <div class="feat-ico" style="background:var(--amber-lt);">🏆</div>
+        <h3>공모전</h3>
+        <p>모집요강·심사 기준을 분석해 마감일 기반 마일스톤을 잡아 드려요.</p>
+      </div>
+      <div class="feat-card track-card" data-track="club" onclick="pickTrack('club')">
+        <div class="feat-ico" style="background:var(--teal-lt);">🎨</div>
+        <h3>동아리</h3>
+        <p>이전 기수 활동 내역을 참고해 이번 활동의 마일스톤을 함께 정리해요.</p>
+      </div>
+    </div>
+
+    <div class="up-panel" id="track-name-panel" style="display:none;">
+      <div class="up-panel-ttl">📁 프로젝트 이름</div>
+      <input type="text" class="m-inp" id="track-name-inp" placeholder="예) 캡스톤디자인 팀플, 창업 아이디어 공모전..." style="margin-bottom:14px;">
+      <button class="btn-pk" onclick="createProject()">프로젝트 만들고 시작하기 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     ONBOARDING (1단계 — 트랙별 온보딩)
+════════════════════════════════ -->
+<div class="page" id="page-onboard">
+  <div class="up-wrap" style="max-width:820px;">
+    <div class="up-hd">
+      <h2 id="ob-title">🚀 온보딩</h2>
+      <p id="ob-sub">아래 정보를 입력하면 AI가 마일스톤과 다음 회의 아젠다를 준비해 드려요.</p>
+    </div>
+
+    <div id="ob-fields-team" style="display:none;"></div>
+    <div id="ob-fields-contest" style="display:none;"></div>
+    <div id="ob-fields-club" style="display:none;"></div>
+
+    <div class="up-panel" id="ob-actions">
+      <button class="anlz-btn" onclick="runOnboarding()">
+        <span>✨ AI 온보딩 시작</span>
+      </button>
+      <button class="btn-ghost" style="margin-left:8px;" onclick="skipOnboarding()">나중에 하기</button>
+    </div>
+
+    <div class="err-banner" id="ob-err" style="display:none;">
+      <span>⚠️</span><span id="ob-err-msg"></span>
+    </div>
+
+    <div class="ai-proc" id="ob-proc">
+      <div class="ai-spin-ring"></div>
+      <h4>Gemini AI가 온보딩 정보를 분석 중이에요</h4>
+      <p>마일스톤과 다음 회의 아젠다를 설계하고 있어요...</p>
+    </div>
+
+    <div class="result-wrap" id="ob-result"></div>
   </div>
 </div>
 
@@ -813,7 +896,7 @@ nav{
     <!-- 초기 빈 상태 -->
     <div class="up-panel" id="up-empty">
       <div class="empty">
-        <div class="e-ico">🌸</div>
+        <div class="e-ico">🌊</div>
         <h3>회의 내용을 입력해보세요</h3>
         <p>위 입력창에 회의 텍스트를 붙여넣고 AI 분석 시작을 눌러주세요.<br>
            샘플 버튼으로 바로 테스트해볼 수 있어요!</p>
@@ -823,20 +906,33 @@ nav{
 </div>
 
 <!-- ════════════════════════════════
-     DASHBOARD
+     PROJECTS HOME (프로젝트 목록)
+════════════════════════════════ -->
+<div class="page" id="page-projects">
+  <div class="up-wrap" style="max-width:900px;">
+    <div class="up-hd">
+      <h2>📁 내 프로젝트</h2>
+      <p>프로젝트를 선택해서 회의 분석·Action Items·마일스톤을 관리하세요</p>
+    </div>
+    <div id="projects-gallery"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     DASHBOARD (프로젝트 워크스페이스)
 ════════════════════════════════ -->
 <div class="page" id="page-dash">
   <div class="dash-layout">
 
     <!-- 사이드바 -->
     <aside class="sidebar">
-      <div class="sb-new" onclick="gp('upload')">
-        <span class="sico">➕</span> 새 회의 분석
-      </div>
-      <div class="sb-lbl">메뉴</div>
-      <div class="sb-item on"  id="sb-overview"  onclick="sdt('overview')"><span class="sico">📊</span> 대시보드<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
+      <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
+      <div class="sb-lbl" style="margin-top:0;">메뉴</div>
+      <div class="sb-item" onclick="gp('upload')"><span class="sico">📝</span> 새 회의 분석</div>
+      <div class="sb-item on"  id="sb-overview"  onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
       <div class="sb-item"     id="sb-actions"   onclick="sdt('actions')"><span class="sico">✅</span> Action Items</div>
       <div class="sb-item"     id="sb-members"   onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
+      <div class="sb-item"     id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
       <div class="sb-item"     id="sb-taskflow"  onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
       <div class="sb-item"     id="sb-briefing"  onclick="sdt('briefing')"><span class="sico">📋</span> 브리핑</div>
       <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
@@ -851,7 +947,7 @@ nav{
       <!-- ── 대시보드 탭 ── -->
       <div class="tab active" id="tab-overview">
         <div class="pg-hd">
-          <div><h2>📊 대시보드</h2><p>전체 프로젝트 현황과 Action Items를 한눈에 확인하세요</p></div>
+          <div><h2>📊 개요</h2><p>이 프로젝트의 현황과 Action Items를 한눈에 확인하세요</p></div>
           <div class="pg-actions">
             <button class="btn-pk btn-pk-sm" onclick="gp('upload')">+ 새 회의 분석</button>
           </div>
@@ -903,6 +999,16 @@ nav{
         </div>
       </div>
 
+      <!-- ── 마일스톤 탭 ── -->
+      <div class="tab" id="tab-milestones">
+        <div class="pg-hd">
+          <div><h2>🧭 마일스톤</h2><p>AI가 설계한 마일스톤과 다음 회의 아젠다를 확인하세요</p></div>
+        </div>
+        <div id="milestones-wrap">
+          <div class="panel"><div class="empty"><div class="e-ico">🧭</div><h3>아직 온보딩을 완료하지 않았어요</h3></div></div>
+        </div>
+      </div>
+
       <!-- ── Task Flow 탭 ── -->
       <div class="tab" id="tab-taskflow">
         <div class="pg-hd">
@@ -927,22 +1033,6 @@ nav{
   </div>
 </div>
 
-<!-- ── API 키 모달 ── -->
-<div class="overlay" id="api-overlay" onclick="if(event.target.id==='api-overlay')closeApi()">
-  <div class="modal-box">
-    <div class="m-ttl">🔑 Gemini API 키 설정</div>
-    <div class="m-desc">
-      <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>에서 무료로 발급받으세요.
-      키는 브라우저 로컬스토리지에만 저장되며 외부 서버로 전송되지 않습니다.
-    </div>
-    <div class="m-lbl">GEMINI API KEY</div>
-    <input type="password" class="m-inp" id="api-inp" placeholder="AIzaSy..." />
-    <div class="m-btns">
-      <button class="btn-ghost" onclick="closeApi()">취소</button>
-      <button class="btn-pk" style="padding:10px 22px;font-size:14px;" onclick="saveKey()">저장하기</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── 캘린더 모달 ── -->
 <div class="overlay" id="cal-overlay" onclick="if(event.target.id==='cal-overlay')closeCal()">
@@ -959,13 +1049,22 @@ nav{
 
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<!-- ── PDF.js (온보딩 문서 업로드용) ── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
 <!-- ════════════════════════════════
      JAVASCRIPT
 ════════════════════════════════ -->
 <script>
 /* ──── 전역 상태 ──── */
-let apiKey  = localStorage.getItem('mf_key') || '';
-let history = JSON.parse(localStorage.getItem('mf_history') || '[]');
+let history = [];
+let currentUser    = null;
+let currentProject = null;
+let selectedTrack   = null;
+
+const TRACK_LBL  = {team:'🧑‍🤝‍🧑 팀 프로젝트', contest:'🏆 공모전', club:'🎨 동아리'};
+const TRACK_ICON = {team:'🧑‍🤝‍🧑', contest:'🏆', club:'🎨'};
 
 const ST = {
   cycle: ['todo','doing','done'],
@@ -1005,14 +1104,155 @@ UI 시안 수정은 정하은님이 7월 4일까지 마무리합니다.
 
 /* ──── 초기화 ──── */
 function init(){
-  updateApiStatus();
   updateCC();
+  renderAuthArea();
+  renderProjectBadge();
+  renderProjectsGallery();
   renderAll();
 }
-function updateApiStatus(){
-  const dot=document.getElementById('status-dot'), txt=document.getElementById('status-txt');
-  if(apiKey){dot.className='dot on';txt.textContent='API 연결됨';}
-  else{dot.className='dot';txt.textContent='API 키 없음';}
+
+/* ──── 인증 (Firebase Auth) ──── */
+function handleAuthChange(user){
+  currentUser = user;
+  if(user){
+    const projects = loadProjects();
+    const activeId = localStorage.getItem('mf_active_project_'+user.uid);
+    currentProject = projects.find(p=>p.id===activeId) || projects[0] || null;
+  } else {
+    currentProject = null;
+  }
+  loadProjectHistory();
+  renderAuthArea();
+  renderProjectBadge();
+  renderProjectsGallery();
+  renderAll();
+}
+
+/* ──── 프로젝트 목록 (다중 프로젝트) ──── */
+function loadProjects(){
+  if(!currentUser) return [];
+  const key='mf_projects_'+currentUser.uid;
+  let list=JSON.parse(localStorage.getItem(key)||'null');
+  if(!list){
+    /* 이전 버전(단일 프로젝트) 데이터 마이그레이션 */
+    const legacy=localStorage.getItem('mf_project_'+currentUser.uid);
+    list=legacy?[JSON.parse(legacy)]:[];
+    localStorage.setItem(key,JSON.stringify(list));
+  }
+  /* 온보딩 기능 이전 프로젝트는 온보딩 완료로 간주(재접속 시 막히지 않게) */
+  list=list.map(p=>p.onboardStatus?p:{...p, onboardStatus:'done', onboarding:p.onboarding||null});
+  return list;
+}
+function saveProjects(list){
+  if(!currentUser) return;
+  localStorage.setItem('mf_projects_'+currentUser.uid,JSON.stringify(list));
+}
+function persistCurrentProject(patch){
+  if(!currentProject) return;
+  const projects=loadProjects();
+  const idx=projects.findIndex(p=>p.id===currentProject.id);
+  if(idx<0) return;
+  projects[idx]={...projects[idx], ...patch};
+  saveProjects(projects);
+  currentProject=projects[idx];
+}
+function switchProject(id,opts={}){
+  const p=loadProjects().find(x=>x.id===id);
+  if(!p) return;
+  currentProject=p;
+  localStorage.setItem('mf_active_project_'+currentUser.uid,id);
+  loadProjectHistory();
+  renderProjectBadge();
+  renderProjectsGallery();
+  renderAll();
+  if(!opts.silent) toast(`"${p.name}"(으)로 전환했어요.`,'info');
+  if(currentProject.onboardStatus==='pending') gp('onboard');
+}
+function openProject(id){
+  switchProject(id,{silent:true});
+  if(currentProject&&currentProject.id===id&&currentProject.onboardStatus!=='pending'){
+    gp('dash');
+  }
+}
+function renderProjectsGallery(){
+  const el=document.getElementById('projects-gallery'); if(!el) return;
+  const projects=loadProjects();
+  const statusBdg={
+    pending:'<span class="bdg b-nodl">⏳ 온보딩 필요</span>',
+    skipped:'<span class="bdg b-dl">⏭️ 온보딩 건너뜀</span>',
+    done:'<span class="bdg b-person" style="background:var(--teal-lt);color:var(--teal);">✅ 온보딩 완료</span>'
+  };
+  if(!projects.length){
+    el.innerHTML=`
+      <div class="panel">
+        <div class="empty">
+          <div class="e-ico">📁</div>
+          <h3>아직 프로젝트가 없어요</h3>
+          <p>새 프로젝트를 만들어서 회의 분석과 마일스톤 관리를 시작해보세요.</p>
+          <button class="btn-pk" style="margin-top:18px;" onclick="gp('track')">✨ 새 프로젝트 만들기</button>
+        </div>
+      </div>`;
+    return;
+  }
+  el.innerHTML=`
+    <div class="feat-grid">
+      ${projects.map(p=>`
+        <div class="feat-card track-card" style="position:relative;" onclick="openProject('${p.id}')">
+          <button class="ico-btn" style="position:absolute;top:14px;right:14px;" onclick="deleteProject('${p.id}',event)" title="프로젝트 삭제">🗑️</button>
+          <div class="feat-ico" style="background:var(--pk-light);">${TRACK_ICON[p.track]||'📁'}</div>
+          <h3>${p.name}</h3>
+          <p>${TRACK_LBL[p.track]||''}</p>
+          <div style="margin-top:10px;">${statusBdg[p.onboardStatus]||''}</div>
+        </div>`).join('')}
+      <div class="feat-card track-card" onclick="gp('track')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-style:dashed;">
+        <div class="feat-ico" style="background:var(--pk-light);">➕</div>
+        <h3>새 프로젝트</h3>
+      </div>
+    </div>`;
+}
+function deleteProject(id,evt){
+  if(evt) evt.stopPropagation();
+  const p=loadProjects().find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`"${p.name}" 프로젝트를 삭제할까요?\n회의 이력과 온보딩 결과가 모두 삭제되고 되돌릴 수 없어요.`)) return;
+
+  saveProjects(loadProjects().filter(x=>x.id!==id));
+  localStorage.removeItem('mf_history_'+id);
+
+  if(currentProject&&currentProject.id===id){
+    currentProject=null;
+    localStorage.removeItem('mf_active_project_'+currentUser.uid);
+    history=[];
+    renderProjectBadge();
+  }
+  renderProjectsGallery();
+  toast(`"${p.name}" 프로젝트를 삭제했어요.`,'info');
+}
+function renderAuthArea(){
+  const el=document.getElementById('auth-area'); if(!el) return;
+  if(currentUser){
+    el.innerHTML=`
+      <div class="user-chip" onclick="signOutUser()" title="로그아웃">
+        ${currentUser.photoURL?`<img src="${currentUser.photoURL}" class="user-avatar" referrerpolicy="no-referrer">`:`<div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--pk),var(--pk-dark));">${(currentUser.displayName||currentUser.email||'?')[0]}</div>`}
+        <span class="user-name">${currentUser.displayName||currentUser.email}</span>
+      </div>`;
+  } else {
+    el.innerHTML=`<button class="btn-out" onclick="signInGoogle()">🔑 Google로 로그인</button>`;
+  }
+}
+function renderProjectBadge(){
+  const el=document.getElementById('nav-project'); if(!el) return;
+  if(currentProject){ el.style.display='inline-flex'; el.textContent='📁 '+currentProject.name; }
+  else el.style.display='none';
+}
+async function signInGoogle(){
+  try{ await window.mfSignIn(); toast('로그인 됐어요! 🎉','success'); }
+  catch(e){ toast('로그인에 실패했어요: '+e.message,'error'); }
+}
+async function signOutUser(){
+  await window.mfSignOut();
+  toast('로그아웃 됐어요.','info');
+  gp('landing');
 }
 function updateCC(){
   document.getElementById('char-ct').textContent = document.getElementById('meeting-input').value.length+'자';
@@ -1032,9 +1272,259 @@ function handleDrop(e){
 
 /* ──── 페이지·탭 전환 ──── */
 function gp(id){
+  if(id==='upload'||id==='dash'||id==='projects'){
+    if(!currentUser){ toast('먼저 Google로 로그인해주세요!','error'); signInGoogle(); return; }
+  }
+  if(id==='upload'||id==='dash'){
+    if(!currentProject){ id='track'; }
+    else if(currentProject.onboardStatus==='pending'){ id='onboard'; }
+  }
+  if(id==='onboard'&&!currentProject){ id='track'; }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   window.scrollTo(0,0);
+  if(id==='onboard') renderOnboardPage();
+  if(id==='projects') renderProjectsGallery();
+}
+
+/* ──── 트랙 선택·프로젝트 생성 (0단계) ──── */
+function pickTrack(t){
+  selectedTrack=t;
+  document.querySelectorAll('.track-card').forEach(c=>c.classList.toggle('sel', c.dataset.track===t));
+  const panel=document.getElementById('track-name-panel');
+  panel.style.display='block';
+  document.getElementById('track-name-inp').focus();
+}
+function createProject(){
+  if(!currentUser){ toast('먼저 로그인해주세요.','error'); return; }
+  if(!selectedTrack){ toast('프로젝트 유형을 선택해주세요.','error'); return; }
+  const name=document.getElementById('track-name-inp').value.trim();
+  if(!name){ toast('프로젝트 이름을 입력해주세요.','error'); return; }
+
+  const newProject={
+    id:'p_'+Date.now(),
+    name, track:selectedTrack,
+    ownerUid:currentUser.uid,
+    createdAt:new Date().toISOString(),
+    onboardStatus:'pending',
+    onboarding:null
+  };
+  const projects=loadProjects();
+  projects.unshift(newProject);
+  saveProjects(projects);
+
+  currentProject=newProject;
+  localStorage.setItem('mf_active_project_'+currentUser.uid, newProject.id);
+  loadProjectHistory();
+  renderProjectBadge();
+  renderProjectsGallery();
+  toast(`"${name}" 프로젝트가 만들어졌어요! ${TRACK_LBL[selectedTrack]} 🎉`,'success');
+
+  /* 트랙 선택 UI 초기화 (다음 프로젝트 생성 대비) */
+  selectedTrack=null;
+  document.querySelectorAll('.track-card').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('track-name-panel').style.display='none';
+  document.getElementById('track-name-inp').value='';
+
+  gp('onboard');
+}
+function loadProjectHistory(){
+  history = currentProject ? JSON.parse(localStorage.getItem('mf_history_'+currentProject.id) || '[]') : [];
+}
+
+/* ──── 1단계: 트랙별 온보딩 ──── */
+function skipOnboarding(){
+  if(!currentProject) return;
+  persistCurrentProject({onboardStatus:'skipped'});
+  renderMilestones();
+  toast('나중에 온보딩할 수 있어요. 대시보드 🧭 마일스톤 탭에서 다시 시작하세요.','info');
+  gp('upload');
+}
+function renderOnboardPage(){
+  if(!currentProject) return;
+  const t=currentProject.track;
+  document.getElementById('ob-title').textContent=`🚀 온보딩 — ${TRACK_LBL[t]}`;
+  document.getElementById('ob-sub').textContent='아래 정보를 입력하면 AI가 마일스톤과 다음 회의 아젠다를 준비해 드려요.';
+  ['team','contest','club'].forEach(k=>{ document.getElementById('ob-fields-'+k).style.display=(k===t)?'block':'none'; });
+  document.getElementById('ob-fields-'+t).innerHTML=onboardFieldsHTML(t);
+  document.getElementById('ob-actions').style.display='block';
+  document.getElementById('ob-err').style.display='none';
+  document.getElementById('ob-proc').classList.remove('show');
+  document.getElementById('ob-result').classList.remove('show');
+  document.getElementById('ob-result').innerHTML='';
+}
+
+function docFieldHTML(id,label,placeholder,opts={}){
+  const withPdf=opts.withPdf!==false;
+  const rows=opts.rows||6;
+  return `
+    <div class="up-panel">
+      <div class="up-panel-ttl">${label}${opts.optional?' <span style="color:var(--hint);font-weight:500;">(선택)</span>':' *'}</div>
+      <textarea id="${id}-ta" class="textarea" rows="${rows}" placeholder="${placeholder}" oninput="updateDocCC('${id}')"></textarea>
+      <div class="input-row">
+        <span class="char-ct" id="${id}-ct">0자</span>
+        ${withPdf?`
+        <div class="sample-row">
+          <button class="samp-btn" type="button" onclick="triggerPdfUpload('${id}')">📎 PDF 업로드</button>
+          <input type="file" id="${id}-file" accept="application/pdf" style="display:none" onchange="handlePdfUpload(event,'${id}')">
+          <span class="char-ct" id="${id}-fname"></span>
+        </div>`:''}
+      </div>
+    </div>`;
+}
+function clubCadenceHTML(){
+  const today=new Date().toISOString().split('T')[0];
+  return `
+    <div class="up-panel">
+      <div class="up-panel-ttl">🗓️ 정기모임 주기 *</div>
+      <div class="g2" style="margin-bottom:0;">
+        <div>
+          <div class="m-lbl">요일</div>
+          <select id="club-weekday" class="m-inp" style="margin-bottom:0;">
+            <option value="1">매주 월요일</option>
+            <option value="2" selected>매주 화요일</option>
+            <option value="3">매주 수요일</option>
+            <option value="4">매주 목요일</option>
+            <option value="5">매주 금요일</option>
+            <option value="6">매주 토요일</option>
+            <option value="0">매주 일요일</option>
+          </select>
+        </div>
+        <div>
+          <div class="m-lbl">시작일</div>
+          <input type="date" id="club-start" class="m-inp" style="margin-bottom:0;" value="${today}">
+        </div>
+      </div>
+      <div style="margin-top:14px;max-width:200px;">
+        <div class="m-lbl">학기 주차 수</div>
+        <input type="number" id="club-weeks" class="m-inp" style="margin-bottom:0;" value="15" min="1" max="30">
+      </div>
+    </div>`;
+}
+function onboardFieldsHTML(t){
+  if(t==='team') return [
+    docFieldHTML('team-syllabus','📘 강의계획서','주차별 진도, 발표일, 제출 마감일이 담긴 강의계획서 내용을 붙여넣으세요.'),
+    docFieldHTML('team-brief','📋 과제 안내문','과제 요구사항, 제출 형식, 평가 배점표가 있다면 함께 붙여넣으세요.'),
+    docFieldHTML('team-members','👥 팀원 정보','예) 팀원 4명 — 홍길동(기획), 김영희(디자인), 이철수(개발), 박민준(발표)',{optional:true,withPdf:false,rows:3}),
+  ].join('');
+  if(t==='contest') return [
+    docFieldHTML('contest-guidelines','📢 모집요강','자격요건, 제출서류, 마감일, 제출형식이 담긴 모집요강을 붙여넣으세요.'),
+    docFieldHTML('contest-rubric','📊 심사기준','배점표(예: 창의성 30%, 실현가능성 30%, 발표력 20%, 완성도 20%)를 붙여넣으세요.'),
+    docFieldHTML('contest-pastwinners','🏅 이전 수상작','참고할 이전 수상작 내용이 있다면 붙여넣으세요.',{optional:true}),
+  ].join('');
+  if(t==='club') return [
+    docFieldHTML('club-history','📚 작년 기수 활동내역','작년에 진행한 행사/활동 목록을 붙여넣으세요. (MT, 정기공연, 전시회 등)'),
+    docFieldHTML('club-goals','🎯 이번 학기 목표','이번 학기에 새로 계획하는 목표가 있다면 적어주세요.',{optional:true,withPdf:false,rows:3}),
+    clubCadenceHTML(),
+    docFieldHTML('club-budget','💰 예산 정보','항목별 예산이 있다면 적어주세요.',{optional:true,withPdf:false,rows:3}),
+  ].join('');
+  return '';
+}
+function updateDocCC(id){
+  const ta=document.getElementById(id+'-ta'), ct=document.getElementById(id+'-ct');
+  if(ta&&ct) ct.textContent=ta.value.length+'자';
+}
+function triggerPdfUpload(id){ document.getElementById(id+'-file').click(); }
+async function handlePdfUpload(evt,id){
+  const file=evt.target.files[0]; if(!file) return;
+  const fname=document.getElementById(id+'-fname');
+  fname.textContent='📄 추출 중...';
+  try{
+    const {text,pages}=await extractPdfText(file);
+    document.getElementById(id+'-ta').value=text;
+    updateDocCC(id);
+    fname.textContent=`✅ ${pages}페이지 추출됨 (${file.name})`;
+    toast('PDF 텍스트를 추출했어요!','success');
+  }catch(e){
+    fname.textContent='⚠️ 추출 실패';
+    toast(e.message||'PDF 추출에 실패했어요. 직접 붙여넣어주세요.','error');
+  }finally{
+    evt.target.value='';
+  }
+}
+async function extractPdfText(file){
+  if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name)){
+    throw new Error('PDF 파일만 업로드할 수 있어요.');
+  }
+  const buf=await file.arrayBuffer();
+  let pdf;
+  try{ pdf=await pdfjsLib.getDocument({data:buf}).promise; }
+  catch(e){ throw new Error('손상되었거나 지원되지 않는 PDF 파일이에요.'); }
+  let text='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    text += content.items.map(it=>it.str).join(' ') + '\n\n';
+  }
+  text=text.trim();
+  if(!text) throw new Error('PDF에서 텍스트를 찾을 수 없어요. (스캔 이미지 PDF는 지원되지 않아요)');
+  return {text, pages:pdf.numPages};
+}
+
+function collectOnboardInputs(t){
+  const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+  if(t==='team') return { syllabus:val('team-syllabus-ta'), brief:val('team-brief-ta'), members:val('team-members-ta') };
+  if(t==='contest') return { guidelines:val('contest-guidelines-ta'), rubric:val('contest-rubric-ta'), pastWinners:val('contest-pastwinners-ta') };
+  if(t==='club') return {
+    history:val('club-history-ta'), goals:val('club-goals-ta'),
+    weekday:document.getElementById('club-weekday').value,
+    startDate:document.getElementById('club-start').value,
+    weeks:document.getElementById('club-weeks').value,
+    budget:val('club-budget-ta')
+  };
+  return {};
+}
+function onboardMissingField(t,inp){
+  if(t==='team'){ if(!inp.syllabus) return '강의계획서를 입력해주세요.'; if(!inp.brief) return '과제 안내문을 입력해주세요.'; }
+  if(t==='contest'){ if(!inp.guidelines) return '모집요강을 입력해주세요.'; if(!inp.rubric) return '심사기준을 입력해주세요.'; }
+  if(t==='club'){ if(!inp.history) return '작년 기수 활동내역을 입력해주세요.'; if(!inp.startDate) return '정기모임 시작일을 선택해주세요.'; }
+  return null;
+}
+function showOnboardErr(msg){ document.getElementById('ob-err').style.display='flex'; document.getElementById('ob-err-msg').textContent=msg; }
+
+async function runOnboarding(){
+  if(!currentProject) return;
+  const t=currentProject.track;
+  const inputs=collectOnboardInputs(t);
+  const missing=onboardMissingField(t,inputs);
+  if(missing){ toast(missing,'error'); return; }
+
+  document.getElementById('ob-actions').style.display='none';
+  document.getElementById('ob-err').style.display='none';
+  document.getElementById('ob-proc').classList.add('show');
+
+  try{
+    const result=await callGeminiOnboard(t,inputs);
+    if(t==='club'){
+      result.recurringMeeting={
+        dayOfWeek:Number(inputs.weekday),
+        startDate:inputs.startDate,
+        weeksCount:Number(inputs.weeks)||15,
+        notes:(result.recurringMeeting&&result.recurringMeeting.notes)||''
+      };
+    }
+    persistCurrentProject({onboardStatus:'done', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}});
+    renderOnboardResult();
+    toast('온보딩이 완료됐어요! 🎉','success');
+  }catch(e){
+    showOnboardErr(e.message);
+    document.getElementById('ob-actions').style.display='block';
+  }finally{
+    document.getElementById('ob-proc').classList.remove('show');
+  }
+}
+function renderOnboardResult(){
+  const el=document.getElementById('ob-result');
+  el.classList.add('show');
+  el.innerHTML=`
+    <div class="sum-banner">
+      <div class="sum-ico">🎉</div>
+      <div>
+        <div class="sum-lbl">온보딩 완료</div>
+        <div class="sum-txt">AI가 마일스톤과 다음 회의 아젠다를 준비했어요. 대시보드의 🧭 마일스톤 탭에서 확인하세요.</div>
+      </div>
+    </div>
+    <button class="btn-pk" onclick="gp('dash');sdt('milestones');">대시보드에서 확인하기 →</button>`;
 }
 function sdt(id){
   document.querySelectorAll('#page-dash .tab').forEach(t=>t.classList.remove('active'));
@@ -1043,21 +1533,10 @@ function sdt(id){
   const sb=document.getElementById('sb-'+id); if(sb) sb.classList.add('on');
 }
 
-/* ──── API 키 모달 ──── */
-function openApiModal(){ document.getElementById('api-inp').value=apiKey; document.getElementById('api-overlay').classList.add('show'); }
-function closeApi(){ document.getElementById('api-overlay').classList.remove('show'); }
-function saveKey(){
-  const v=document.getElementById('api-inp').value.trim();
-  if(!v){toast('API 키를 입력해주세요.','error');return;}
-  apiKey=v; localStorage.setItem('mf_key',v); updateApiStatus(); closeApi();
-  toast('API 키가 저장됐어요! 🎉','success');
-}
-
 /* ──── AI 분석 ──── */
 async function analyze(){
   const text=document.getElementById('meeting-input').value.trim();
   if(!text){toast('회의 내용을 입력해주세요.','error');return;}
-  if(!apiKey){toast('먼저 API 키를 설정해주세요!','error');openApiModal();return;}
 
   setLoading(true); hideErr();
   document.getElementById('result-wrap').classList.remove('show');
@@ -1091,6 +1570,38 @@ async function analyze(){
   }
 }
 
+/* ──── Gemini 공통 호출/파싱 ──── */
+async function geminiRequest(prompt,schema,maxTokens=4096){
+  /* Firebase AI Logic 경유 — 사용자가 Gemini API 키를 입력할 필요 없음 */
+  if(typeof window.mfGenerateJSON!=='function'){
+    throw new Error('AI 모듈을 불러오는 중이에요. 잠시 후 다시 시도해주세요.');
+  }
+  let raw;
+  try{
+    raw=await window.mfGenerateJSON(prompt,schema,maxTokens);
+  }catch(e){
+    console.error('[MeetFlow] Firebase AI Logic 오류:', e);
+    const msg=e?.message||'';
+    if(/quota|RESOURCE_EXHAUSTED|429/i.test(msg)) throw new Error('AI 사용량 한도를 초과했어요. 잠시 후 다시 시도해주세요.');
+    if(/permission|PERMISSION_DENIED|403/i.test(msg)) throw new Error('AI 서비스 권한 오류예요. Firebase AI Logic 설정을 확인해주세요.');
+    throw new Error('AI 호출에 실패했어요: '+msg);
+  }
+  console.log('[MeetFlow] Gemini 원본 응답:', raw);
+  return parseGeminiJson(raw);
+}
+function parseGeminiJson(raw){
+  /* 마크다운 코드블록 제거 후 첫 번째 JSON 객체 추출 */
+  const stripped=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  const jsonMatch=stripped.match(/\{[\s\S]*\}/);
+  const jsonStr=jsonMatch?jsonMatch[0]:stripped;
+  try{
+    return JSON.parse(jsonStr);
+  }catch(e){
+    console.error('[MeetFlow] JSON 파싱 실패. 원본:', raw, '/ 정제 후:', jsonStr);
+    throw new Error('AI 응답 파싱 실패. 다시 시도해주세요.');
+  }
+}
+
 async function callGemini(text){
   const today=new Date().toISOString().split('T')[0];
   const prompt=`다음 회의 텍스트를 분석하여 아래 JSON 스키마에 맞게 응답하세요.
@@ -1108,68 +1619,29 @@ ${text}
 - task는 25자 이내로 간결하게
 - summary는 2~3문장의 완성된 문장으로 작성`;
 
-  const res=await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{parts:[{text:prompt}]}],
-        generationConfig:{
-          temperature:0.1,
-          maxOutputTokens:4096,
-          /* 항상 순수 JSON으로 응답받아 마크다운 코드블록 파싱 오류 방지 */
-          responseMimeType:'application/json',
-          responseSchema:{
-            type:'object',
-            properties:{
-              summary:{type:'string'},
-              items:{
-                type:'array',
-                items:{
-                  type:'object',
-                  properties:{
-                    assignee:{type:'string'},
-                    task:    {type:'string'},
-                    deadline:{type:'string', nullable:true},
-                    status:  {type:'string'},
-                    priority:{type:'string'},
-                  },
-                  required:['assignee','task','status','priority']
-                }
-              }
-            },
-            required:['summary','items']
-          }
+  const schema={
+    type:'object',
+    properties:{
+      summary:{type:'string'},
+      items:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            assignee:{type:'string'},
+            task:    {type:'string'},
+            deadline:{type:'string', nullable:true},
+            status:  {type:'string'},
+            priority:{type:'string'},
+          },
+          required:['assignee','task','status','priority']
         }
-      })
-    }
-  );
+      }
+    },
+    required:['summary','items']
+  };
 
-  if(!res.ok){
-    const err=await res.json().catch(()=>({}));
-    const msg=err?.error?.message||`API 오류 (${res.status})`;
-    if(res.status===400&&msg.includes('API_KEY')) throw new Error('API 키가 올바르지 않아요. 다시 확인해주세요.');
-    if(res.status===429) throw new Error('API 호출 한도 초과. 잠시 후 다시 시도해주세요.');
-    throw new Error(msg);
-  }
-
-  const data=await res.json();
-  const raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
-  console.log('[MeetFlow] Gemini 원본 응답:', raw);
-
-  /* 마크다운 코드블록 제거 후 첫 번째 JSON 객체 추출 */
-  const stripped=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-  const jsonMatch=stripped.match(/\{[\s\S]*\}/);
-  const jsonStr=jsonMatch?jsonMatch[0]:stripped;
-
-  let parsed;
-  try{
-    parsed=JSON.parse(jsonStr);
-  }catch(e){
-    console.error('[MeetFlow] JSON 파싱 실패. 원본:', raw, '/ 정제 후:', jsonStr);
-    throw new Error('AI 응답 파싱 실패. 다시 시도해주세요.');
-  }
-
+  const parsed=await geminiRequest(prompt,schema,4096);
   if(!Array.isArray(parsed.items)) throw new Error('AI 응답 형식이 올바르지 않아요.');
 
   /* deadline이 빈 문자열이면 null로 정규화 */
@@ -1180,6 +1652,150 @@ ${text}
   }));
 
   return parsed;
+}
+
+/* ──── 온보딩 전용 Gemini 프롬프트/스키마 ──── */
+async function callGeminiOnboard(track,inputs){
+  const today=new Date().toISOString().split('T')[0];
+  return await geminiRequest(onboardPrompt(track,inputs,today), onboardSchema(track), 8192);
+}
+function onboardPrompt(t,inputs,today){
+  if(t==='team') return `당신은 팀 프로젝트 온보딩을 돕는 AI입니다. 아래 문서를 분석해서 마일스톤·역할·배점·1차 회의 아젠다를 JSON으로 설계하세요.
+
+[강의계획서]
+"""
+${inputs.syllabus}
+"""
+
+[과제 안내문]
+"""
+${inputs.brief}
+"""
+
+[팀원 정보 (선택)]
+"""
+${inputs.members||'(제공되지 않음)'}
+"""
+
+규칙:
+- 오늘 날짜는 ${today}입니다. 상대적 날짜 표현은 이 날짜 기준으로 YYYY-MM-DD로 변환하세요.
+- 강의계획서에 명시된 중간발표일·최종제출일 등 고정 날짜는 milestones에 그대로 반영하고 임의로 추정하지 마세요. 날짜를 알 수 없으면 dueDate는 null.
+- 과제 안내문에서 요구되는 산출물(보고서·PPT·시연영상 등)을 deliverable에 구체적으로 적으세요.
+- 평가 배점표가 있으면 rubric을 채우고, 각 마일스톤이 해당하는 배점 항목을 rubricCategory로 태깅하세요. 배점표가 없으면 rubric은 빈 배열로 두세요.
+- 산출물 종류로부터 필요한 역할(아이디어/자료조사, PPT 제작, 기술 공부, 개발, 발표 등)을 roles에 나열하세요.
+- 팀원 정보가 있으면 인원 수만큼 역할을 배분해 assignee를 채우고, 없으면 assignee는 null로 두세요.
+- firstMeetingAgenda는 5개 이내로, 첫 팀 회의에서 다룰 안건을 bullet 형태 문장으로 작성하세요.`;
+
+  if(t==='contest') return `당신은 공모전 참가 온보딩을 돕는 AI입니다. 아래 문서를 분석해서 역산 일정·심사기준 배점·체크리스트·인사이트·1차 회의 아젠다를 JSON으로 설계하세요.
+
+[모집요강]
+"""
+${inputs.guidelines}
+"""
+
+[심사기준]
+"""
+${inputs.rubric}
+"""
+
+[이전 수상작 (선택)]
+"""
+${inputs.pastWinners||'(제공되지 않음)'}
+"""
+
+규칙:
+- 오늘 날짜는 ${today}입니다.
+- 모집요강에서 제출 마감일을 찾아, 그 날짜로부터 역산해서 마일스톤을 설계하세요. (예: 마감 60일 전 아이디어 확정, 45일 전 프로토타입, 20일 전 발표자료, 7일 전 리허설 — 프로젝트 성격에 맞게 조정)
+- 각 마일스톤의 dueDate는 실제 YYYY-MM-DD로 계산해서 채우세요. 마감일을 찾을 수 없으면 dueDate는 null.
+- 심사기준의 배점 항목들을 rubric에 채우세요.
+- 이전 수상작 정보가 제공됐다면, 수상작들이 공통적으로 강조한 지점을 insights에 2~4개 문장으로 작성하세요. 정보가 없으면 빈 배열로 두세요.
+- 심사기준 각 항목에 대해 "현재 이 프로젝트가 이 항목을 충족하는지" 체크리스트를 만드세요. 아직 알 수 없으면 met은 false, notes에 "확인 필요"라고 적으세요.
+- firstMeetingAgenda는 5개 이내 bullet.`;
+
+  if(t==='club') return `당신은 동아리 활동 온보딩을 돕는 AI입니다. 아래 정보를 분석해서 행사 마일스톤·목표 마일스톤·예산 체크리스트·1차 회의 아젠다를 JSON으로 설계하세요.
+
+[작년 기수 활동내역]
+"""
+${inputs.history}
+"""
+
+[이번 학기 목표 (선택)]
+"""
+${inputs.goals||'(제공되지 않음)'}
+"""
+
+[예산 정보 (선택)]
+"""
+${inputs.budget||'(제공되지 않음)'}
+"""
+
+정기모임: 매주 요일코드 ${inputs.weekday}(0=일,1=월,2=화,3=수,4=목,5=금,6=토), 시작일 ${inputs.startDate}, 총 ${inputs.weeks}주
+
+규칙:
+- 오늘 날짜는 ${today}입니다.
+- recurringMeeting에는 위에 주어진 정기모임 정보를 그대로 반영하세요 (dayOfWeek, weeksCount는 숫자로).
+- 작년 기수 활동내역에서 반복되는 행사(MT, 정기공연, 전시회 등)를 찾아, 올해도 비슷한 시기에 있을 것으로 가정하고 eventMilestones에 준비 시작일(prepStartDate)과 행사 예상일(eventDate)을 추정해 넣으세요. 정확한 날짜를 모르면 notes에 "작년 대비 예상 시기"라고 설명하고 날짜는 null로 두세요.
+- 이번 학기 목표가 있으면 각각을 goalMilestones에 별도 항목으로 추가하세요.
+- 예산 정보가 있으면 항목별로 budgetChecklist를 채우세요. 없으면 빈 배열.
+- firstMeetingAgenda는 5개 이내 bullet.`;
+
+  return '';
+}
+function onboardSchema(t){
+  if(t==='team') return {
+    type:'object',
+    properties:{
+      milestones:{type:'array',items:{type:'object',properties:{
+        title:{type:'string'}, dueDate:{type:'string',nullable:true},
+        deliverable:{type:'string'}, rubricCategory:{type:'string',nullable:true}
+      },required:['title','deliverable']}},
+      roles:{type:'array',items:{type:'object',properties:{
+        role:{type:'string'}, assignee:{type:'string',nullable:true}, tasks:{type:'array',items:{type:'string'}}
+      },required:['role','tasks']}},
+      rubric:{type:'array',items:{type:'object',properties:{
+        category:{type:'string'}, weight:{type:'number'}
+      },required:['category','weight']}},
+      firstMeetingAgenda:{type:'array',items:{type:'string'}}
+    },
+    required:['milestones','roles','rubric','firstMeetingAgenda']
+  };
+  if(t==='contest') return {
+    type:'object',
+    properties:{
+      milestones:{type:'array',items:{type:'object',properties:{
+        title:{type:'string'}, dueDate:{type:'string',nullable:true}, deliverable:{type:'string'}
+      },required:['title','deliverable']}},
+      rubric:{type:'array',items:{type:'object',properties:{
+        category:{type:'string'}, weight:{type:'number'}
+      },required:['category','weight']}},
+      insights:{type:'array',items:{type:'string'}},
+      checklist:{type:'array',items:{type:'object',properties:{
+        item:{type:'string'}, met:{type:'boolean'}, notes:{type:'string'}
+      },required:['item','met']}},
+      firstMeetingAgenda:{type:'array',items:{type:'string'}}
+    },
+    required:['milestones','rubric','checklist','firstMeetingAgenda']
+  };
+  if(t==='club') return {
+    type:'object',
+    properties:{
+      recurringMeeting:{type:'object',properties:{
+        dayOfWeek:{type:'number'}, startDate:{type:'string',nullable:true}, weeksCount:{type:'number'}, notes:{type:'string'}
+      },required:['dayOfWeek','weeksCount']},
+      eventMilestones:{type:'array',items:{type:'object',properties:{
+        title:{type:'string'}, prepStartDate:{type:'string',nullable:true}, eventDate:{type:'string',nullable:true}, notes:{type:'string'}
+      },required:['title','notes']}},
+      goalMilestones:{type:'array',items:{type:'object',properties:{
+        title:{type:'string'}, targetDate:{type:'string',nullable:true}, notes:{type:'string'}
+      },required:['title']}},
+      budgetChecklist:{type:'array',items:{type:'object',properties:{
+        item:{type:'string'}, estimatedCost:{type:'number',nullable:true}, notes:{type:'string'}
+      },required:['item']}},
+      firstMeetingAgenda:{type:'array',items:{type:'string'}}
+    },
+    required:['recurringMeeting','eventMilestones','goalMilestones','budgetChecklist','firstMeetingAgenda']
+  };
+  return {type:'object',properties:{}};
 }
 
 /* ──── 업로드 결과 렌더링 ──── */
@@ -1324,13 +1940,14 @@ function saveHistory(result,text){
     date:new Date().toISOString()
   };
   history.unshift(e); if(history.length>10) history=history.slice(0,10);
-  localStorage.setItem('mf_history',JSON.stringify(history));
+  if(currentProject) localStorage.setItem('mf_history_'+currentProject.id,JSON.stringify(history));
   renderAll();
 }
 function renderAll(){
   renderOverview();
   renderAllActions();
   renderMembers();
+  renderMilestones();
   renderTaskFlow();
   renderBriefing();
 }
@@ -1492,14 +2109,6 @@ function renderBriefing(){
   const incomplete=all.filter(i=>i.status!=='done');
   const urgCt=upcoming.filter(i=>i.diff<=3).length;
 
-  function ddayHTML(diff){
-    if(diff<0)  return `<span class="dl-dday dd-urg">D+${Math.abs(diff)}</span>`;
-    if(diff===0)return `<span class="dl-dday dd-urg">D-DAY</span>`;
-    if(diff<=3) return `<span class="dl-dday dd-urg">D-${diff}</span>`;
-    if(diff<=7) return `<span class="dl-dday dd-soon">D-${diff}</span>`;
-    return       `<span class="dl-dday dd-ok">D-${diff}</span>`;
-  }
-
   wrap.innerHTML=`
     ${lastSum?`
     <div class="panel">
@@ -1609,7 +2218,172 @@ function renderBriefing(){
     </div>`;
 }
 
+/* 마일스톤 (1단계 온보딩 결과) */
+function renderMilestones(){
+  const wrap=document.getElementById('milestones-wrap');
+  if(!wrap||!currentProject) return;
+  if(currentProject.onboardStatus!=='done'||!currentProject.onboarding){
+    wrap.innerHTML=`
+      <div class="panel">
+        <div class="empty">
+          <div class="e-ico">🧭</div>
+          <h3>아직 온보딩을 완료하지 않았어요</h3>
+          <p>AI가 마일스톤과 다음 회의 아젠다를 준비하려면 온보딩을 먼저 진행해주세요.</p>
+          <button class="btn-pk" style="margin-top:18px;" onclick="gp('onboard')">✨ 온보딩 시작하기</button>
+        </div>
+      </div>`;
+    return;
+  }
+  wrap.innerHTML=milestonesHTML(currentProject);
+}
+function milestonesHTML(project){
+  const t=project.track, r=project.onboarding.result;
+  return t==='club' ? milestonesClubHTML(r) : milestonesLinearHTML(t,r);
+}
+function agendaPanelHTML(r){
+  const agenda=r.firstMeetingAgenda||[];
+  if(!agenda.length) return '';
+  return `
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📋 1차 회의 아젠다</div></div>
+      <ol style="padding-left:20px;font-size:13px;line-height:2;color:var(--text);">
+        ${agenda.map(a=>`<li>${a}</li>`).join('')}
+      </ol>
+    </div>`;
+}
+function milestonesLinearHTML(t,r){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const ms=(r.milestones||[])
+    .map(m=>({...m,_diff:m.dueDate?Math.ceil((new Date(m.dueDate)-today)/86400000):null}))
+    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
+
+  const msHTML=ms.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🧭 마일스톤</div></div>
+      <div class="dl-grid">
+        ${ms.map(m=>`
+          <div class="dl-card">
+            ${m._diff!=null?ddayHTML(m._diff):'<span class="dl-dday dd-ok">미정</span>'}
+            <div class="dl-task">${m.title}</div>
+            <div class="dl-who">${m.deliverable||m.rubricCategory||''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const rubricHTML=(r.rubric&&r.rubric.length)?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📊 평가 배점</div></div>
+      ${r.rubric.map(it=>`
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+            <span style="font-weight:600;">${it.category}</span><span>${it.weight}%</span>
+          </div>
+          <div class="prog-wrap"><div class="prog-fill" style="width:${it.weight}%"></div></div>
+        </div>`).join('')}
+    </div>`:'';
+
+  let sideHTML='';
+  if(t==='team'&&r.roles&&r.roles.length){
+    sideHTML=`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">👥 역할 분배</div></div>
+      ${r.roles.map(role=>`
+        <div class="mini-task">
+          <div class="av ${avCls(role.assignee||role.role)}" style="width:28px;height:28px;font-size:11px;">${(role.assignee||role.role||'?')[0]}</div>
+          <div class="mt-name">${role.role}${role.assignee?` — ${role.assignee}`:''}</div>
+        </div>`).join('')}
+    </div>`;
+  } else if(t==='contest'&&r.checklist&&r.checklist.length){
+    const items=r.checklist.map(c=>({task:c.item,assignee:null,deadline:null,status:c.met?'done':'todo',priority:'medium'}));
+    sideHTML=`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">✅ 심사기준 충족 체크리스트</div></div>
+      <div class="ac-grid">${items.map((it,i)=>acHTML(it,i,'ms-check')).join('')}</div>
+    </div>`;
+  }
+
+  const insightsHTML=(t==='contest'&&r.insights&&r.insights.length)?`
+    <div class="ai-rec">
+      <div class="ai-rec-hd">
+        <div class="ai-rec-ico">💡</div>
+        <div><div class="ai-rec-title">수상작 인사이트</div><div class="ai-rec-sub">이전 수상작 분석 기반</div></div>
+      </div>
+      ${r.insights.map(i=>`<div class="rec-item"><span class="rec-ico">✨</span><div class="rec-body"><div class="rec-desc">${i}</div></div></div>`).join('')}
+    </div>`:'';
+
+  return msHTML+`<div class="g2">${rubricHTML}${sideHTML}</div>`+insightsHTML+agendaPanelHTML(r);
+}
+function milestonesClubHTML(r){
+  const rm=r.recurringMeeting||{};
+  const wdNames=['일','월','화','수','목','금','토'];
+  const wd=wdNames[rm.dayOfWeek??2];
+  let nextHTML='';
+  if(rm.startDate){
+    const start=new Date(rm.startDate);
+    const today=new Date(); today.setHours(0,0,0,0);
+    const dow=Number(rm.dayOfWeek);
+    let next=new Date(Math.max(start.getTime(),today.getTime()));
+    while(next.getDay()!==dow) next.setDate(next.getDate()+1);
+    const diff=Math.ceil((next-today)/86400000);
+    const weeksCount=rm.weeksCount||15;
+    const weekNo=Math.min(weeksCount, Math.max(1, Math.floor((next-start)/(7*86400000))+1));
+    nextHTML=`
+      <div class="sum-banner">
+        <div class="sum-ico">🗓️</div>
+        <div>
+          <div class="sum-lbl">다음 정기모임</div>
+          <div class="sum-txt">매주 ${wd}요일 · ${next.toISOString().split('T')[0]} (${diff===0?'오늘':diff+'일 후'}) — ${weekNo}/${weeksCount}회차</div>
+        </div>
+      </div>
+      <div class="m-card" style="margin-bottom:16px;">
+        <div class="m-lbl">이번 학기 진행률</div>
+        <div class="m-val" style="color:var(--pk);">${weekNo}/${weeksCount}주</div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min(100,weekNo/weeksCount*100)}%"></div></div>
+      </div>`;
+  }
+
+  const evs=(r.eventMilestones||[]).map(e=>({title:e.title,date:e.prepStartDate||e.eventDate,note:e.notes}));
+  const goals=(r.goalMilestones||[]).map(g=>({title:g.title,date:g.targetDate,note:g.notes}));
+  const today=new Date(); today.setHours(0,0,0,0);
+  const all=[...evs,...goals]
+    .map(x=>({...x,_diff:x.date?Math.ceil((new Date(x.date)-today)/86400000):null}))
+    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
+
+  const evHTML=all.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🎪 행사·목표 마일스톤</div></div>
+      <div class="dl-grid">
+        ${all.map(x=>`
+          <div class="dl-card">
+            ${x._diff!=null?ddayHTML(x._diff):'<span class="dl-dday dd-ok">미정</span>'}
+            <div class="dl-task">${x.title}</div>
+            <div class="dl-who">${x.note||''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const budget=r.budgetChecklist||[];
+  const budgetHTML=budget.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">💰 예산 체크리스트</div></div>
+      ${budget.map(b=>`
+        <div class="mini-task">
+          <div class="mt-name">${b.item}</div>
+          <span class="bdg b-dl">${b.estimatedCost?b.estimatedCost+'원':'미정'}</span>
+        </div>`).join('')}
+    </div>`:'';
+
+  return nextHTML+evHTML+budgetHTML+agendaPanelHTML(r);
+}
+
 /* ──── 유틸 ──── */
+function ddayHTML(diff){
+  if(diff<0)  return `<span class="dl-dday dd-urg">D+${Math.abs(diff)}</span>`;
+  if(diff===0)return `<span class="dl-dday dd-urg">D-DAY</span>`;
+  if(diff<=3) return `<span class="dl-dday dd-urg">D-${diff}</span>`;
+  if(diff<=7) return `<span class="dl-dday dd-soon">D-${diff}</span>`;
+  return       `<span class="dl-dday dd-ok">D-${diff}</span>`;
+}
 function groupBy(items){
   const g={};
   items.forEach(it=>{ const n=it.assignee||'미지정'; if(!g[n]) g[n]=[]; g[n].push(it); });
@@ -1641,6 +2415,72 @@ function openCal(te,dl,ae){
 function closeCal(){ document.getElementById('cal-overlay').classList.remove('show'); }
 
 init();
+</script>
+
+<!-- ── Firebase Auth (Google 로그인) ── -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+  import { getAI, getGenerativeModel, GoogleAIBackend, Schema }
+    from "https://www.gstatic.com/firebasejs/12.9.0/firebase-ai.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAWwB4HOUK0mvsoK-QfdCt59R22kSAIYHw",
+    authDomain: "meetflow-fcfec.firebaseapp.com",
+    projectId: "meetflow-fcfec",
+    storageBucket: "meetflow-fcfec.firebasestorage.app",
+    messagingSenderId: "334342255147",
+    appId: "1:334342255147:web:2d327f57c0a5deac8df06e",
+  };
+
+  const app      = initializeApp(firebaseConfig);
+  const auth     = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  window.mfSignIn  = () => signInWithPopup(auth, provider);
+  window.mfSignOut = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    if (typeof window.handleAuthChange === 'function') window.handleAuthChange(user);
+  });
+
+  /* ── Firebase AI Logic (Gemini) — 사용자가 API 키를 넣지 않아도 동작 ── */
+  const ai = getAI(app, { backend: new GoogleAIBackend() });
+
+  /* 앱 코드의 플레인 JSON 스키마를 Firebase AI의 Schema 객체로 변환 */
+  function toFirebaseSchema(node){
+    if(!node || typeof node!=='object') return Schema.string();
+    const nullable = !!node.nullable;
+    switch(node.type){
+      case 'object': {
+        const properties={};
+        for(const [k,v] of Object.entries(node.properties||{})) properties[k]=toFirebaseSchema(v);
+        const required=node.required||[];
+        const optionalProperties=Object.keys(properties).filter(k=>!required.includes(k));
+        return Schema.object({ properties, optionalProperties, nullable });
+      }
+      case 'array':   return Schema.array({ items:toFirebaseSchema(node.items), nullable });
+      case 'number':  return Schema.number({ nullable });
+      case 'integer': return Schema.integer({ nullable });
+      case 'boolean': return Schema.boolean({ nullable });
+      default:        return Schema.string({ nullable });
+    }
+  }
+
+  window.mfGenerateJSON = async (prompt, plainSchema, maxOutputTokens = 4096) => {
+    const model = getGenerativeModel(ai, {
+      model: "gemini-3.6-flash",
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens,
+        responseMimeType: "application/json",
+        responseSchema: toFirebaseSchema(plainSchema)
+      }
+    });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  };
 </script>
 </body>
 </html>
