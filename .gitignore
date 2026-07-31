@@ -20,3 +20,9 @@ desktop.ini
 
 # 로그
 *.log
+
+# Cloud Functions
+node_modules/
+functions/node_modules/
+.firebase/
+firebase-debug.log
