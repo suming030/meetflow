@@ -58,7 +58,13 @@ function heroCta(){
 }
 function openLogin(){ document.getElementById('login-overlay').classList.add('show'); }
 function closeLogin(){ document.getElementById('login-overlay').classList.remove('show'); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLogin(); });
+/* Esc로 열려 있는 모달을 닫는다 */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  closeLogin();
+  if(typeof closeInvite==='function') closeInvite();
+  if(typeof closeJoin==='function')   closeJoin();
+});
 function loginFromModal(){
   closeLogin();
   signInGoogle('upload');

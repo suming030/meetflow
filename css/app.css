@@ -361,6 +361,24 @@
 .login-skip{margin-top:14px;font-size:12.5px;color:var(--hint);cursor:pointer;}
 .login-skip:hover{color:var(--muted);text-decoration:underline;}
 
+/* 초대 코드 — 토스트로 흘려보내면 안 되는 정보라 크게 보여주고 복사할 수 있게 한다 */
+.invite-code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:34px;font-weight:800;letter-spacing:.22em;text-indent:.22em;
+  color:var(--pk-dark);background:var(--pk-light);
+  border:1.5px dashed var(--bd-s);border-radius:14px;
+  padding:20px 12px;margin-bottom:18px;user-select:all;
+}
+.invite-input{
+  width:100%;padding:16px;margin-bottom:16px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:26px;font-weight:800;letter-spacing:.2em;text-align:center;
+  color:var(--text);background:var(--pk-bg);
+  border:1.5px solid var(--bd-s);border-radius:14px;transition:border-color .2s;
+}
+.invite-input:focus{outline:none;border-color:var(--pk);background:#fff;}
+.invite-input::placeholder{color:var(--hint);letter-spacing:.2em;}
+
 .cal-box{background:var(--surface);border-radius:22px;padding:30px;width:370px;max-width:92vw;box-shadow:0 28px 64px rgba(75,107,251,.18);animation:slideUp .25s ease;}
 .cal-task-lbl{font-size:12px;color:var(--muted);margin-bottom:5px;}
 .cal-task-name{font-size:14px;font-weight:600;padding:10px 14px;background:var(--pk-light);border-radius:10px;color:var(--pk-dark);margin-bottom:18px;}

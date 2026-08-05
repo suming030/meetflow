@@ -164,28 +164,62 @@ function makeInviteCode(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   /* 헷갈리는 O0I1 제외 */
   return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
 }
-async function promptJoinProject(){
+/* ── 초대 코드 보여주기 ──
+   토스트는 몇 초 뒤 사라져서 초대 코드처럼 옮겨 적어야 하는 정보에는 맞지 않는다.
+   모달로 띄워 두고 복사 버튼을 제공하며, 사이드바에서 언제든 다시 열 수 있다. */
+function showInviteCode(opts={}){
+  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return; }
+  if(!currentProject.inviteCode){ toast('이 프로젝트에는 초대 코드가 없어요.','error'); return; }
+  document.getElementById('invite-code').textContent=currentProject.inviteCode;
+  document.getElementById('invite-ttl').textContent=
+    opts.created?'프로젝트가 만들어졌어요! 🎉':'팀원을 초대하세요';
+  document.getElementById('invite-desc').innerHTML=
+    opts.created
+      ? `"${currentProject.name}"에 팀원을 초대하려면<br>아래 코드를 알려주세요. 나중에 사이드바에서 다시 볼 수 있어요.`
+      : '팀원이 이 코드를 입력하면<br>같은 프로젝트를 함께 보게 돼요.';
+  document.getElementById('invite-overlay').classList.add('show');
+}
+function closeInvite(){ document.getElementById('invite-overlay').classList.remove('show'); }
+async function copyInviteCode(){
+  const code=document.getElementById('invite-code').textContent;
+  try{
+    await navigator.clipboard.writeText(code);
+    toast('초대 코드를 복사했어요!','success');
+  }catch(e){
+    /* 클립보드 권한이 없을 수 있으니 직접 선택할 수 있게 안내 */
+    toast('복사에 실패했어요. 코드를 직접 선택해 복사해주세요.','error');
+  }
+}
+
+/* ── 초대 코드로 참여 ── */
+function promptJoinProject(){
   if(!currentUser){ openLogin(); return; }
-  const code=(prompt('팀원에게 받은 초대 코드를 입력하세요 (6자리)')||'').trim().toUpperCase();
-  if(!code) return;
+  document.getElementById('join-code-inp').value='';
+  document.getElementById('join-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('join-code-inp').focus(),50);
+}
+function closeJoin(){ document.getElementById('join-overlay').classList.remove('show'); }
+async function submitJoinProject(){
+  const code=(document.getElementById('join-code-inp').value||'').trim().toUpperCase();
+  if(code.length<6){ toast('6자리 코드를 입력해주세요.','error'); return; }
+  const btn=document.getElementById('join-btn');
+  btn.disabled=true; btn.textContent='참여하는 중...';
   try{
     const info=await window.mfDb.lookupInvite(code);
     if(!info){ toast('그런 초대 코드가 없어요. 다시 확인해주세요.','error'); return; }
-    if(projectsCache.some(p=>p.id===info.projectId)){ toast('이미 참여 중인 프로젝트예요.','info'); return; }
+    if(projectsCache.some(p=>p.id===info.projectId)){ toast('이미 참여 중인 프로젝트예요.','info'); closeJoin(); return; }
     await window.mfDb.joinProject(info.projectId, currentUser.uid);
     await syncProjects();
     renderProjectsGallery();
+    closeJoin();
     const joined=projectsCache.find(p=>p.id===info.projectId);
     toast(joined?`"${joined.name}"에 참여했어요! 🎉`:'프로젝트에 참여했어요!','success');
   }catch(e){
     console.error('[MeetFlow] 참여 실패', e);
     toast('참여하지 못했어요: '+e.message,'error');
+  }finally{
+    btn.disabled=false; btn.textContent='참여하기';
   }
-}
-function showInviteCode(){
-  if(!currentProject) return;
-  if(!currentProject.inviteCode){ toast('초대 코드가 아직 없어요.','error'); return; }
-  prompt('팀원에게 이 코드를 알려주세요', currentProject.inviteCode);
 }
 
 /* ──── 트랙 선택·프로젝트 생성 (0단계) ──── */
@@ -232,7 +266,8 @@ async function createProject(){
   try{
     await window.mfDb.saveProject(newProject);
     await window.mfDb.createInvite(inviteCode, newProject.id, currentUser.uid);
-    toast(`"${name}" 프로젝트가 만들어졌어요! 초대 코드: ${inviteCode} 🎉`,'success');
+    /* 초대 코드는 사라지면 안 되므로 토스트 대신 모달로 띄운다 */
+    showInviteCode({created:true});
   }catch(e){
     console.error('[MeetFlow] 프로젝트 생성 실패', e);
     toast('프로젝트를 저장하지 못했어요: '+e.message,'error');

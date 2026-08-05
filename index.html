@@ -509,6 +509,41 @@
   </div>
 </div>
 
+<!-- ── 초대 코드 모달 ── -->
+<div class="overlay" id="invite-overlay" onclick="if(event.target.id==='invite-overlay')closeInvite()">
+  <div class="login-box">
+    <div class="login-top">
+      <img src="assets/logo-horizontal.png" alt="MeetFlow">
+    </div>
+    <div class="login-body">
+      <h3 id="invite-ttl">팀원을 초대하세요</h3>
+      <p id="invite-desc">팀원이 이 코드를 입력하면<br>같은 프로젝트를 함께 보게 돼요.</p>
+      <div class="invite-code" id="invite-code">------</div>
+      <button class="btn-pk" style="width:100%;" onclick="copyInviteCode()">📋 코드 복사하기</button>
+      <div class="login-skip" onclick="closeInvite()">닫기</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 초대 코드로 참여 모달 ── -->
+<div class="overlay" id="join-overlay" onclick="if(event.target.id==='join-overlay')closeJoin()">
+  <div class="login-box">
+    <div class="login-top">
+      <img src="assets/logo-horizontal.png" alt="MeetFlow">
+    </div>
+    <div class="login-body">
+      <h3>초대 코드로 참여하기</h3>
+      <p>팀원에게 받은 6자리 코드를 입력하세요.</p>
+      <input type="text" id="join-code-inp" class="invite-input" placeholder="ABC123"
+             maxlength="6" autocomplete="off"
+             oninput="this.value=this.value.toUpperCase()"
+             onkeydown="if(event.key==='Enter') submitJoinProject()">
+      <button class="btn-pk" style="width:100%;" id="join-btn" onclick="submitJoinProject()">참여하기</button>
+      <div class="login-skip" onclick="closeJoin()">취소</div>
+    </div>
+  </div>
+</div>
+
 <!-- ── 캘린더 모달 ── -->
 <div class="overlay" id="cal-overlay" onclick="if(event.target.id==='cal-overlay')closeCal()">
   <div class="cal-box">
