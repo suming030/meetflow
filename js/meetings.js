@@ -172,6 +172,10 @@ async function saveHistory(result,text){
     text:text.slice(0,40)+(text.length>40?'…':''),
     summary:result.summary,
     items:(result.items||[]).map((it,i)=>({...it, id:'i'+stamp+'_'+i})),
+    /* 회의 타임라인에서 "몇 차 회의에서 무엇이 이어졌는지"를 되짚으려면
+       분석 당시의 판단을 회의 문서에 함께 남겨야 한다. */
+    carriedOver:result.carriedOver||[],
+    gaps:result.gaps||[],
     date:new Date().toISOString(),
     createdBy:currentUser?currentUser.uid:null,
     createdByName:currentUser?(currentUser.displayName||currentUser.email||''):''
