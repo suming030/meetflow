@@ -6,4 +6,334 @@
      provider.addScope('https://www.googleapis.com/auth/calendar.events');
      const token = GoogleAuthProvider.credentialFromResult(result).accessToken;
    주의: 액세스 토큰은 약 1시간 뒤 만료되고 자동 갱신되지 않는다.
-        만료되면 재로그인을 유도해야 한다. */
+        만료되면 재로그인을 유도해야 한다.
+
+   구현 범위 (1차 과제)
+   - Action Item 캘린더 등록: 기존엔 링크만 열어줬는데(utils.js의 openCal),
+     여기서 openCal을 다시 선언해 실제 Calendar API 호출로 바꾼다.
+     (이 파일이 index.html에서 utils.js보다 나중에 로드되므로 마지막 선언이 이긴다.)
+   - 회의록 Google Docs 내보내기: 업로드 결과 패널(#result-wrap)에 버튼을
+     JS로 동적 주입해서 넣는다. index.html은 건드리지 않는다.
+
+   ⚠️ 이 파일은 내 담당(기능 D)만 수정한다. 다른 파일 로직은 여기서
+      "덮어쓰기"로만 확장하고, index.html/dashboard.js/utils.js는 손대지 않는다. */
+
+/* ════════════════════════════════════════
+   1) 구글 액세스 토큰 관리
+   ════════════════════════════════════════ */
+
+/* Calendar 일정 등록 + Docs 문서 생성/편집에 필요한 최소 스코프 */
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/documents',
+];
+
+const GOOGLE_TOKEN_KEY     = 'mf_google_access_token';
+const GOOGLE_TOKEN_EXP_KEY = 'mf_google_access_token_exp';
+/* 구글 액세스 토큰은 보통 1시간 뒤 만료된다고 안내돼 있어서, 안전하게 55분으로 캐시한다 */
+const GOOGLE_TOKEN_TTL_MS = 55 * 60 * 1000;
+
+/* index.html의 <script type="module">이 이미 같은 URL로 firebase-app/auth를
+   로드해 두므로, 브라우저 모듈 캐시 덕분에 아래 동적 import는 네트워크 요청 없이
+   바로 재사용된다. 클릭 시점에 지연 없이 쓰려고 스크립트 로드 시점에 미리 시작해둔다. */
+const _mfFirebaseModules = Promise.all([
+  import('https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js'),
+  import('https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js'),
+]);
+/* 아직 아무 버튼도 안 눌렀는데 프리페치가 실패하면(네트워크 차단 등) 콘솔에 시끄러운
+   "Uncaught (in promise)"가 뜨는 것만 막는다 — 실제 에러 처리는 getGoogleAccessToken에서 함 */
+_mfFirebaseModules.catch(() => {});
+
+function clearGoogleToken(){
+  sessionStorage.removeItem(GOOGLE_TOKEN_KEY);
+  sessionStorage.removeItem(GOOGLE_TOKEN_EXP_KEY);
+}
+
+/* 캐시된 토큰이 있으면 그대로, 없거나 만료됐으면 팝업으로 동의 받아 새로 발급.
+   이미 로그인된 사용자면 reauthenticateWithPopup으로 "추가 동의"만 받는다
+   (완전히 새로 로그인시키지 않음 — Firebase가 권장하는 증분 권한 부여 방식). */
+async function getGoogleAccessToken(){
+  const cached = sessionStorage.getItem(GOOGLE_TOKEN_KEY);
+  const exp = Number(sessionStorage.getItem(GOOGLE_TOKEN_EXP_KEY) || 0);
+  if(cached && Date.now() < exp) return cached;
+
+  const [{ getApp }, { getAuth, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup }] =
+    await _mfFirebaseModules;
+
+  const auth = getAuth(getApp());
+  const provider = new GoogleAuthProvider();
+  GOOGLE_SCOPES.forEach(scope => provider.addScope(scope));
+  /* 캘린더/문서 권한에 실제로 동의했는지 매번 확인 */
+  provider.setCustomParameters({ prompt: 'consent' });
+
+  let result;
+  try{
+    result = auth.currentUser
+      ? await reauthenticateWithPopup(auth.currentUser, provider)
+      : await signInWithPopup(auth, provider);
+  }catch(e){
+    if(e && e.code === 'auth/popup-closed-by-user'){
+      throw new Error('권한 동의 창이 닫혔어요. 다시 시도해주세요.');
+    }
+    throw new Error('구글 인증에 실패했어요: ' + (e && e.message ? e.message : e));
+  }
+
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  const token = credential && credential.accessToken;
+  if(!token) throw new Error('구글 액세스 토큰을 받지 못했어요. 캘린더/문서 권한 동의가 필요해요.');
+
+  sessionStorage.setItem(GOOGLE_TOKEN_KEY, token);
+  sessionStorage.setItem(GOOGLE_TOKEN_EXP_KEY, String(Date.now() + GOOGLE_TOKEN_TTL_MS));
+  return token;
+}
+
+/* Calendar/Docs 공통 REST 호출 헬퍼. 401(토큰 만료)이면 캐시를 지우고 한 번만
+   재발급 받아 재시도한다. */
+async function googleApiRequest(url, options = {}, _retry = true){
+  const token = await getGoogleAccessToken();
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  if(res.status === 401 && _retry){
+    clearGoogleToken();
+    return googleApiRequest(url, options, false);
+  }
+  if(!res.ok){
+    let msg = `요청이 실패했어요 (${res.status})`;
+    try{
+      const body = await res.json();
+      if(body && body.error && body.error.message) msg = body.error.message;
+    }catch(_){ /* 응답이 JSON이 아니면 기본 메시지 사용 */ }
+    throw new Error(msg);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+/* ════════════════════════════════════════
+   2) Google Calendar — Action Item 실제 등록
+   ════════════════════════════════════════
+   utils.js의 openCal은 링크만 열어주는 버전이었다. 이 파일이 나중에 로드되므로
+   같은 이름으로 다시 선언해 실제 등록 동작으로 덮어쓴다(모달 UI는 그대로 재사용). */
+function openCal(te, dl, ae){
+  const task = decodeURIComponent(te), assignee = decodeURIComponent(ae);
+
+  const nameEl = document.getElementById('cal-task-name');
+  if(nameEl) nameEl.textContent = (assignee ? assignee + ' – ' : '') + task;
+
+  const linkEl = document.getElementById('cal-google');
+  if(linkEl){
+    linkEl.removeAttribute('href');
+    linkEl.removeAttribute('target');
+    linkEl.style.cursor = 'pointer';
+    linkEl.innerHTML = '<span style="font-size:20px;">📅</span> Google 캘린더에 등록';
+    linkEl.onclick = (e) => { e.preventDefault(); registerCalendarEvent(task, dl, assignee, linkEl); };
+  }
+
+  const overlay = document.getElementById('cal-overlay');
+  if(overlay) overlay.classList.add('show');
+}
+
+async function registerCalendarEvent(task, deadline, assignee, linkEl){
+  if(!currentUser){
+    toast('먼저 구글 로그인을 해주세요.', 'error');
+    closeCal(); openLogin();
+    return;
+  }
+
+  const original = linkEl.innerHTML;
+  linkEl.innerHTML = '<span style="font-size:20px;">⏳</span> 등록 중...';
+  linkEl.style.pointerEvents = 'none';
+
+  try{
+    const event = buildCalendarEvent(task, deadline, assignee);
+    const data = await googleApiRequest(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+      { method: 'POST', body: JSON.stringify(event) }
+    );
+    toast('📅 Google 캘린더에 일정이 등록됐어요!', 'success');
+    closeCal();
+    if(data && data.htmlLink) window.open(data.htmlLink, '_blank');
+  }catch(e){
+    console.error('[MeetFlow][google.js] 캘린더 등록 실패:', e);
+    toast('캘린더 등록 실패: ' + e.message, 'error');
+  }finally{
+    linkEl.innerHTML = original;
+    linkEl.style.pointerEvents = '';
+  }
+}
+
+function buildCalendarEvent(task, deadline, assignee){
+  const summary = (assignee ? assignee + ' – ' : '') + task;
+  const description = [
+    task,
+    assignee ? `담당자: ${assignee}` : null,
+    'MeetFlow에서 자동 등록된 일정입니다.',
+  ].filter(Boolean).join('\n');
+
+  if(deadline){
+    /* 마감일 당일 오전 9시~10시 일정으로 등록 (KST 고정) */
+    return {
+      summary, description,
+      start: { dateTime: `${deadline}T09:00:00+09:00` },
+      end:   { dateTime: `${deadline}T10:00:00+09:00` },
+    };
+  }
+  /* calBtn은 item.deadline이 있을 때만 노출되므로 실제로는 거의 안 타지만,
+     방어적으로 내일 종일 일정으로 대체 */
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const ds = d.toISOString().slice(0, 10);
+  return { summary, description, start: { date: ds }, end: { date: ds } };
+}
+
+/* ════════════════════════════════════════
+   3) Google Docs — 회의록 내보내기
+   ════════════════════════════════════════
+   index.html을 건드리지 않고, 분석 결과 패널(#result-wrap)의 패널 헤더에
+   버튼을 동적으로 주입한다. */
+const PRIO_KR = { high: '높음', medium: '보통', low: '낮음' };
+
+function injectExportButton(){
+  if(document.getElementById('mf-export-docs-btn')) return; /* 중복 주입 방지 */
+  const panelHd = document.querySelector('#result-wrap .panel-hd');
+  if(!panelHd) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'mf-export-docs-btn';
+  btn.className = 'btn-ghost btn-pk-sm';
+  btn.textContent = '📄 회의록 Docs로 내보내기';
+  btn.onclick = exportMeetingToDocs;
+
+  const dashBtn = panelHd.querySelector('button');
+  if(dashBtn && dashBtn.parentNode === panelHd){
+    /* panel-hd가 justify-content:space-between이라 버튼 두 개를 한 그룹으로 묶는다 */
+    const group = document.createElement('div');
+    group.style.display = 'flex';
+    group.style.gap = '8px';
+    group.style.alignItems = 'center';
+    panelHd.insertBefore(group, dashBtn);
+    group.appendChild(btn);
+    group.appendChild(dashBtn);
+  } else {
+    panelHd.appendChild(btn);
+  }
+}
+
+async function exportMeetingToDocs(){
+  if(!currentUser){ toast('먼저 구글 로그인을 해주세요.', 'error'); openLogin(); return; }
+
+  /* meetings.js의 analyze()는 renderUpResult 직후 saveHistory를 호출해서
+     history[0]에 방금 화면에 표시된 분석 결과를 넣어둔다 */
+  const meeting = (typeof history !== 'undefined') ? history[0] : null;
+  if(!meeting){
+    toast('내보낼 회의 분석 결과가 없어요. 먼저 회의를 분석해주세요.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('mf-export-docs-btn');
+  const original = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
+
+  try{
+    const title = `MeetFlow 회의록 – ${formatDateKR(meeting.date)}`;
+    const doc = await googleApiRequest('https://docs.googleapis.com/v1/documents', {
+      method: 'POST', body: JSON.stringify({ title }),
+    });
+    const documentId = doc.documentId;
+
+    const requests = buildDocsRequests(meeting);
+    await googleApiRequest(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+      method: 'POST', body: JSON.stringify({ requests }),
+    });
+
+    toast('📄 회의록이 Google Docs로 내보내졌어요!', 'success');
+    window.open(`https://docs.google.com/document/d/${documentId}/edit`, '_blank');
+  }catch(e){
+    console.error('[MeetFlow][google.js] Docs 내보내기 실패:', e);
+    toast('회의록 내보내기 실패: ' + e.message, 'error');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = original; }
+  }
+}
+
+function formatDateKR(iso){
+  try{ return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch(_){ return iso || ''; }
+}
+
+/* summary + action items를 하나의 텍스트로 합치고, 제목/소제목엔 헤딩 스타일,
+   Action Items 목록엔 글머리 기호를 적용하는 Docs batchUpdate 요청을 만든다. */
+function buildDocsRequests(meeting){
+  const items = meeting.items || [];
+  const lines = [];
+  const add = (text, style) => lines.push({ text, style });
+
+  add('MeetFlow 회의록', 'HEADING_1');
+  add(`생성일: ${formatDateKR(meeting.date)}`, null);
+  add('', null);
+  add('핵심 안건 요약', 'HEADING_2');
+  add(meeting.summary || '(요약 없음)', null);
+  add('', null);
+  add(`Action Items (${items.length}개)`, 'HEADING_2');
+
+  const itemStartLine = lines.length;
+  items.forEach(it => {
+    const parts = [];
+    if(it.assignee && it.assignee !== '미지정') parts.push(`[${it.assignee}]`);
+    parts.push(it.task || '');
+    if(it.deadline) parts.push(`(마감 ${it.deadline})`);
+    if(it.priority) parts.push(`· 우선순위 ${PRIO_KR[it.priority] || it.priority}`);
+    add(parts.join(' '), null);
+  });
+  if(!items.length) add('(추출된 Action Item이 없어요)', null);
+
+  /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
+     Docs 문서 본문은 index 1부터 시작한다. */
+  let cursor = 1, fullText = '';
+  const ranges = lines.map(l => {
+    const start = cursor;
+    const seg = l.text + '\n';
+    cursor += seg.length;
+    fullText += seg;
+    return { start, end: start + l.text.length, style: l.style };
+  });
+
+  const requests = [{ insertText: { location: { index: 1 }, text: fullText } }];
+
+  ranges.forEach(r => {
+    if(r.style){
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: r.start, endIndex: r.end },
+          paragraphStyle: { namedStyleType: r.style },
+          fields: 'namedStyleType',
+        },
+      });
+    }
+  });
+
+  if(items.length){
+    requests.push({
+      createParagraphBullets: {
+        range: { startIndex: ranges[itemStartLine].start, endIndex: ranges[ranges.length - 1].end },
+        bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+      },
+    });
+  }
+
+  return requests;
+}
+
+/* ════════════════════════════════════════
+   4) 초기화
+   ════════════════════════════════════════
+   이 스크립트는 index.html에서 #result-wrap 마크업보다 뒤에 로드되므로
+   바로 호출해도 되지만, 혹시 모를 순서 변경에 대비해 DOMContentLoaded에도
+   한 번 더 걸어둔다(injectExportButton은 중복 실행에 안전하다). */
+injectExportButton();
+document.addEventListener('DOMContentLoaded', injectExportButton);
