@@ -1,0 +1,75 @@
+/* MeetFlow — 디자인 토큰 + 공용 컴포넌트 + 내비게이션
+   소유자: 디자인 A. 여기 값이 앱 전체의 기준이 된다.
+   다른 담당자는 직접 고치지 말고 A에게 요청할 것. */
+
+/* ═══════════════════════════════════════
+   CSS 변수 — 파랑→보라 테마 (로고 그라데이션과 동일 계열)
+   --pk(파랑)와 --pk-dark(보라)가 앱 전역의 그라데이션 양 끝을 이룬다.
+═══════════════════════════════════════ */
+:root {
+  --pk:          #4B6BFB;
+  --pk-dark:     #7C3AED;
+  --pk-mid:      #A5B0FC;
+  --pk-light:    #EEF0FE;
+  --pk-bg:       #F7F8FF;
+  --teal:        #1D9E75; --teal-lt:   #E1F5EE;
+  --amber:       #C07820; --amber-lt:  #FBF0DA;
+  --blue:        #0E7C94; --blue-lt:   #E0F2F7;
+  --green:       #3B6D11; --green-lt:  #EAF3DE;
+  --red:         #A32D2D; --red-lt:    #FCEBEB;
+  --violet:      #B026C4; --violet-lt: #FAE9FC;
+  --bg:          #F7F8FF;
+  --surface:     #FFFFFF;
+  --bd:          rgba(75,107,251,.10);
+  --bd-s:        rgba(75,107,251,.22);
+  --text:        #15173A;
+  --muted:       #5A5F87;
+  --hint:        #A8ADCC;
+  --shadow-pk:   0 4px 18px rgba(124,58,237,.24);
+  --shadow-card: 0 2px 12px rgba(75,107,251,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;}
+
+/* ── 공통 버튼 ── */
+.btn-pk   {padding:12px 26px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:var(--shadow-pk);}
+.btn-pk:hover{opacity:.88;transform:translateY(-1px);}
+.btn-pk-sm{padding:8px 18px;font-size:13px;border-radius:9px;}
+.btn-out  {padding:12px 26px;background:transparent;border:1.5px solid var(--bd-s);border-radius:12px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-out:hover{border-color:var(--pk);color:var(--pk);}
+.btn-ghost{padding:8px 16px;background:transparent;border:1.5px solid var(--bd-s);border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--pk-mid);color:var(--pk-dark);}
+.btn-white{padding:14px 34px;background:#fff;color:var(--pk-dark);border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,.14);transition:all .2s;}
+.btn-white:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.18);}
+
+/* ── 페이지 토글 ── */
+.page{display:none;}.page.active{display:block;}
+.tab{display:none;}.tab.active{display:block;}
+
+/* ══════════════════════
+   NAV
+══════════════════════ */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 44px;height:64px;
+  background:rgba(255,255,255,.92);
+  border-bottom:1px solid var(--bd);
+  position:sticky;top:0;z-index:300;
+  backdrop-filter:blur(12px);
+  box-shadow:0 1px 14px rgba(75,107,251,.06);
+}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;cursor:pointer;color:var(--text);}
+.nav-logo-img{height:26px;width:auto;display:block;}
+.hero-logo{height:56px;width:auto;display:block;margin:0 auto 24px;}
+.logo-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(124,58,237,.35);}
+.nav-links{display:flex;gap:28px;font-size:14px;color:var(--muted);}
+.nav-links span{cursor:pointer;transition:color .2s;font-weight:500;}
+.nav-links span:hover{color:var(--pk);}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-project{font-size:12px;font-weight:700;color:var(--pk-dark);background:var(--pk-light);border:1px solid var(--bd-s);padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s;}
+.nav-project:hover{background:var(--pk);color:#fff;}
+.user-chip{display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;background:var(--pk-bg);border:1px solid var(--bd-s);border-radius:20px;cursor:pointer;transition:all .2s;}
+.user-chip:hover{border-color:var(--pk);background:var(--pk-light);}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--pk-light);flex-shrink:0;}
+.user-name{font-size:12.5px;font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

@@ -1,0 +1,129 @@
+/* MeetFlow — 랜딩 페이지 전용 (히어로 / 기능 카드 / 연동 배지 / CTA)
+   소유자: 디자인 A */
+
+/* ══════════════════════
+   LANDING — HERO
+══════════════════════ */
+.hero{
+  text-align:center;padding:100px 40px 80px;
+  background:linear-gradient(160deg,#f4f5ff 0%,#fff 55%,#f6f0ff 100%);
+  border-bottom:1px solid var(--bd);position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-120px;right:-120px;
+  width:480px;height:480px;border-radius:50%;
+  background:radial-gradient(circle,rgba(75,107,251,.12),transparent 70%);pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-80px;left:-80px;
+  width:320px;height:320px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.10),transparent 70%);pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--pk-light);color:var(--pk-dark);
+  font-size:13px;font-weight:600;padding:6px 18px;
+  border-radius:20px;margin-bottom:28px;border:1px solid var(--bd-s);
+}
+.hero h1{font-size:50px;font-weight:800;line-height:1.18;margin-bottom:22px;letter-spacing:-1.8px;}
+.hero h1 em{color:var(--pk);font-style:normal;}
+.hero p{font-size:17px;color:var(--muted);line-height:1.85;max-width:540px;margin:0 auto 40px;}
+.hero-btns{display:flex;gap:12px;justify-content:center;margin-bottom:64px;}
+
+/* 히어로 제품 미리보기 */
+.hero-preview{
+  max-width:860px;margin:0 auto;
+  background:var(--surface);border:1px solid var(--bd-s);
+  border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(75,107,251,.14);
+  position:relative;z-index:1;
+}
+.hp-bar{
+  background:linear-gradient(90deg,var(--pk),var(--pk-dark));
+  height:8px;
+}
+.hp-chrome{
+  display:flex;align-items:center;gap:8px;padding:12px 16px;
+  background:#f2f3ff;border-bottom:1px solid var(--bd);
+}
+.hp-dot{width:10px;height:10px;border-radius:50%;}
+.hp-url{flex:1;background:#fff;border:1px solid var(--bd);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--hint);text-align:left;}
+.hp-body{display:flex;height:260px;}
+.hp-sidebar{width:160px;flex-shrink:0;border-right:1px solid var(--bd);padding:14px 8px;background:var(--surface);}
+.hp-sb-logo{display:flex;align-items:center;gap:6px;padding:8px;font-size:12px;font-weight:700;margin-bottom:12px;}
+.hp-sb-ico{width:22px;height:22px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.hp-sb-item{padding:7px 8px;border-radius:7px;font-size:11px;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+.hp-sb-item.a{background:var(--pk-light);color:var(--pk-dark);font-weight:600;}
+.hp-main{flex:1;padding:16px;background:var(--bg);overflow:hidden;}
+.hp-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.hp-mc{background:var(--surface);border:1px solid var(--bd);border-radius:9px;padding:10px;text-align:center;}
+.hp-mc-v{font-size:18px;font-weight:800;}
+.hp-mc-l{font-size:9px;color:var(--muted);margin-top:2px;}
+.hp-cards{display:flex;flex-direction:column;gap:6px;}
+.hp-card{background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:11px;}
+.hp-ck{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--bd-s);flex-shrink:0;}
+.hp-ck.d{background:var(--teal);border-color:var(--teal);}
+.hp-bdg{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;}
+.hp-bdg.pk{background:var(--pk-light);color:var(--pk-dark);}
+.hp-bdg.am{background:var(--amber-lt);color:var(--amber);}
+.hp-bdg.tl{background:var(--teal-lt);color:var(--teal);}
+.hp-bdg.bl{background:var(--blue-lt);color:var(--blue);}
+
+/* ══════════════════════
+   LANDING — 섹션들
+══════════════════════ */
+.section-wrap{padding:72px 40px;max-width:1100px;margin:0 auto;}
+.section-wrap.full{max-width:100%;padding:72px 0;}
+.sec-ttl{text-align:center;font-size:32px;font-weight:800;margin-bottom:10px;letter-spacing:-.6px;}
+.sec-sub{text-align:center;font-size:15px;color:var(--muted);margin-bottom:46px;}
+
+/* 기능 카드 */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.feat-card{
+  background:var(--surface);border:1px solid var(--bd);border-radius:18px;padding:28px;
+  transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;
+}
+/* 아직 구현되지 않은 기능 표시 */
+.feat-soon{
+  position:absolute;top:18px;right:18px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  padding:4px 10px;border-radius:20px;
+  background:var(--pk-light);color:var(--pk-dark);
+}
+.feat-card:hover{border-color:var(--pk-mid);transform:translateY(-5px);box-shadow:0 10px 32px rgba(124,58,237,.15);}
+.track-card{cursor:pointer;}
+.track-card.sel{border-color:var(--pk);background:var(--pk-light);box-shadow:0 10px 32px rgba(124,58,237,.17);}
+.feat-ico{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;}
+.feat-card h3{font-size:15px;font-weight:700;margin-bottom:9px;}
+.feat-card p{font-size:13px;color:var(--muted);line-height:1.75;}
+
+/* Google Workspace 배지 */
+.gw-section{background:var(--surface);padding:44px 40px;border-top:1px solid var(--bd);text-align:center;}
+.gw-label{font-size:13px;color:var(--hint);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:22px;}
+.gw-logos{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.gw-badge{
+  display:flex;align-items:center;gap:9px;padding:10px 20px;
+  background:var(--bg);border:1px solid var(--bd-s);border-radius:12px;
+  font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;
+}
+.gw-badge:hover{border-color:var(--pk);color:var(--pk-dark);background:var(--pk-light);}
+.gw-badge .ico{font-size:20px;}
+
+/* CTA — 전체 폭 배너 대신 여백을 둔 둥근 카드 */
+.cta-sec{padding:20px 24px 84px;background:var(--bg);}
+.cta-card{
+  max-width:840px;margin:0 auto;text-align:center;
+  padding:66px 40px;border-radius:28px;
+  background:linear-gradient(135deg,var(--pk),var(--pk-dark));
+  position:relative;overflow:hidden;
+  box-shadow:0 24px 60px rgba(124,58,237,.28);
+}
+/* 딱딱한 그라데이션을 풀어주는 은은한 광원 */
+.cta-card::before{
+  content:'';position:absolute;top:-40%;left:-10%;
+  width:70%;height:180%;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);
+  pointer-events:none;
+}
+.cta-card > *{position:relative;}
+.cta-card h2{font-size:33px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:14px;}
+.cta-card p{font-size:15.5px;color:rgba(255,255,255,.86);line-height:1.8;margin-bottom:34px;}

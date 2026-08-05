@@ -1,0 +1,564 @@
+/* MeetFlow — 대시보드 렌더링 (개요/Action Items/담당자별/마일스톤/Task Flow/브리핑)
+   소유자: 디자인 B */
+
+/* ──── 통계 ──── */
+function calcStats(items){
+  return {
+    total:  items.length,
+    persons:new Set(items.filter(i=>i.assignee&&i.assignee!=='미지정').map(i=>i.assignee)).size,
+    dlCt:   items.filter(i=>i.deadline).length,
+    done:   items.filter(i=>i.status==='done').length,
+    rate:   items.length?Math.round(items.filter(i=>i.status==='done').length/items.length*100):0,
+  };
+}
+
+/* ──── HTML 빌더들 ──── */
+function metricsHTML(s,pfx){
+  return `
+    <div class="m-card"><div class="m-lbl">Action Items</div><div class="m-val" style="color:var(--pk)" id="mv-total-${pfx}">${s.total}</div><div class="m-sub">이번 회의 총 업무</div></div>
+    <div class="m-card"><div class="m-lbl">담당자</div><div class="m-val" style="color:var(--teal)">${s.persons}명</div><div class="m-sub">업무 배정 인원</div></div>
+    <div class="m-card"><div class="m-lbl">마감일 명시</div><div class="m-val" style="color:var(--amber)">${s.dlCt}개</div><div class="m-sub">기한이 있는 업무</div></div>
+    <div class="m-card"><div class="m-lbl">완료율</div><div class="m-val" style="color:var(--violet)" id="mv-rate-${pfx}">${s.rate}%</div><div class="prog-wrap"><div class="prog-fill" id="pf-${pfx}" style="width:${s.rate}%"></div></div></div>`;
+}
+
+function renderWarn(items,bid,tid){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const urg=items.filter(i=>{
+    if(!i.deadline) return false;
+    const diff=Math.ceil((new Date(i.deadline)-today)/86400000);
+    return diff>=0&&diff<=3;
+  });
+  const b=document.getElementById(bid);
+  if(!b) return;
+  if(urg.length){
+    b.style.display='flex';
+    document.getElementById(tid).textContent=`⚠️ ${urg.length}개 업무의 마감이 3일 이내예요: ${urg.map(i=>i.task).join(' · ')}`;
+  } else b.style.display='none';
+}
+
+function asSummaryHTML(items){
+  const g=groupBy(items);
+  return Object.entries(g).map(([name,tasks])=>`
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div class="av ${avCls(name)}" style="width:28px;height:28px;font-size:11px;">${name[0]}</div>
+        <div style="font-size:13px;font-weight:700;">${name}</div>
+        <div style="font-size:11px;color:var(--muted);">업무 ${tasks.length}개</div>
+      </div>
+      ${tasks.map(t=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);">
+          <div style="flex:1;font-size:12px;">${t.task}</div>
+          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">📅 ${t.deadline}</span>`:''}
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function prioChartHTML(items){
+  const h=items.filter(i=>i.priority==='high').length;
+  const m=items.filter(i=>i.priority==='medium').length;
+  const l=items.filter(i=>i.priority==='low').length;
+  const total=items.length||1;
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+          <span style="color:var(--red);font-weight:700;">🔴 높음</span><span>${h}개</span>
+        </div>
+        <div class="prog-wrap" style="background:var(--red-lt);"><div style="height:100%;width:${h/total*100}%;background:var(--red);border-radius:99px;transition:width .8s;"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+          <span style="color:var(--amber);font-weight:700;">🟡 보통</span><span>${m}개</span>
+        </div>
+        <div class="prog-wrap" style="background:var(--amber-lt);"><div style="height:100%;width:${m/total*100}%;background:var(--amber);border-radius:99px;transition:width .8s;"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+          <span style="color:var(--green);font-weight:700;">🟢 낮음</span><span>${l}개</span>
+        </div>
+        <div class="prog-wrap" style="background:var(--green-lt);"><div style="height:100%;width:${l/total*100}%;background:var(--green);border-radius:99px;transition:width .8s;"></div></div>
+      </div>
+    </div>`;
+}
+
+function acHTML(item,idx,pfx){
+  const pid=pfx+'-'+idx, st=item.status||'todo';
+  const prio=item.priority||'medium';
+  const calBtn=item.deadline
+    ?`<button class="ico-btn" title="캘린더에 추가" onclick="openCal('${esc(item.task)}','${item.deadline}','${esc(item.assignee||'')}')">📅</button>`:'';
+  return `
+    <div class="ac" id="ac-${pid}">
+      <div class="prio-bar prio-${prio[0]}"></div>
+      <div class="ac-chk" id="ck-${pid}" onclick="toggleCk('${pid}')"></div>
+      <div class="ac-body">
+        <div class="ac-task" id="t-${pid}">${item.task}</div>
+        <div class="ac-meta">
+          ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
+          ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}
+          <span class="st-bdg ${ST.cls[st]}" id="st-${pid}" data-st="${st}" onclick="cycleSt('${pid}')">${ST.ico[st]} ${ST.lbl[st]}</span>
+        </div>
+      </div>
+      <div class="ac-right">${calBtn}</div>
+    </div>`;
+}
+
+/* ──── 체크·상태 ──── */
+function toggleCk(pid){
+  const ck=document.getElementById('ck-'+pid), t=document.getElementById('t-'+pid);
+  const done=ck.classList.toggle('ck');
+  ck.textContent=done?'✓':''; t.classList.toggle('done',done);
+  setSt(pid, done?'done':'todo');
+}
+function cycleSt(pid){
+  const el=document.getElementById('st-'+pid), cur=el.dataset.st||'todo';
+  setSt(pid, ST.cycle[(ST.cycle.indexOf(cur)+1)%3]);
+}
+function setSt(pid,st){
+  const el=document.getElementById('st-'+pid); if(!el) return;
+  el.dataset.st=st; el.className=`st-bdg ${ST.cls[st]}`; el.textContent=`${ST.ico[st]} ${ST.lbl[st]}`;
+}
+
+/* ──── 이력 저장·렌더 ──── */
+function saveHistory(result,text){
+  const e={
+    id:Date.now(),
+    text:text.slice(0,40)+(text.length>40?'…':''),
+    summary:result.summary, items:result.items,
+    date:new Date().toISOString()
+  };
+  history.unshift(e); if(history.length>10) history=history.slice(0,10);
+  if(currentProject) localStorage.setItem('mf_history_'+currentProject.id,JSON.stringify(history));
+  renderAll();
+}
+function renderAll(){
+  renderOverview();
+  renderAllActions();
+  renderMembers();
+  renderMilestones();
+  renderTaskFlow();
+  renderBriefing();
+}
+
+/* 대시보드 개요 */
+function renderOverview(){
+  if(!history.length){
+    document.getElementById('ov-empty').style.display='block';
+    document.getElementById('ov-content').style.display='none';
+    document.getElementById('sb-cnt-total').style.display='none';
+    return;
+  }
+  document.getElementById('ov-empty').style.display='none';
+  document.getElementById('ov-content').style.display='block';
+  const all=history.flatMap(e=>e.items);
+  const stats=calcStats(all);
+  document.getElementById('sb-cnt-total').style.display='';
+  document.getElementById('sb-cnt-total').textContent=all.length;
+  document.getElementById('ov-metrics').innerHTML=metricsHTML(stats,'ov');
+  renderWarn(all,'ov-warn','ov-warn-txt');
+  document.getElementById('ov-ac-grid').innerHTML=all.slice(0,6).map((it,i)=>acHTML(it,i,'ov')).join('');
+  document.getElementById('ov-as-summary').innerHTML=asSummaryHTML(all);
+}
+
+/* 전체 Action Items */
+function renderAllActions(){
+  const wrap=document.getElementById('all-ac-wrap');
+  if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">📋</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
+  const all=history.flatMap(e=>e.items);
+  wrap.innerHTML=`<div class="panel"><div class="ac-grid">${all.map((it,i)=>acHTML(it,i,'all')).join('')}</div></div>`;
+}
+
+/* 담당자별 */
+function renderMembers(){
+  const wrap=document.getElementById('members-wrap');
+  if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">👥</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
+  const all=history.flatMap(e=>e.items);
+  const g=groupBy(all);
+  wrap.innerHTML=Object.entries(g).map(([name,tasks])=>`
+    <div class="as-group">
+      <div class="as-hd">
+        <div class="av ${avCls(name)}">${name[0]}</div>
+        <div><div class="as-name">${name}</div><div class="as-ct">업무 ${tasks.length}개 · 완료 ${tasks.filter(t=>t.status==='done').length}개</div></div>
+        <div style="margin-left:auto;">
+          <div class="prog-wrap" style="width:80px;"><div class="prog-fill" style="width:${tasks.length?tasks.filter(t=>t.status==='done').length/tasks.length*100:0}%"></div></div>
+        </div>
+      </div>
+      ${tasks.map((t,i)=>`
+        <div class="mini-task">
+          <span class="prio-bar prio-${(t.priority||'m')[0]}" style="height:30px;margin-right:2px;"></span>
+          <div class="mt-name">${t.task}</div>
+          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">${t.deadline}</span>`:''}
+          <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+/* Task Flow */
+function renderTaskFlow(){
+  const wrap=document.getElementById('tf-wrap');
+  if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">🔗</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
+  const all=history.flatMap(e=>e.items);
+  const today=new Date(); today.setHours(0,0,0,0);
+
+  const stages=[
+    {key:'이번 주 (7일 이내)', cls:'fc-week', items:[]},
+    {key:'2주 내',            cls:'fc-2w',   items:[]},
+    {key:'1개월 내',          cls:'fc-mon',  items:[]},
+    {key:'장기',              cls:'fc-later',items:[]},
+    {key:'마감 미정',         cls:'fc-none', items:[]},
+  ];
+  all.forEach(item=>{
+    if(!item.deadline){ stages[4].items.push(item); return; }
+    const diff=Math.ceil((new Date(item.deadline)-today)/86400000);
+    if(diff<0||diff<=7) stages[0].items.push(item);
+    else if(diff<=14) stages[1].items.push(item);
+    else if(diff<=30) stages[2].items.push(item);
+    else stages[3].items.push(item);
+  });
+
+  const active=stages.filter(s=>s.items.length);
+
+  const nodesHTML=active.map(s=>`
+    <div class="flow-col">
+      <div class="flow-col-hd ${s.cls}">
+        <span>${s.key}</span>
+        <span class="col-cnt">${s.items.length}</span>
+      </div>
+      ${s.items.map(item=>{
+        const today2=new Date(); today2.setHours(0,0,0,0);
+        const diff=item.deadline?Math.ceil((new Date(item.deadline)-today2)/86400000):null;
+        const nc=item.status==='done'?'fn-done':diff!==null&&diff<=3?'fn-warn':item.status==='doing'?'fn-active':'';
+        return `<div class="flow-node ${nc}">
+          <div class="fn-name">${item.task}</div>
+          <div class="fn-meta">
+            ${item.assignee&&item.assignee!=='미지정'?`<div class="fn-av ${avCls(item.assignee)}">${item.assignee[0]}</div>`:''}
+            <span class="fn-dl">${item.deadline||'미정'}</span>
+            <span class="fn-st ${item.status||'todo'}">${ST.lbl[item.status||'todo']}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+
+  /* 진행률 요약 */
+  const doneAll=all.filter(i=>i.status==='done').length;
+  const rate=all.length?Math.round(doneAll/all.length*100):0;
+
+  wrap.innerHTML=`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🔗 마감일 기준 업무 흐름</div></div>
+      <div class="flow-board"><div class="flow-cols">${nodesHTML}</div></div>
+    </div>
+    <div class="g2">
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-ttl">📊 전체 진행률</div></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+          <div style="text-align:center;">
+            <div style="font-size:40px;font-weight:800;color:var(--pk);">${rate}%</div>
+            <div style="font-size:12px;color:var(--muted);">완료율</div>
+          </div>
+          <div style="flex:1;">
+            <div class="prog-wrap" style="height:10px;margin-bottom:10px;"><div class="prog-fill" style="width:${rate}%"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+              <span>✅ 완료 ${doneAll}개</span><span>전체 ${all.length}개</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-ttl">📌 범례</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+          <span style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:4px;background:var(--teal-lt);border:1.5px solid var(--teal);flex-shrink:0;"></span>완료된 업무</span>
+          <span style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:4px;background:var(--pk-light);border:1.5px solid var(--pk);flex-shrink:0;"></span>진행 중</span>
+          <span style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:4px;background:var(--amber-lt);border:1.5px solid #EF9F27;flex-shrink:0;"></span>마감 임박 (3일 이내)</span>
+          <span style="display:flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border-radius:4px;background:var(--surface);border:1.5px solid var(--bd-s);flex-shrink:0;"></span>미시작</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* 브리핑 */
+function renderBriefing(){
+  const wrap=document.getElementById('brief-wrap');
+  if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">📋</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
+
+  const all=history.flatMap(e=>e.items);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const stats=calcStats(all);
+  const lastSum=history[0]?.summary||'';
+
+  /* D-day 계산 */
+  const upcoming=all
+    .filter(i=>i.deadline&&i.status!=='done')
+    .map(i=>({...i, diff:Math.ceil((new Date(i.deadline)-today)/86400000)}))
+    .filter(i=>i.diff>=-1)
+    .sort((a,b)=>a.diff-b.diff)
+    .slice(0,9);
+
+  const incomplete=all.filter(i=>i.status!=='done');
+  const urgCt=upcoming.filter(i=>i.diff<=3).length;
+
+  wrap.innerHTML=`
+    ${lastSum?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">💡 최근 회의 요약</div></div>
+      <div style="font-size:14px;line-height:1.85;color:var(--text);background:var(--pk-bg);padding:14px 16px;border-radius:10px;">${lastSum}</div>
+    </div>`:''}
+
+    <div class="g2">
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-ttl">📊 전체 현황</div></div>
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;">
+          <div style="text-align:center;min-width:80px;">
+            <div style="font-size:36px;font-weight:800;color:var(--pk);">${stats.rate}%</div>
+            <div style="font-size:12px;color:var(--muted);">전체 완료율</div>
+          </div>
+          <div style="flex:1;">
+            <div class="prog-wrap" style="height:10px;margin-bottom:8px;"><div class="prog-fill" style="width:${stats.rate}%"></div></div>
+            <div style="font-size:12px;color:var(--muted);">완료 ${stats.done}개 / 전체 ${stats.total}개</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="background:var(--pk-bg);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;color:var(--pk);">${incomplete.length}</div>
+            <div style="font-size:11px;color:var(--muted);">미완료</div>
+          </div>
+          <div style="background:var(--amber-lt);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;color:var(--amber);">${urgCt}</div>
+            <div style="font-size:11px;color:var(--muted);">마감 임박</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-ttl">👥 담당자별 완료율</div></div>
+        ${Object.entries(groupBy(all)).map(([name,tasks])=>{
+          const rate2=tasks.length?Math.round(tasks.filter(t=>t.status==='done').length/tasks.length*100):0;
+          return `<div style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div class="av ${avCls(name)}" style="width:22px;height:22px;font-size:10px;">${name[0]}</div>
+                <span style="font-size:13px;font-weight:600;">${name}</span>
+              </div>
+              <span style="font-size:12px;color:var(--muted);font-weight:600;">${rate2}%</span>
+            </div>
+            <div class="prog-wrap"><div class="prog-fill" style="width:${rate2}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${upcoming.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📅 마감 일정</div></div>
+      <div class="dl-grid">
+        ${upcoming.map(item=>`
+          <div class="dl-card">
+            ${ddayHTML(item.diff)}
+            <div class="dl-task">${item.task}</div>
+            <div class="dl-who">👤 ${item.assignee||'미지정'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    ${incomplete.length?`
+    <div class="panel">
+      <div class="panel-hd">
+        <div class="panel-ttl">⚠️ 미완료 업무 (${incomplete.length}개)</div>
+        <span class="panel-lnk" onclick="sdt('actions')">전체 보기 →</span>
+      </div>
+      <div class="ac-grid">${incomplete.slice(0,6).map((it,i)=>acHTML(it,i,'brief')).join('')}</div>
+      ${incomplete.length>6?`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);">+ ${incomplete.length-6}개 더 · <span style="color:var(--pk);cursor:pointer;font-weight:600;" onclick="sdt('actions')">전체 보기</span></div>`:''}
+    </div>`:`
+    <div class="panel" style="text-align:center;padding:32px;">
+      <div style="font-size:40px;margin-bottom:12px;">🎉</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">모든 업무 완료!</div>
+      <div style="font-size:13px;color:var(--muted);">다음 회의를 분석해보세요.</div>
+    </div>`}
+
+    <div class="ai-rec">
+      <div class="ai-rec-hd">
+        <div class="ai-rec-ico">✨</div>
+        <div>
+          <div class="ai-rec-title">AI 권고 사항</div>
+          <div class="ai-rec-sub">Gemini AI 분석 기반 권고</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <span class="rec-ico">${urgCt>0?'🚨':'✅'}</span>
+        <div class="rec-body">
+          <div class="rec-ttl">${urgCt>0?`마감 임박 업무 ${urgCt}개 확인 필요`:'마감 임박 업무 없음'}</div>
+          <div class="rec-desc">${urgCt>0?`3일 이내 마감되는 업무가 ${urgCt}개 있어요. 담당자에게 진행 상황을 확인해보세요.`:'현재 3일 이내 마감 업무가 없어요. 일정이 잘 관리되고 있어요!'}</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <span class="rec-ico">📈</span>
+        <div class="rec-body">
+          <div class="rec-ttl">완료율 ${stats.rate}% — ${stats.rate>=70?'양호':'개선 필요'}</div>
+          <div class="rec-desc">${stats.rate>=70?'팀 업무 진행률이 양호해요. 현재 페이스를 유지하세요.':'전체 완료율이 낮아요. 미완료 업무의 원인을 파악하고 우선순위를 재조정해보세요.'}</div>
+        </div>
+      </div>
+      <div class="rec-item">
+        <span class="rec-ico">👥</span>
+        <div class="rec-body">
+          <div class="rec-ttl">다음 회의 체크포인트</div>
+          <div class="rec-desc">${incomplete.length?`미완료 업무 ${incomplete.length}개의 진행 상황을 다음 회의에서 리뷰하세요. 특히 마감이 가까운 업무를 먼저 확인하세요.`:'모든 업무가 완료됐어요. 다음 스프린트 계획을 세워보세요.'}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* 마일스톤 (1단계 온보딩 결과) */
+function renderMilestones(){
+  const wrap=document.getElementById('milestones-wrap');
+  if(!wrap||!currentProject) return;
+  if(currentProject.onboardStatus!=='done'||!currentProject.onboarding){
+    wrap.innerHTML=`
+      <div class="panel">
+        <div class="empty">
+          <div class="e-ico">🧭</div>
+          <h3>아직 온보딩을 완료하지 않았어요</h3>
+          <p>AI가 마일스톤과 다음 회의 아젠다를 준비하려면 온보딩을 먼저 진행해주세요.</p>
+          <button class="btn-pk" style="margin-top:18px;" onclick="gp('onboard')">✨ 온보딩 시작하기</button>
+        </div>
+      </div>`;
+    return;
+  }
+  wrap.innerHTML=milestonesHTML(currentProject);
+}
+function milestonesHTML(project){
+  const t=project.track, r=project.onboarding.result;
+  return t==='club' ? milestonesClubHTML(r) : milestonesLinearHTML(t,r);
+}
+function agendaPanelHTML(r){
+  const agenda=r.firstMeetingAgenda||[];
+  if(!agenda.length) return '';
+  return `
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📋 1차 회의 아젠다</div></div>
+      <ol style="padding-left:20px;font-size:13px;line-height:2;color:var(--text);">
+        ${agenda.map(a=>`<li>${a}</li>`).join('')}
+      </ol>
+    </div>`;
+}
+function milestonesLinearHTML(t,r){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const ms=(r.milestones||[])
+    .map(m=>({...m,_diff:m.dueDate?Math.ceil((new Date(m.dueDate)-today)/86400000):null}))
+    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
+
+  const msHTML=ms.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🧭 마일스톤</div></div>
+      <div class="dl-grid">
+        ${ms.map(m=>`
+          <div class="dl-card">
+            ${m._diff!=null?ddayHTML(m._diff):'<span class="dl-dday dd-ok">미정</span>'}
+            <div class="dl-task">${m.title}</div>
+            <div class="dl-who">${m.deliverable||m.rubricCategory||''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const rubricHTML=(r.rubric&&r.rubric.length)?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📊 평가 배점</div></div>
+      ${r.rubric.map(it=>`
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+            <span style="font-weight:600;">${it.category}</span><span>${it.weight}%</span>
+          </div>
+          <div class="prog-wrap"><div class="prog-fill" style="width:${it.weight}%"></div></div>
+        </div>`).join('')}
+    </div>`:'';
+
+  let sideHTML='';
+  if(t==='team'&&r.roles&&r.roles.length){
+    sideHTML=`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">👥 역할 분배</div></div>
+      ${r.roles.map(role=>`
+        <div class="mini-task">
+          <div class="av ${avCls(role.assignee||role.role)}" style="width:28px;height:28px;font-size:11px;">${(role.assignee||role.role||'?')[0]}</div>
+          <div class="mt-name">${role.role}${role.assignee?` — ${role.assignee}`:''}</div>
+        </div>`).join('')}
+    </div>`;
+  } else if(t==='contest'&&r.checklist&&r.checklist.length){
+    const items=r.checklist.map(c=>({task:c.item,assignee:null,deadline:null,status:c.met?'done':'todo',priority:'medium'}));
+    sideHTML=`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">✅ 심사기준 충족 체크리스트</div></div>
+      <div class="ac-grid">${items.map((it,i)=>acHTML(it,i,'ms-check')).join('')}</div>
+    </div>`;
+  }
+
+  const insightsHTML=(t==='contest'&&r.insights&&r.insights.length)?`
+    <div class="ai-rec">
+      <div class="ai-rec-hd">
+        <div class="ai-rec-ico">💡</div>
+        <div><div class="ai-rec-title">수상작 인사이트</div><div class="ai-rec-sub">이전 수상작 분석 기반</div></div>
+      </div>
+      ${r.insights.map(i=>`<div class="rec-item"><span class="rec-ico">✨</span><div class="rec-body"><div class="rec-desc">${i}</div></div></div>`).join('')}
+    </div>`:'';
+
+  return msHTML+`<div class="g2">${rubricHTML}${sideHTML}</div>`+insightsHTML+agendaPanelHTML(r);
+}
+function milestonesClubHTML(r){
+  const rm=r.recurringMeeting||{};
+  const wdNames=['일','월','화','수','목','금','토'];
+  const wd=wdNames[rm.dayOfWeek??2];
+  let nextHTML='';
+  if(rm.startDate){
+    const start=new Date(rm.startDate);
+    const today=new Date(); today.setHours(0,0,0,0);
+    const dow=Number(rm.dayOfWeek);
+    let next=new Date(Math.max(start.getTime(),today.getTime()));
+    while(next.getDay()!==dow) next.setDate(next.getDate()+1);
+    const diff=Math.ceil((next-today)/86400000);
+    const weeksCount=rm.weeksCount||15;
+    const weekNo=Math.min(weeksCount, Math.max(1, Math.floor((next-start)/(7*86400000))+1));
+    nextHTML=`
+      <div class="sum-banner">
+        <div class="sum-ico">🗓️</div>
+        <div>
+          <div class="sum-lbl">다음 정기모임</div>
+          <div class="sum-txt">매주 ${wd}요일 · ${next.toISOString().split('T')[0]} (${diff===0?'오늘':diff+'일 후'}) — ${weekNo}/${weeksCount}회차</div>
+        </div>
+      </div>
+      <div class="m-card" style="margin-bottom:16px;">
+        <div class="m-lbl">이번 학기 진행률</div>
+        <div class="m-val" style="color:var(--pk);">${weekNo}/${weeksCount}주</div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min(100,weekNo/weeksCount*100)}%"></div></div>
+      </div>`;
+  }
+
+  const evs=(r.eventMilestones||[]).map(e=>({title:e.title,date:e.prepStartDate||e.eventDate,note:e.notes}));
+  const goals=(r.goalMilestones||[]).map(g=>({title:g.title,date:g.targetDate,note:g.notes}));
+  const today=new Date(); today.setHours(0,0,0,0);
+  const all=[...evs,...goals]
+    .map(x=>({...x,_diff:x.date?Math.ceil((new Date(x.date)-today)/86400000):null}))
+    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
+
+  const evHTML=all.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🎪 행사·목표 마일스톤</div></div>
+      <div class="dl-grid">
+        ${all.map(x=>`
+          <div class="dl-card">
+            ${x._diff!=null?ddayHTML(x._diff):'<span class="dl-dday dd-ok">미정</span>'}
+            <div class="dl-task">${x.title}</div>
+            <div class="dl-who">${x.note||''}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const budget=r.budgetChecklist||[];
+  const budgetHTML=budget.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">💰 예산 체크리스트</div></div>
+      ${budget.map(b=>`
+        <div class="mini-task">
+          <div class="mt-name">${b.item}</div>
+          <span class="bdg b-dl">${b.estimatedCost?b.estimatedCost+'원':'미정'}</span>
+        </div>`).join('')}
+    </div>`:'';
+
+  return nextHTML+evHTML+budgetHTML+agendaPanelHTML(r);
+}
