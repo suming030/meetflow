@@ -29,12 +29,8 @@ function toast(msg,type=''){
 }
 
 /* 캘린더 */
-function openCal(te,dl,ae){
-  const task=decodeURIComponent(te), as=decodeURIComponent(ae);
-  document.getElementById('cal-task-name').textContent=(as?as+' – ':'')+task;
-  const title=esc((as?as+' – ':'')+task);
-  const ds=dl?dl.replace(/-/g,'')+'T090000Z/'+dl.replace(/-/g,'')+'T100000Z':'';
-  document.getElementById('cal-google').href=`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${ds}&details=${esc(task)}`;
-  document.getElementById('cal-overlay').classList.add('show');
-}
+/* openCal은 js/google.js에 있다.
+   원래 여기서 구글 캘린더 링크만 열었지만, Calendar API로 실제 등록하는
+   버전으로 대체됐다. 같은 이름을 두 파일에 두면 로드 순서에 따라 동작이
+   바뀌므로 이쪽 정의는 제거한다. */
 function closeCal(){ document.getElementById('cal-overlay').classList.remove('show'); }
