@@ -225,7 +225,7 @@ async function submitJoinProject(){
 /* ──── 트랙 선택·프로젝트 생성 (0단계) ──── */
 function pickTrack(t){
   selectedTrack=t;
-  document.querySelectorAll('.track-card').forEach(c=>c.classList.toggle('sel', c.dataset.track===t));
+  document.querySelectorAll('.tsel-card').forEach(c=>c.classList.toggle('sel', c.dataset.track===t));
   const panel=document.getElementById('track-name-panel');
   panel.style.display='block';
   document.getElementById('track-name-inp').focus();
@@ -257,7 +257,7 @@ async function createProject(){
 
   /* 트랙 선택 UI 초기화 (다음 프로젝트 생성 대비) */
   selectedTrack=null;
-  document.querySelectorAll('.track-card').forEach(c=>c.classList.remove('sel'));
+  document.querySelectorAll('.tsel-card').forEach(c=>c.classList.remove('sel'));
   document.getElementById('track-name-panel').style.display='none';
   document.getElementById('track-name-inp').value='';
 

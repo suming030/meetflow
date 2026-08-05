@@ -361,6 +361,64 @@
 .login-skip{margin-top:14px;font-size:12.5px;color:var(--hint);cursor:pointer;}
 .login-skip:hover{color:var(--muted);text-decoration:underline;}
 
+/* ══════════════════════
+   트랙 선택 카드
+   프로젝트 목록 카드와 클래스를 공유하면 한쪽을 고칠 때 다른 쪽이 깨지므로
+   .tsel-* 로 분리했다. 어떤 자료가 필요한지 미리 보여줘 선택 부담을 줄인다.
+══════════════════════ */
+.tsel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px;}
+.tsel-card{
+  background:var(--surface);border:1px solid var(--bd);border-radius:20px;
+  padding:30px 24px 24px;text-align:center;cursor:pointer;
+  display:flex;flex-direction:column;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+}
+.tsel-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(75,107,251,.14);}
+.tsel-ico{
+  width:72px;height:72px;margin:0 auto 18px;border-radius:20px;
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+}
+.tsel-card h3{font-size:19px;font-weight:800;letter-spacing:-.4px;margin-bottom:10px;}
+.tsel-card > p{font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:20px;}
+.tsel-inputs{
+  border-top:1px solid var(--bd);padding-top:18px;margin-top:auto;
+  text-align:left;border-radius:12px;padding:16px;
+}
+.tsel-inputs-ttl{font-size:12px;font-weight:800;margin-bottom:10px;}
+.tsel-row{
+  display:flex;align-items:center;gap:8px;
+  font-size:12.5px;color:var(--muted);padding:5px 0;
+}
+.tsel-row em{font-style:normal;font-size:11px;color:var(--hint);}
+.tsel-go{
+  width:40px;height:40px;margin:18px auto 0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:700;transition:transform .2s;
+}
+.tsel-card:hover .tsel-go{transform:translateX(3px);}
+
+/* 트랙별 강조색 — 카드가 서로 구분되게 */
+.tsel-card[data-track="team"]    .tsel-ico{background:var(--teal-lt);}
+.tsel-card[data-track="team"]    .tsel-inputs{background:var(--teal-lt);}
+.tsel-card[data-track="team"]    .tsel-inputs-ttl,
+.tsel-card[data-track="team"]    .tsel-go{color:var(--teal);}
+.tsel-card[data-track="team"]    .tsel-go{background:var(--teal-lt);}
+.tsel-card[data-track="team"].sel{border-color:var(--teal);box-shadow:0 12px 32px rgba(29,158,117,.22);}
+
+.tsel-card[data-track="contest"] .tsel-ico{background:var(--amber-lt);}
+.tsel-card[data-track="contest"] .tsel-inputs{background:var(--amber-lt);}
+.tsel-card[data-track="contest"] .tsel-inputs-ttl,
+.tsel-card[data-track="contest"] .tsel-go{color:var(--amber);}
+.tsel-card[data-track="contest"] .tsel-go{background:var(--amber-lt);}
+.tsel-card[data-track="contest"].sel{border-color:var(--amber);box-shadow:0 12px 32px rgba(192,120,32,.22);}
+
+.tsel-card[data-track="club"]    .tsel-ico{background:var(--violet-lt);}
+.tsel-card[data-track="club"]    .tsel-inputs{background:var(--violet-lt);}
+.tsel-card[data-track="club"]    .tsel-inputs-ttl,
+.tsel-card[data-track="club"]    .tsel-go{color:var(--violet);}
+.tsel-card[data-track="club"]    .tsel-go{background:var(--violet-lt);}
+.tsel-card[data-track="club"].sel{border-color:var(--violet);box-shadow:0 12px 32px rgba(176,38,196,.22);}
+
 /* 초대 코드 — 토스트로 흘려보내면 안 되는 정보라 크게 보여주고 복사할 수 있게 한다 */
 .invite-code{
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;

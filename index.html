@@ -159,21 +159,44 @@
       <p>어떤 활동인지 선택하면 그에 맞는 AI 온보딩과 마일스톤을 준비해 드려요</p>
     </div>
 
-    <div class="feat-grid" style="margin-bottom:18px;">
-      <div class="feat-card track-card" data-track="team" onclick="pickTrack('team')">
-        <div class="feat-ico" style="background:var(--pk-light);">🧑‍🤝‍🧑</div>
+    <div class="tsel-grid">
+      <div class="tsel-card" data-track="team" onclick="pickTrack('team')">
+        <div class="tsel-ico">🧑‍🤝‍🧑</div>
         <h3>팀 프로젝트</h3>
-        <p>강의계획서·과제 안내문을 바탕으로 목표·역할·마일스톤을 자동으로 설계해 드려요.</p>
+        <p>강의계획서와 과제 안내문을 분석해<br>역할 분담과 일정, 마일스톤을 자동으로 설계합니다.</p>
+        <div class="tsel-inputs">
+          <div class="tsel-inputs-ttl">주요 입력</div>
+          <div class="tsel-row"><span>📘</span> 강의계획서</div>
+          <div class="tsel-row"><span>📋</span> 과제 안내문</div>
+          <div class="tsel-row"><span>👥</span> 팀원 정보 <em>선택</em></div>
+        </div>
+        <div class="tsel-go">→</div>
       </div>
-      <div class="feat-card track-card" data-track="contest" onclick="pickTrack('contest')">
-        <div class="feat-ico" style="background:var(--amber-lt);">🏆</div>
+
+      <div class="tsel-card" data-track="contest" onclick="pickTrack('contest')">
+        <div class="tsel-ico">🏆</div>
         <h3>공모전</h3>
-        <p>모집요강·심사 기준을 분석해 마감일 기반 마일스톤을 잡아 드려요.</p>
+        <p>모집요강과 심사 기준을 분석해<br>마감일에서 역산한 마일스톤을 잡아 드립니다.</p>
+        <div class="tsel-inputs">
+          <div class="tsel-inputs-ttl">주요 입력</div>
+          <div class="tsel-row"><span>📢</span> 모집요강</div>
+          <div class="tsel-row"><span>📊</span> 심사기준</div>
+          <div class="tsel-row"><span>🏅</span> 이전 수상작 <em>선택</em></div>
+        </div>
+        <div class="tsel-go">→</div>
       </div>
-      <div class="feat-card track-card" data-track="club" onclick="pickTrack('club')">
-        <div class="feat-ico" style="background:var(--teal-lt);">🎨</div>
+
+      <div class="tsel-card" data-track="club" onclick="pickTrack('club')">
+        <div class="tsel-ico">🎨</div>
         <h3>동아리</h3>
-        <p>이전 기수 활동 내역을 참고해 이번 활동의 마일스톤을 함께 정리해요.</p>
+        <p>이전 기수 활동 내역을 참고해<br>정기모임과 행사 일정을 함께 정리합니다.</p>
+        <div class="tsel-inputs">
+          <div class="tsel-inputs-ttl">주요 입력</div>
+          <div class="tsel-row"><span>📚</span> 작년 활동 내역</div>
+          <div class="tsel-row"><span>🗓️</span> 정기모임 주기</div>
+          <div class="tsel-row"><span>🎯</span> 이번 학기 목표 <em>선택</em></div>
+        </div>
+        <div class="tsel-go">→</div>
       </div>
     </div>
 
