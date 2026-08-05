@@ -241,7 +241,9 @@ async function createProject(){
 
 /** 현재 프로젝트의 회의 이력을 Firestore에서 읽어 history에 채운다. */
 async function loadProjectHistory(){
-  if(!currentProject){ history=[]; return; }
+  /* 읽어오는 동안 이전 프로젝트의 회의가 남아 보이지 않도록 먼저 비운다 */
+  history=[];
+  if(!currentProject) return;
   const projectId=currentProject.id;
   try{
     const list=await window.mfDb.listMeetings(projectId);
