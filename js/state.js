@@ -2,7 +2,8 @@
    소유자: 공용 — 바꾸기 전 팀에 공유 */
 
 /* ──── 전역 상태 ──── */
-let history = [];
+let history = [];              /* 현재 프로젝트의 회의 이력 (Firestore에서 읽어온 캐시) */
+let projectsCache = [];        /* 내 프로젝트 목록 캐시 — loadProjects()가 이걸 읽는다 */
 let routeReady = false;
 let currentUser    = null;
 let currentProject = null;

@@ -70,15 +70,28 @@ function renderUpResult(result){
   document.getElementById('up-prio-chart').innerHTML=prioChartHTML(items);
 }
 
-/* ──── 이력 저장·렌더 ──── */
-function saveHistory(result,text){
-  const e={
-    id:Date.now(),
+/* ──── 이력 저장 ────
+   회의는 프로젝트 하위 컬렉션에 쌓인다. "회의가 쌓일수록 선명해진다"가 이 제품의
+   핵심이므로 개수 제한을 두지 않는다. */
+async function saveHistory(result,text){
+  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return; }
+  const meeting={
     text:text.slice(0,40)+(text.length>40?'…':''),
-    summary:result.summary, items:result.items,
-    date:new Date().toISOString()
+    summary:result.summary,
+    items:result.items,
+    date:new Date().toISOString(),
+    createdBy:currentUser?currentUser.uid:null,
+    createdByName:currentUser?(currentUser.displayName||currentUser.email||''):''
   };
-  history.unshift(e); if(history.length>10) history=history.slice(0,10);
-  if(currentProject) localStorage.setItem('mf_history_'+currentProject.id,JSON.stringify(history));
+  const projectId=currentProject.id;
+  history.unshift(meeting);   /* 화면에 즉시 반영 */
   renderAll();
+  try{
+    meeting.id=await window.mfDb.addMeeting(projectId, meeting);
+  }catch(e){
+    console.error('[MeetFlow] 회의 저장 실패', e);
+    history=history.filter(m=>m!==meeting);   /* 저장 실패한 건 되돌린다 */
+    renderAll();
+    toast('회의를 저장하지 못했어요: '+e.message,'error');
+  }
 }

@@ -2,22 +2,30 @@
    소유자: 공용 */
 
 /* ──── 인증 (Firebase Auth) ──── */
-function handleAuthChange(user){
+async function handleAuthChange(user){
   currentUser = user;
+
+  /* 화면을 먼저 그려두고(로그인 상태 반영), 프로젝트는 Firestore에서 읽어 채운다 */
+  renderAuthArea();
+
   if(user){
+    await syncProjects();
     const projects = loadProjects();
     const activeId = localStorage.getItem('mf_active_project_'+user.uid);
     currentProject = projects.find(p=>p.id===activeId) || projects[0] || null;
   } else {
+    projectsCache = [];
     currentProject = null;
+    history = [];
   }
-  loadProjectHistory();
-  renderAuthArea();
+
   renderProjectBadge();
   renderProjectsGallery();
   renderAll();
   /* 로그인 상태가 확정된 뒤에 URL(해시)이 가리키는 화면을 복원 */
   if(!routeReady){ routeReady=true; applyHash(); }
+  /* 회의 이력은 시간이 걸리므로 화면을 막지 않고 뒤이어 채운다 */
+  if(currentProject) loadProjectHistory();
 }
 
 function renderAuthArea(){

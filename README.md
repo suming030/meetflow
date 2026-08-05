@@ -100,6 +100,17 @@ http://localhost:8000 으로 접속합니다. `localhost`는 Firebase 기본 승
 - 관련 자료 자동 추천 (Grounding with Google Search)
 - 프로젝트 종료 후 경험 정리
 
+**Firestore 규칙 배포** (팀 공유가 안 되면 이것부터)
+
+```bash
+firebase login
+firebase deploy --only firestore:rules
+```
+
+데이터 구조는 `projects/{id}` + `projects/{id}/meetings/{id}` 하위 컬렉션이고,
+`memberUids` 배열로 접근을 제어합니다. 팀원은 6자리 **초대 코드**로 참여합니다
+(`invites/{code}` 컬렉션이 공개 인덱스 역할).
+
 **아직 안 된 설정**
 - Firebase Blaze 요금제 (Cloud Functions·STT에 필요) → `functions/README.md` 참고
 - App Check 적용 해제 또는 정식 설정 (현재 AI 호출이 401로 막힘)

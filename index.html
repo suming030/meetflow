@@ -378,6 +378,7 @@
     <!-- 사이드바 -->
     <aside class="sidebar">
       <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
+      <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
       <div class="sb-item" onclick="gp('upload')"><span class="sico">📝</span> 새 회의 분석</div>
       <div class="sb-item on"  id="sb-overview"  onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
@@ -552,6 +553,9 @@
     from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
   import { getFunctions, httpsCallable }
     from "https://www.gstatic.com/firebasejs/12.9.0/firebase-functions.js";
+  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
+           deleteDoc, addDoc, query, where, orderBy, arrayUnion }
+    from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAWwB4HOUK0mvsoK-QfdCt59R22kSAIYHw",
@@ -566,8 +570,55 @@
   const auth     = getAuth(app);
   const provider = new GoogleAuthProvider();
   const storage  = getStorage(app);
+  const db       = getFirestore(app);
   /* functions/index.js의 FN_REGION과 반드시 일치해야 한다 */
   const functions = getFunctions(app, "asia-northeast3");
+
+  /* ── Firestore — 프로젝트/회의를 팀원끼리 공유하기 위한 저장소 ──
+     구조:
+       projects/{projectId}                     프로젝트 (memberUids로 접근 제어)
+       projects/{projectId}/meetings/{id}       회의 이력 (개수 제한 없음)
+       invites/{code}                           초대 코드 → projectId (공개 인덱스)
+     앱 코드는 동기 함수로 캐시를 읽으므로, 여기서는 순수 I/O만 담당한다. */
+  window.mfDb = {
+    listProjects: async (uid) => {
+      const snap = await getDocs(query(collection(db, "projects"),
+                                       where("memberUids", "array-contains", uid)));
+      return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+    },
+    saveProject: async (p) => {
+      await setDoc(doc(db, "projects", p.id), p, { merge: true });
+    },
+    deleteProject: async (id) => {
+      /* 하위 컬렉션은 자동 삭제되지 않으므로 회의부터 지운다 */
+      const ms = await getDocs(collection(db, "projects", id, "meetings"));
+      await Promise.all(ms.docs.map((m) => deleteDoc(m.ref)));
+      await deleteDoc(doc(db, "projects", id));
+    },
+    listMeetings: async (projectId) => {
+      const snap = await getDocs(query(collection(db, "projects", projectId, "meetings"),
+                                       orderBy("date", "desc")));
+      return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+    },
+    addMeeting: async (projectId, meeting) => {
+      const ref = await addDoc(collection(db, "projects", projectId, "meetings"), meeting);
+      return ref.id;
+    },
+    /* 초대 코드 발급/조회/참여 */
+    createInvite: async (code, projectId, ownerUid) => {
+      await setDoc(doc(db, "invites", code), { projectId, ownerUid });
+    },
+    lookupInvite: async (code) => {
+      const s = await getDoc(doc(db, "invites", code));
+      return s.exists() ? s.data() : null;
+    },
+    joinProject: async (projectId, uid) => {
+      await updateDoc(doc(db, "projects", projectId), { memberUids: arrayUnion(uid) });
+    },
+    deleteInvite: async (code) => {
+      await deleteDoc(doc(db, "invites", code));
+    },
+  };
 
   /* ── 회의 녹음 업로드 → Cloud Speech-to-Text 화자 분리 전사 ── */
   window.mfUploadAudio = (blob, ext, onProgress) => {
