@@ -127,3 +127,52 @@
 .cta-card > *{position:relative;}
 .cta-card h2{font-size:33px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:14px;}
 .cta-card p{font-size:15.5px;color:rgba(255,255,255,.86);line-height:1.8;margin-bottom:34px;}
+
+/* ══════════════════════
+   RESPONSIVE
+   브레이크포인트: 768px(태블릿) / 480px(모바일)
+══════════════════════ */
+@media (max-width: 768px){
+  .hero{padding:56px 20px 48px;}
+  .hero h1{font-size:32px;letter-spacing:-1px;margin-bottom:16px;}
+  .hero p{font-size:14.5px;padding:0 4px;margin-bottom:28px;}
+  .hero-btns{flex-direction:column;align-items:center;gap:10px;margin-bottom:44px;}
+  .hero-btns .btn-pk,.hero-btns .btn-out{width:100%;max-width:280px;}
+
+  .hero-preview{margin:0 12px;border-radius:16px;}
+  .hp-body{flex-direction:column;height:auto;}     /* 사이드바+메인 가로 배치 → 세로로 전환 */
+  .hp-sidebar{display:none;}                        /* 좁은 화면에서 사이드바 미리보기는 생략 */
+  .hp-metrics{grid-template-columns:repeat(2,1fr);} /* 4칸 → 2칸 */
+
+  .section-wrap{padding:48px 20px;}
+  .sec-ttl{font-size:24px;}
+  .sec-sub{margin-bottom:32px;}
+
+  .feat-grid{grid-template-columns:repeat(2,1fr);gap:14px;} /* 3칸 → 2칸 */
+  .feat-card{padding:20px;}
+
+  .gw-section{padding:32px 20px;}
+  .gw-logos{gap:10px;}
+  .gw-badge{padding:8px 14px;font-size:12px;}
+
+  .cta-sec{padding:16px 16px 56px;}
+  .cta-card{padding:44px 24px;border-radius:20px;}
+  .cta-card h2{font-size:24px;}
+  .cta-card p{font-size:14px;margin-bottom:24px;}
+}
+
+@media (max-width: 480px){
+  .hero h1{font-size:26px;}
+  .hero-badge{font-size:12px;padding:5px 14px;margin-bottom:20px;}
+
+  .hp-metrics{grid-template-columns:repeat(2,1fr);}
+  .hp-mc-v{font-size:15px;}
+  .hp-mc-l{font-size:8px;}
+
+  .feat-grid{grid-template-columns:1fr;}   /* 2칸 → 1칸 */
+
+  .sec-ttl{font-size:21px;}
+
+  .cta-card h2{font-size:20px;}
+}
+
