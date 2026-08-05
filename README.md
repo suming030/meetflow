@@ -38,7 +38,7 @@
 |---|---|
 | `js/meetings.js` | 회의 분석 + 이력 저장(`saveHistory`). **지난 회의 미완료 → 이번 회의 반영**이 여기 들어갑니다 |
 | `js/gemini.js` | Gemini 공통 호출·JSON 파싱 |
-| `js/stt.js` | 녹음 + 화자 분리 전사 |
+| `js/stt.js` | 녹음 + 전사 (Gemini) |
 | `js/onboarding.js` | 1단계 트랙별 온보딩 |
 
 제품의 차별점 그 자체이므로 가장 비중이 큰 파트입니다.
@@ -95,7 +95,7 @@ http://localhost:8000 으로 접속합니다. `localhost`는 Firebase 기본 승
 - 구글 로그인, 다중 프로젝트 생성·전환·삭제
 - 트랙별(팀프로젝트/공모전/동아리) AI 온보딩 → 마일스톤·역할·배점·1차 아젠다 생성
 - 회의 텍스트 분석 → 담당자·업무·마감일 추출
-- 녹음 / 음성 파일 → 화자 분리 전사 *(Cloud Function 배포 필요)*
+- 녹음 / 음성 파일 → Gemini 전사 (짧은 회의 1~2분 기준, 화자 구분은 없음)
 - 대시보드 6개 탭, 해시 라우팅(브라우저 뒤로가기)
 
 **미구현** — 랜딩에 "준비 중" 배지로 표시돼 있습니다
@@ -115,9 +115,14 @@ firebase deploy --only firestore:rules
 (`invites/{code}` 컬렉션이 공개 인덱스 역할).
 
 **아직 안 된 설정**
-- Firebase Blaze 요금제 (Cloud Functions·STT에 필요) → `functions/README.md` 참고
-- App Check 적용 해제 또는 정식 설정 (현재 AI 호출이 401로 막힘)
+- App Check 적용 해제 또는 정식 설정 (안 하면 AI 호출이 401로 막힘)
 - 배포 도메인 `suming030.github.io`를 Firebase 승인된 도메인에 추가
+
+**쓰지 않는 코드**
+`functions/`, `storage.rules`는 Cloud Speech-to-Text(화자 분리)용으로 만들었으나
+**현재 사용하지 않습니다.** 화자 분리는 서비스 계정 인증이 필요해 브라우저에서 직접
+호출할 수 없고 Cloud Function + Blaze 요금제가 있어야 하는데, 녹음이 1~2분 수준이라
+Gemini 전사만 쓰기로 했습니다. Blaze 결제도 필요 없습니다.
 
 **알려진 한계**
 - **데스크톱 전용입니다.** 모바일·반응형은 하지 않기로 했습니다. 미디어쿼리가 없고

@@ -1,20 +1,19 @@
-/* MeetFlow — 녹음 + 화자 분리 전사
+/* MeetFlow — 녹음 + 전사
    소유자: 기능 C */
 
 /* ════════════════════════════════
    녹음 + STT (2단계 — 음성 입력)
 
-   화자 분리(diarization)는 요청 단위로 화자 번호를 매기므로, 회의를 조각내
-   보내면 조각마다 "화자1"이 다른 사람이 된다. 그래서 회의 전체를 하나의
-   파일로 녹음해 Cloud Storage에 올리고, Cloud Function이 STT V2의
-   batchRecognize(chirp_3)로 한 번에 전사한다.
+   녹음한 오디오를 Gemini에 그대로 보내 텍스트로 옮긴다.
 
-   Cloud STT를 쓸 수 없을 때(함수 미배포 등)는 Gemini 전사로 대체한다.
-   단 Gemini는 요청 20MB 제한이 있어 짧은 녹음에만 가능하다.
+   Cloud Speech-to-Text(화자 분리)를 쓰지 않는 이유:
+   화자 분리는 서비스 계정 인증이 필요해 브라우저에서 직접 호출할 수 없고,
+   Cloud Function + Blaze 요금제가 있어야 한다. 녹음이 1~2분 수준이라
+   그만한 비용을 들일 이유가 없어 Gemini 전사만 쓰기로 했다.
+   (백엔드 코드는 functions/ 에 남아 있으나 현재 사용하지 않는다)
 ════════════════════════════════ */
-const AUDIO_BPS       = 48000;  /* 48kbps opus — 전사 정확도를 위해 여유 있게 */
-const GEMINI_MAX_MB   = 15;     /* Gemini 대체 경로의 파일 상한 (base64 팽창 감안) */
-const STORAGE_MAX_MB  = 500;    /* storage.rules와 맞춘 값 */
+const AUDIO_BPS     = 48000;  /* 48kbps opus — 전사 정확도를 위해 여유 있게 */
+const GEMINI_MAX_MB = 15;     /* Gemini 요청 상한 약 20MB, base64 팽창을 감안한 값 */
 
 let mediaStream=null, recorder=null, recTick=null;
 let recStartMs=0, recChunks=[], sttBusy=false;
@@ -89,53 +88,31 @@ function setSttBusy(on){
   if(ub) ub.disabled=on;
 }
 
-/* ── 오디오 한 개를 전사해서 입력창에 채운다 ── */
+/* ── 오디오 한 개를 전사해서 입력창에 채운다 ──
+   Gemini에 오디오를 그대로 보내 전사한다. Cloud Speech-to-Text(화자 분리)는
+   Blaze 요금제와 백엔드가 필요한데, 녹음이 1~2분 수준이라 쓰지 않기로 했다.
+   대신 요청 크기 상한(약 20MB, base64 팽창 포함)에 걸리지 않게 길이를 제한한다. */
 async function processAudio(blob, ext){
   const mb=blob.size/1024/1024;
-  if(mb>STORAGE_MAX_MB){
+  if(mb>GEMINI_MAX_MB){
     setSttStatus('');
-    toast(`녹음 파일이 너무 커요 (${mb.toFixed(0)}MB).`,'error');
+    toast(`녹음이 너무 길어요 (${mb.toFixed(1)}MB). 회의를 나눠서 녹음해 주세요.`,'error');
     return;
   }
   setSttBusy(true);
+  setSttStatus('🗣️ 음성을 텍스트로 옮기는 중이에요...');
   try{
-    const text=await transcribeViaCloud(blob, ext);
+    const text=await transcribeViaGemini(blob);
     appendTranscript(text);
-    setSttStatus('✅ 화자 분리 전사가 끝났어요 — 아래 텍스트를 확인하고 수정하세요.');
+    setSttStatus('✅ 전사가 끝났어요 — 아래 텍스트를 확인하고 수정하세요.');
     toast('전사가 완료됐어요! 🎉','success');
   }catch(e){
-    console.error('[MeetFlow] Cloud STT 실패', e);
-    /* Cloud STT를 못 쓰면 Gemini로라도 텍스트는 뽑아준다 (화자 구분 없음) */
-    if(mb<=GEMINI_MAX_MB){
-      try{
-        setSttStatus('⚠️ 화자 분리 전사를 못 써서 기본 전사로 대체하는 중...');
-        const text=await transcribeViaGemini(blob);
-        appendTranscript(text);
-        setSttStatus('✅ 전사 완료 (화자 구분 없음) — 아래 텍스트를 확인하세요.');
-        toast('화자 분리는 못 했지만 전사는 됐어요.','warn');
-        return;
-      }catch(e2){
-        console.error('[MeetFlow] Gemini 전사도 실패', e2);
-        e=e2;
-      }
-    }
+    console.error('[MeetFlow] 전사 실패', e);
     setSttStatus('');
     toast('전사에 실패했어요: '+(e.message||e),'error');
   }finally{
     setSttBusy(false);
   }
-}
-
-async function transcribeViaCloud(blob, ext){
-  if(typeof window.mfUploadAudio!=='function'||typeof window.mfTranscribeCloud!=='function'){
-    throw new Error('업로드 모듈을 불러오는 중이에요.');
-  }
-  setSttStatus('☁️ 녹음 파일을 올리는 중... 0%');
-  const gcsUri=await window.mfUploadAudio(blob, ext, p=>{
-    setSttStatus(`☁️ 녹음 파일을 올리는 중... ${Math.round(p*100)}%`);
-  });
-  setSttStatus('🗣️ 화자를 구분해 전사하는 중이에요. 회의 길이에 따라 몇 분 걸려요...');
-  return await window.mfTranscribeCloud(gcsUri);
 }
 
 async function transcribeViaGemini(blob){
