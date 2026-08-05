@@ -69,3 +69,16 @@ function renderUpResult(result){
   document.getElementById('up-as-summary').innerHTML=asSummaryHTML(items);
   document.getElementById('up-prio-chart').innerHTML=prioChartHTML(items);
 }
+
+/* ──── 이력 저장·렌더 ──── */
+function saveHistory(result,text){
+  const e={
+    id:Date.now(),
+    text:text.slice(0,40)+(text.length>40?'…':''),
+    summary:result.summary, items:result.items,
+    date:new Date().toISOString()
+  };
+  history.unshift(e); if(history.length>10) history=history.slice(0,10);
+  if(currentProject) localStorage.setItem('mf_history_'+currentProject.id,JSON.stringify(history));
+  renderAll();
+}

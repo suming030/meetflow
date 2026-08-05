@@ -118,18 +118,6 @@ function setSt(pid,st){
   el.dataset.st=st; el.className=`st-bdg ${ST.cls[st]}`; el.textContent=`${ST.ico[st]} ${ST.lbl[st]}`;
 }
 
-/* ──── 이력 저장·렌더 ──── */
-function saveHistory(result,text){
-  const e={
-    id:Date.now(),
-    text:text.slice(0,40)+(text.length>40?'…':''),
-    summary:result.summary, items:result.items,
-    date:new Date().toISOString()
-  };
-  history.unshift(e); if(history.length>10) history=history.slice(0,10);
-  if(currentProject) localStorage.setItem('mf_history_'+currentProject.id,JSON.stringify(history));
-  renderAll();
-}
 function renderAll(){
   renderOverview();
   renderAllActions();

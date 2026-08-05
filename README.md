@@ -33,7 +33,7 @@
 
 | 파일 | 내용 |
 |---|---|
-| `js/meetings.js` | 회의 분석. **지난 회의 미완료 → 이번 회의 반영**이 여기 들어갑니다 |
+| `js/meetings.js` | 회의 분석 + 이력 저장(`saveHistory`). **지난 회의 미완료 → 이번 회의 반영**이 여기 들어갑니다 |
 | `js/gemini.js` | Gemini 공통 호출·JSON 파싱 |
 | `js/stt.js` | 녹음 + 화자 분리 전사 |
 | `js/onboarding.js` | 1단계 트랙별 온보딩 |
