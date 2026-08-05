@@ -10,29 +10,30 @@
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════
-   CSS 변수 — 연분홍 테마
+   CSS 변수 — 파랑→보라 테마 (로고 그라데이션과 동일 계열)
+   --pk(파랑)와 --pk-dark(보라)가 앱 전역의 그라데이션 양 끝을 이룬다.
 ═══════════════════════════════════════ */
 :root {
-  --pk:          #17A9C2;
-  --pk-dark:     #0E7F94;
-  --pk-mid:      #7FD8D0;
-  --pk-light:    #E1F7F3;
-  --pk-bg:       #F2FBFA;
+  --pk:          #4B6BFB;
+  --pk-dark:     #7C3AED;
+  --pk-mid:      #A5B0FC;
+  --pk-light:    #EEF0FE;
+  --pk-bg:       #F7F8FF;
   --teal:        #1D9E75; --teal-lt:   #E1F5EE;
   --amber:       #C07820; --amber-lt:  #FBF0DA;
-  --blue:        #4C5FD5; --blue-lt:   #ECEDFB;
+  --blue:        #0E7C94; --blue-lt:   #E0F2F7;
   --green:       #3B6D11; --green-lt:  #EAF3DE;
   --red:         #A32D2D; --red-lt:    #FCEBEB;
-  --violet:      #6B4FC8; --violet-lt: #EDE9FA;
-  --bg:          #F2FBFA;
+  --violet:      #B026C4; --violet-lt: #FAE9FC;
+  --bg:          #F7F8FF;
   --surface:     #FFFFFF;
-  --bd:          rgba(23,169,194,.10);
-  --bd-s:        rgba(23,169,194,.22);
-  --text:        #0E2530;
-  --muted:       #4F7A82;
-  --hint:        #9BC7CC;
-  --shadow-pk:   0 4px 18px rgba(23,169,194,.22);
-  --shadow-card: 0 2px 12px rgba(23,169,194,.07);
+  --bd:          rgba(75,107,251,.10);
+  --bd-s:        rgba(75,107,251,.22);
+  --text:        #15173A;
+  --muted:       #5A5F87;
+  --hint:        #A8ADCC;
+  --shadow-pk:   0 4px 18px rgba(124,58,237,.24);
+  --shadow-card: 0 2px 12px rgba(75,107,251,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
@@ -63,12 +64,12 @@ nav{
   border-bottom:1px solid var(--bd);
   position:sticky;top:0;z-index:300;
   backdrop-filter:blur(12px);
-  box-shadow:0 1px 14px rgba(232,73,138,.06);
+  box-shadow:0 1px 14px rgba(75,107,251,.06);
 }
 .nav-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;cursor:pointer;color:var(--text);}
 .nav-logo-img{height:26px;width:auto;display:block;}
 .hero-logo{height:56px;width:auto;display:block;margin:0 auto 24px;}
-.logo-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(232,73,138,.35);}
+.logo-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 3px 10px rgba(124,58,237,.35);}
 .nav-links{display:flex;gap:28px;font-size:14px;color:var(--muted);}
 .nav-links span{cursor:pointer;transition:color .2s;font-weight:500;}
 .nav-links span:hover{color:var(--pk);}
@@ -79,27 +80,24 @@ nav{
 .user-chip:hover{border-color:var(--pk);background:var(--pk-light);}
 .user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--pk-light);flex-shrink:0;}
 .user-name{font-size:12.5px;font-weight:600;color:var(--text);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.nav-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
-.dot{width:7px;height:7px;border-radius:50%;background:#e0dde8;flex-shrink:0;transition:background .3s;}
-.dot.on{background:var(--teal);}
 
 /* ══════════════════════
    LANDING — HERO
 ══════════════════════ */
 .hero{
   text-align:center;padding:100px 40px 80px;
-  background:linear-gradient(160deg,#f2fbfa 0%,#fff 55%,#eaf6fb 100%);
+  background:linear-gradient(160deg,#f4f5ff 0%,#fff 55%,#f6f0ff 100%);
   border-bottom:1px solid var(--bd);position:relative;overflow:hidden;
 }
 .hero::before{
   content:'';position:absolute;top:-120px;right:-120px;
   width:480px;height:480px;border-radius:50%;
-  background:radial-gradient(circle,rgba(232,73,138,.10),transparent 70%);pointer-events:none;
+  background:radial-gradient(circle,rgba(75,107,251,.12),transparent 70%);pointer-events:none;
 }
 .hero::after{
   content:'';position:absolute;bottom:-80px;left:-80px;
   width:320px;height:320px;border-radius:50%;
-  background:radial-gradient(circle,rgba(83,74,183,.07),transparent 70%);pointer-events:none;
+  background:radial-gradient(circle,rgba(124,58,237,.10),transparent 70%);pointer-events:none;
 }
 .hero-badge{
   display:inline-flex;align-items:center;gap:6px;
@@ -116,7 +114,7 @@ nav{
 .hero-preview{
   max-width:860px;margin:0 auto;
   background:var(--surface);border:1px solid var(--bd-s);
-  border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(232,73,138,.14);
+  border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(75,107,251,.14);
   position:relative;z-index:1;
 }
 .hp-bar{
@@ -125,7 +123,7 @@ nav{
 }
 .hp-chrome{
   display:flex;align-items:center;gap:8px;padding:12px 16px;
-  background:#f9f0f5;border-bottom:1px solid var(--bd);
+  background:#f2f3ff;border-bottom:1px solid var(--bd);
 }
 .hp-dot{width:10px;height:10px;border-radius:50%;}
 .hp-url{flex:1;background:#fff;border:1px solid var(--bd);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--hint);text-align:left;}
@@ -162,30 +160,21 @@ nav{
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
 .feat-card{
   background:var(--surface);border:1px solid var(--bd);border-radius:18px;padding:28px;
-  transition:border-color .2s,transform .2s,box-shadow .2s;
+  transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;
 }
-.feat-card:hover{border-color:var(--pk-mid);transform:translateY(-5px);box-shadow:0 10px 32px rgba(23,169,194,.13);}
+/* 아직 구현되지 않은 기능 표시 */
+.feat-soon{
+  position:absolute;top:18px;right:18px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  padding:4px 10px;border-radius:20px;
+  background:var(--pk-light);color:var(--pk-dark);
+}
+.feat-card:hover{border-color:var(--pk-mid);transform:translateY(-5px);box-shadow:0 10px 32px rgba(124,58,237,.15);}
 .track-card{cursor:pointer;}
-.track-card.sel{border-color:var(--pk);background:var(--pk-light);box-shadow:0 10px 32px rgba(23,169,194,.15);}
+.track-card.sel{border-color:var(--pk);background:var(--pk-light);box-shadow:0 10px 32px rgba(124,58,237,.17);}
 .feat-ico{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;}
 .feat-card h3{font-size:15px;font-weight:700;margin-bottom:9px;}
 .feat-card p{font-size:13px;color:var(--muted);line-height:1.75;}
-
-/* 단계 */
-.how-bg{background:var(--surface);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);}
-.steps{display:flex;max-width:960px;margin:0 auto;position:relative;}
-.steps::before{content:'';position:absolute;top:29px;left:80px;right:80px;height:2px;background:var(--pk-light);z-index:0;}
-.step{flex:1;text-align:center;position:relative;z-index:1;}
-.step-n{
-  width:60px;height:60px;border-radius:50%;
-  background:linear-gradient(135deg,var(--pk),var(--pk-dark));
-  color:#fff;font-size:20px;font-weight:800;
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 16px;border:3px solid var(--bg);
-  box-shadow:0 4px 14px rgba(232,73,138,.32);
-}
-.step h4{font-size:14px;font-weight:700;margin-bottom:7px;}
-.step p{font-size:12px;color:var(--muted);line-height:1.7;padding:0 12px;}
 
 /* Google Workspace 배지 */
 .gw-section{background:var(--surface);padding:44px 40px;border-top:1px solid var(--bd);text-align:center;}
@@ -199,19 +188,25 @@ nav{
 .gw-badge:hover{border-color:var(--pk);color:var(--pk-dark);background:var(--pk-light);}
 .gw-badge .ico{font-size:20px;}
 
-/* CTA */
-.cta-sec{
-  text-align:center;padding:88px 40px;
+/* CTA — 전체 폭 배너 대신 여백을 둔 둥근 카드 */
+.cta-sec{padding:20px 24px 84px;background:var(--bg);}
+.cta-card{
+  max-width:840px;margin:0 auto;text-align:center;
+  padding:66px 40px;border-radius:28px;
   background:linear-gradient(135deg,var(--pk),var(--pk-dark));
   position:relative;overflow:hidden;
+  box-shadow:0 24px 60px rgba(124,58,237,.28);
 }
-.cta-sec::before{
-  content:'';position:absolute;inset:0;
-  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* 딱딱한 그라데이션을 풀어주는 은은한 광원 */
+.cta-card::before{
+  content:'';position:absolute;top:-40%;left:-10%;
+  width:70%;height:180%;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);
   pointer-events:none;
 }
-.cta-sec h2{font-size:34px;font-weight:800;color:#fff;margin-bottom:14px;position:relative;}
-.cta-sec p{font-size:16px;color:rgba(255,255,255,.82);margin-bottom:34px;position:relative;}
+.cta-card > *{position:relative;}
+.cta-card h2{font-size:33px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:14px;}
+.cta-card p{font-size:15.5px;color:rgba(255,255,255,.86);line-height:1.8;margin-bottom:34px;}
 
 /* ══════════════════════
    UPLOAD PAGE
@@ -243,7 +238,7 @@ nav{
 /* 녹음·STT */
 .rec-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .rec-timer{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;color:var(--muted);min-width:52px;}
-.rec-dot{width:10px;height:10px;border-radius:50%;background:#e0dde8;flex-shrink:0;}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:#dcdff0;flex-shrink:0;}
 .rec-dot.on{background:var(--red);animation:recPulse 1.2s ease-in-out infinite;}
 @keyframes recPulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 .stt-status{font-size:12.5px;color:var(--muted);margin-top:12px;min-height:18px;}
@@ -285,7 +280,7 @@ nav{
 /* AI 처리 중 */
 .ai-proc{
   display:none;text-align:center;padding:40px 24px;
-  background:linear-gradient(135deg,var(--pk-light),#fff9fc);
+  background:linear-gradient(135deg,var(--pk-light),#f8f5ff);
   border:1px solid var(--bd-s);border-radius:16px;margin-bottom:18px;
 }
 .ai-proc.show{display:block;}
@@ -310,17 +305,17 @@ nav{
 .result-wrap.show{display:block;}
 
 .sum-banner{
-  background:linear-gradient(135deg,var(--pk-light),#fff5fb);
+  background:linear-gradient(135deg,var(--pk-light),#f8f5ff);
   border:1px solid var(--bd-s);border-radius:16px;
   padding:20px 22px;margin-bottom:18px;
   display:flex;align-items:flex-start;gap:16px;
-  box-shadow:0 2px 14px rgba(232,73,138,.08);
+  box-shadow:0 2px 14px rgba(75,107,251,.08);
 }
 .sum-ico{
   width:44px;height:44px;flex-shrink:0;
   background:linear-gradient(135deg,var(--pk),var(--pk-dark));
   border-radius:12px;display:flex;align-items:center;justify-content:center;
-  font-size:22px;box-shadow:0 3px 12px rgba(232,73,138,.3);
+  font-size:22px;box-shadow:0 3px 12px rgba(124,58,237,.3);
 }
 .sum-lbl{font-size:11px;font-weight:700;color:var(--pk);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;}
 .sum-txt{font-size:14px;color:var(--text);line-height:1.8;font-weight:500;}
@@ -349,7 +344,7 @@ nav{
   transition:border-color .18s,transform .18s,box-shadow .18s;
   animation:fadeUp .35s ease both;
 }
-.ac:hover{border-color:var(--pk-mid);transform:translateY(-2px);box-shadow:0 6px 20px rgba(232,73,138,.10);}
+.ac:hover{border-color:var(--pk-mid);transform:translateY(-2px);box-shadow:0 6px 20px rgba(75,107,251,.10);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .ac:nth-child(1){animation-delay:.04s}
 .ac:nth-child(2){animation-delay:.08s}
@@ -444,8 +439,8 @@ nav{
 .av0{background:linear-gradient(135deg,var(--pk),var(--pk-dark));}
 .av1{background:linear-gradient(135deg,#1D9E75,#16795A);}
 .av2{background:linear-gradient(135deg,#C07820,#8B5510);}
-.av3{background:linear-gradient(135deg,#185FA5,#104578);}
-.av4{background:linear-gradient(135deg,#6B4FC8,#4D3499);}
+.av3{background:linear-gradient(135deg,#0E7C94,#0A5A6C);}
+.av4{background:linear-gradient(135deg,#B026C4,#7E1A8C);}
 .as-name{font-size:14px;font-weight:700;}
 .as-ct{font-size:12px;color:var(--muted);}
 .mini-task{
@@ -467,11 +462,11 @@ nav{
   padding:9px 14px;border-radius:10px;margin-bottom:10px;
   font-size:12px;font-weight:700;
 }
-.fc-week{background:#E6F8F6;border:1px solid var(--bd-s);color:var(--pk-dark);}
+.fc-week{background:#EEF0FE;border:1px solid var(--bd-s);color:var(--pk-dark);}
 .fc-2w  {background:#fff8f0;border:1px solid rgba(192,120,32,.3);color:var(--amber);}
-.fc-mon {background:#f0f0fc;border:1px solid rgba(76,95,213,.2);color:var(--blue);}
+.fc-mon {background:#E6F4F8;border:1px solid rgba(14,124,148,.25);color:var(--blue);}
 .fc-later{background:#f0f9f4;border:1px solid rgba(29,158,117,.2);color:var(--teal);}
-.fc-none{background:#f6f4f9;border:1px solid rgba(107,79,200,.2);color:var(--violet);}
+.fc-none{background:#FAE9FC;border:1px solid rgba(176,38,196,.22);color:var(--violet);}
 .col-cnt{
   background:rgba(255,255,255,.8);border-radius:10px;
   padding:3px 8px;font-size:11px;
@@ -481,7 +476,7 @@ nav{
   border-radius:11px;padding:11px 13px;margin-bottom:8px;
   transition:border-color .15s,transform .15s;cursor:default;
 }
-.flow-node:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(232,73,138,.1);}
+.flow-node:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(75,107,251,.1);}
 .flow-node.fn-done {border-color:var(--teal);background:var(--teal-lt);}
 .flow-node.fn-active{border-color:var(--pk);background:var(--pk-light);}
 .flow-node.fn-warn {border-color:#EF9F27;background:var(--amber-lt);}
@@ -508,7 +503,7 @@ nav{
 .dl-task{font-size:12px;color:var(--muted);margin-bottom:3px;line-height:1.5;}
 .dl-who{font-size:11px;color:var(--hint);}
 .ai-rec{
-  background:linear-gradient(135deg,var(--pk-light),#fff5fb);
+  background:linear-gradient(135deg,var(--pk-light),#f8f5ff);
   border:1px solid var(--bd-s);border-radius:16px;padding:20px;margin-bottom:16px;
 }
 .ai-rec-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
@@ -534,7 +529,7 @@ nav{
 ══════════════════════ */
 .overlay{display:none;position:fixed;inset:0;background:rgba(30,10,20,.48);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center;}
 .overlay.show{display:flex;}
-.modal-box{background:var(--surface);border-radius:22px;padding:34px;width:430px;max-width:92vw;box-shadow:0 28px 64px rgba(232,73,138,.18);animation:slideUp .25s ease;}
+.modal-box{background:var(--surface);border-radius:22px;padding:34px;width:430px;max-width:92vw;box-shadow:0 28px 64px rgba(75,107,251,.18);animation:slideUp .25s ease;}
 @keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .m-ttl{font-size:18px;font-weight:800;margin-bottom:8px;}
 .m-desc{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.7;}
@@ -544,7 +539,36 @@ nav{
 .m-inp{width:100%;padding:11px 14px;border:1.5px solid var(--bd-s);border-radius:10px;font-size:14px;font-family:monospace;background:var(--pk-bg);color:var(--text);margin-bottom:18px;transition:border-color .2s;}
 .m-inp:focus{outline:none;border-color:var(--pk);}
 .m-btns{display:flex;gap:10px;justify-content:flex-end;}
-.cal-box{background:var(--surface);border-radius:22px;padding:30px;width:370px;max-width:92vw;box-shadow:0 28px 64px rgba(232,73,138,.18);animation:slideUp .25s ease;}
+/* 로그인 모달 */
+.login-box{
+  background:var(--surface);border-radius:24px;
+  width:400px;max-width:92vw;overflow:hidden;text-align:center;
+  box-shadow:0 30px 70px rgba(124,58,237,.28);
+  animation:slideUp .25s ease;
+}
+.login-top{
+  padding:34px 30px 30px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--pk),var(--pk-dark));
+}
+.login-top::before{
+  content:'';position:absolute;top:-60%;left:-15%;width:70%;height:200%;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none;
+}
+.login-top img{width:132px;height:auto;position:relative;filter:brightness(0) invert(1);}
+.login-body{padding:28px 30px 30px;}
+.login-body h3{font-size:19px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;}
+.login-body p{font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:24px;}
+.btn-google{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:14px 18px;background:#fff;color:var(--text);
+  border:1.5px solid var(--bd-s);border-radius:13px;
+  font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .18s;
+}
+.btn-google:hover{border-color:var(--pk);box-shadow:0 8px 22px rgba(75,107,251,.18);transform:translateY(-1px);}
+.login-skip{margin-top:14px;font-size:12.5px;color:var(--hint);cursor:pointer;}
+.login-skip:hover{color:var(--muted);text-decoration:underline;}
+
+.cal-box{background:var(--surface);border-radius:22px;padding:30px;width:370px;max-width:92vw;box-shadow:0 28px 64px rgba(75,107,251,.18);animation:slideUp .25s ease;}
 .cal-task-lbl{font-size:12px;color:var(--muted);margin-bottom:5px;}
 .cal-task-name{font-size:14px;font-weight:600;padding:10px 14px;background:var(--pk-light);border-radius:10px;color:var(--pk-dark);margin-bottom:18px;}
 .cal-link{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;text-decoration:none;color:var(--text);font-size:13px;font-weight:600;margin-bottom:8px;transition:all .15s;cursor:pointer;}
@@ -571,17 +595,11 @@ nav{
   </div>
   <div class="nav-links">
     <span onclick="gp('landing');setTimeout(()=>document.querySelector('.section-wrap')?.scrollIntoView({behavior:'smooth'}),50)">기능</span>
-    <span onclick="gp('landing');setTimeout(()=>document.querySelector('.how-bg')?.scrollIntoView({behavior:'smooth'}),50)">방법</span>
     <span onclick="gp('upload')">회의 분석</span>
-    <span onclick="gp('projects')">대시보드</span>
   </div>
   <div class="nav-right">
     <div class="nav-project" id="nav-project" style="display:none;" onclick="gp('dash')" title="현재 프로젝트 워크스페이스로 이동"></div>
-    <div class="nav-status">
-      <div class="dot on" id="status-dot"></div>
-      <span id="status-txt">Gemini 연결됨</span>
-    </div>
-    <button class="btn-pk btn-pk-sm" onclick="gp('upload')">✨ 무료로 시작하기</button>
+    <button class="btn-pk btn-pk-sm" id="nav-cta" style="display:none;" onclick="navCta()">📁 내 프로젝트</button>
     <div id="auth-area"></div>
   </div>
 </nav>
@@ -594,13 +612,13 @@ nav{
   <!-- HERO -->
   <div class="hero">
     <img src="assets/logo-full.png" alt="MeetFlow — Meet. Plan. Flow Together." class="hero-logo">
-    <div class="hero-badge">🌊 Gemini AI 기반 회의 업무 자동화</div>
-    <h1>회의가 끝나면<br><em>업무가 자동으로 정리</em>돼요</h1>
-    <p>회의 텍스트를 붙여넣으면 Gemini AI가 담당자·업무·마감일을 자동 추출하고,
-       Action Item과 Task Flow로 팀 전체 업무를 한눈에 관리해 드려요.</p>
+    <div class="hero-badge">💜 여러 회의를 하나로 잇는 프로젝트 AI</div>
+    <h1>회의가 쌓일수록<br><em>프로젝트가 선명해</em>져요</h1>
+    <p>서기 없이 회의록이 정리되는 건 기본이에요.
+       지난 회의에서 못 끝낸 일을 이번 회의에 자동으로 이어 붙여,<br>
+       지금 우리가 어디까지 왔는지 되짚지 않아도 되게 해드려요.</p>
     <div class="hero-btns">
-      <button class="btn-pk" style="font-size:15px;padding:14px 30px;" onclick="gp('upload')">✨ 회의 분석 시작하기 →</button>
-      <button class="btn-out" style="font-size:15px;padding:14px 30px;" onclick="gp('projects')">대시보드 보기</button>
+      <button class="btn-pk" id="hero-cta" style="font-size:15px;padding:14px 30px;" onclick="heroCta()">✨ 회의 분석 시작하기 →</button>
     </div>
 
     <!-- 제품 미리보기 -->
@@ -615,7 +633,7 @@ nav{
       <div class="hp-body">
         <div class="hp-sidebar">
           <div class="hp-sb-logo">
-            <div class="hp-sb-ico">🌊</div>
+            <div class="hp-sb-ico">💜</div>
             <span style="font-size:11px;font-weight:800;">MeetFlow</span>
           </div>
           <div class="hp-sb-item a">📊 대시보드</div>
@@ -643,68 +661,41 @@ nav{
 
   <!-- 기능 소개 -->
   <div class="section-wrap">
-    <div class="sec-ttl">왜 MeetFlow인가요?</div>
-    <div class="sec-sub">회의 후 팔로업에 쏟는 시간을 AI가 대신 처리해 드려요</div>
+    <div class="sec-ttl">회의 한 건이 아니라, 프로젝트 전체를 봅니다</div>
+    <div class="sec-sub">기존 AI 회의록은 회의 하나를 잘 남기는 데서 멈춰요. MeetFlow는 회의를 이어 붙입니다.</div>
     <div class="feat-grid">
       <div class="feat-card">
-        <div class="feat-ico" style="background:var(--pk-light);">🎙️</div>
-        <h3>회의 자동 분석</h3>
-        <p>회의록 텍스트를 붙여넣으면 Gemini AI가 핵심 내용을 즉시 분석하고 구조화된 결과로 변환해요.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-ico" style="background:var(--teal-lt);">✅</div>
-        <h3>Action Item 추출</h3>
-        <p>담당자·업무·마감일을 자동 추출해 팀 전체의 할 일을 놓치지 않고 카드로 관리해요.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-ico" style="background:var(--blue-lt);">📊</div>
-        <h3>진행 현황 추적</h3>
-        <p>미시작·진행중·완료 상태를 한눈에 확인하고 담당자별 진행률을 실시간으로 추적해요.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-ico" style="background:var(--amber-lt);">📅</div>
-        <h3>캘린더 연동</h3>
-        <p>Action Item을 Google 캘린더에 원클릭으로 추가해 마감일을 절대 놓치지 마세요.</p>
+        <span class="feat-soon">준비 중</span>
+        <div class="feat-ico" style="background:var(--pk-light);">🔗</div>
+        <h3>회의를 이어서 관리</h3>
+        <p>지난 회의에서 못 끝낸 일을 이번 회의 분석에 자동으로 반영해요. 빠진 부분과 추가로 해야 할 일까지 짚어드려요.</p>
       </div>
       <div class="feat-card">
         <div class="feat-ico" style="background:var(--green-lt);">👥</div>
-        <h3>담당자별 보기</h3>
-        <p>팀원별 배정 업무를 모아 업무 과부하나 공백을 빠르게 파악하고 조정하세요.</p>
+        <h3>팀원별 누적 이력</h3>
+        <p>누가 지금까지 무엇을 맡아왔는지 회차를 넘어 누적해서 보여줘요. 기여도와 공백이 한눈에 드러나요.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-ico" style="background:var(--violet-lt);">🔗</div>
-        <h3>Task Flow 시각화</h3>
-        <p>마감일 기준으로 업무 흐름을 칸반 보드처럼 시각화해 병목 구간을 바로 파악해요.</p>
+        <div class="feat-ico" style="background:var(--teal-lt);">🎙️</div>
+        <h3>서기 없는 회의록</h3>
+        <p>녹음하거나 텍스트를 붙여넣으면 끝. 화자를 구분해 받아쓰고 담당자·업무·마감일까지 뽑아내요.</p>
       </div>
-    </div>
-  </div>
-
-  <!-- 사용 방법 -->
-  <div class="how-bg">
-    <div class="section-wrap">
-      <div class="sec-ttl">사용 방법</div>
-      <div class="sec-sub">4단계로 회의 내용을 완벽하게 정리하세요</div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-n">1</div>
-          <h4>Google 로그인</h4>
-          <p>구글 계정으로 로그인하고 프로젝트 유형을 선택하세요</p>
-        </div>
-        <div class="step">
-          <div class="step-n">2</div>
-          <h4>회의 텍스트 입력</h4>
-          <p>회의록·메모·대화 내용을 텍스트로 붙여넣으세요</p>
-        </div>
-        <div class="step">
-          <div class="step-n">3</div>
-          <h4>AI 자동 분석</h4>
-          <p>Gemini AI가 담당자·업무·마감일을 자동으로 추출해요</p>
-        </div>
-        <div class="step">
-          <div class="step-n">4</div>
-          <h4>대시보드로 관리</h4>
-          <p>Task Flow·브리핑으로 팀 전체 진행률을 추적하세요</p>
-        </div>
+      <div class="feat-card">
+        <div class="feat-ico" style="background:var(--amber-lt);">🚀</div>
+        <h3>자료 넣고 바로 설계</h3>
+        <p>강의계획서나 모집요강을 올리면 목표·산출물을 분석해 역할 분담과 마일스톤, 첫 회의 아젠다까지 만들어드려요.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-soon">준비 중</span>
+        <div class="feat-ico" style="background:var(--blue-lt);">🔍</div>
+        <h3>관련 자료 자동 추천</h3>
+        <p>회의 안건에 맞는 외부 자료를 찾아 붙여줘요. 회의가 거듭될수록 팀의 지식도 함께 쌓여요.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-soon">준비 중</span>
+        <div class="feat-ico" style="background:var(--violet-lt);">📝</div>
+        <h3>끝나면 경험 정리</h3>
+        <p>프로젝트가 끝나면 팀원별로 무엇을 어떻게 해냈는지 정리해드려요. 포트폴리오·자소서에 바로 쓸 수 있게요.</p>
       </div>
     </div>
   </div>
@@ -723,9 +714,11 @@ nav{
 
   <!-- CTA -->
   <div class="cta-sec">
-    <h2>지금 바로 시작해 보세요</h2>
-    <p>구글 계정만 있으면 별도 설정 없이 무료로 모든 기능을 사용할 수 있어요</p>
-    <button class="btn-white" onclick="gp('upload')">✨ 회의 분석 시작하기 →</button>
+    <div class="cta-card">
+      <h2>지금 바로 시작해 보세요</h2>
+      <p>구글 계정만 있으면 별도 설정 없이<br>무료로 모든 기능을 사용할 수 있어요</p>
+      <button class="btn-white" onclick="heroCta()">✨ 회의 분석 시작하기 →</button>
+    </div>
   </div>
 </div>
 
@@ -928,7 +921,7 @@ nav{
     <!-- 초기 빈 상태 -->
     <div class="up-panel" id="up-empty">
       <div class="empty">
-        <div class="e-ico">🌊</div>
+        <div class="e-ico">💜</div>
         <h3>회의 내용을 입력해보세요</h3>
         <p>위 입력창에 회의 텍스트를 붙여넣고 AI 분석 시작을 눌러주세요.<br>
            샘플 버튼으로 바로 테스트해볼 수 있어요!</p>
@@ -1065,6 +1058,29 @@ nav{
   </div>
 </div>
 
+
+<!-- ── 로그인 모달 ── -->
+<div class="overlay" id="login-overlay" onclick="if(event.target.id==='login-overlay')closeLogin()">
+  <div class="login-box">
+    <div class="login-top">
+      <img src="assets/logo-horizontal.png" alt="MeetFlow">
+    </div>
+    <div class="login-body">
+      <h3>회의 분석을 시작할까요?</h3>
+      <p>구글 계정으로 로그인하면<br>프로젝트가 저장돼 이어서 볼 수 있어요.</p>
+      <button class="btn-google" onclick="loginFromModal()">
+        <svg width="19" height="19" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Google 계정으로 계속하기
+      </button>
+      <div class="login-skip" onclick="closeLogin()">나중에 할게요</div>
+    </div>
+  </div>
+</div>
 
 <!-- ── 캘린더 모달 ── -->
 <div class="overlay" id="cal-overlay" onclick="if(event.target.id==='cal-overlay')closeCal()">
@@ -1272,16 +1288,45 @@ function renderAuthArea(){
         <span class="user-name">${currentUser.displayName||currentUser.email}</span>
       </div>`;
   } else {
-    el.innerHTML=`<button class="btn-out" onclick="signInGoogle()">🔑 Google로 로그인</button>`;
+    el.innerHTML='';
   }
+  renderCta();
+}
+/* nav의 프로젝트 버튼은 로그인했을 때만 노출한다 (로그아웃 시 nav 우측은 비움) */
+function renderCta(){
+  const navBtn=document.getElementById('nav-cta');
+  if(navBtn) navBtn.style.display = currentUser?'':'none';
+}
+/* 로그인 전이면 로그인부터, 로그인 후면 프로젝트 목록으로 */
+function navCta(){
+  if(currentUser) gp('projects');
+  else openLogin();
+}
+/* 히어로 CTA — 로그인 전이면 로그인 모달부터, 로그인 후면 회의 분석으로 */
+function heroCta(){
+  if(currentUser) gp('upload');
+  else openLogin();
+}
+function openLogin(){ document.getElementById('login-overlay').classList.add('show'); }
+function closeLogin(){ document.getElementById('login-overlay').classList.remove('show'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLogin(); });
+function loginFromModal(){
+  closeLogin();
+  signInGoogle('upload');
 }
 function renderProjectBadge(){
   const el=document.getElementById('nav-project'); if(!el) return;
   if(currentProject){ el.style.display='inline-flex'; el.textContent='📁 '+currentProject.name; }
   else el.style.display='none';
 }
-async function signInGoogle(){
-  try{ await window.mfSignIn(); toast('로그인 됐어요! 🎉','success'); }
+async function signInGoogle(after){
+  try{
+    await window.mfSignIn();
+    toast('로그인 됐어요! 🎉','success');
+    /* 로그인 직후에는 랜딩에 머무르지 않고 눌렀던 버튼이 향하던 화면으로 넘어간다.
+       (새로고침으로 복원되는 경우는 applyHash가 처리하므로 여기서만 이동) */
+    gp(after||'projects');
+  }
   catch(e){ toast('로그인에 실패했어요: '+e.message,'error'); }
 }
 async function signOutUser(){
@@ -1313,7 +1358,7 @@ function gp(id,opts){
   opts=opts||{};
   if(AUTH_PAGES.includes(id)&&!currentUser){
     if(opts.fromPop){ gp('landing',{fromPop:true}); return; }
-    toast('먼저 Google로 로그인해주세요!','error'); signInGoogle(); return;
+    openLogin(); return;
   }
   if(id==='upload'||id==='dash'){
     if(!currentProject){ id='track'; }
