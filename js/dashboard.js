@@ -82,40 +82,72 @@ function prioChartHTML(items){
 }
 
 function acHTML(item,idx,pfx){
+  /* 같은 업무가 여러 화면(개요·Action Items·브리핑)에 그려지므로 DOM id는 화면별로 구분하고,
+     저장할 때 어느 업무인지 찾기 위해 item.id를 따로 실어 보낸다. */
   const pid=pfx+'-'+idx, st=item.status||'todo';
+  const iid=item.id||'';
   const prio=item.priority||'medium';
   const calBtn=item.deadline
     ?`<button class="ico-btn" title="캘린더에 추가" onclick="openCal('${esc(item.task)}','${item.deadline}','${esc(item.assignee||'')}')">📅</button>`:'';
   return `
     <div class="ac" id="ac-${pid}">
       <div class="prio-bar prio-${prio[0]}"></div>
-      <div class="ac-chk" id="ck-${pid}" onclick="toggleCk('${pid}')"></div>
+      <div class="ac-chk${st==='done'?' ck':''}" id="ck-${pid}" onclick="toggleCk('${pid}','${iid}')">${st==='done'?'✓':''}</div>
       <div class="ac-body">
-        <div class="ac-task" id="t-${pid}">${item.task}</div>
+        <div class="ac-task${st==='done'?' done':''}" id="t-${pid}">${item.task}</div>
         <div class="ac-meta">
           ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
           ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}
-          <span class="st-bdg ${ST.cls[st]}" id="st-${pid}" data-st="${st}" onclick="cycleSt('${pid}')">${ST.ico[st]} ${ST.lbl[st]}</span>
+          <span class="st-bdg ${ST.cls[st]}" id="st-${pid}" data-st="${st}" onclick="cycleSt('${pid}','${iid}')">${ST.ico[st]} ${ST.lbl[st]}</span>
         </div>
       </div>
       <div class="ac-right">${calBtn}</div>
     </div>`;
 }
 
-/* ──── 체크·상태 ──── */
-function toggleCk(pid){
+/* ──── 체크·상태 ────
+   상태는 회의 문서 안의 items 배열에 들어 있다. 화면만 바꾸면 새로고침할 때
+   전부 '미시작'으로 돌아가므로, 바뀔 때마다 해당 회의 문서를 갱신한다. */
+function toggleCk(pid,iid){
   const ck=document.getElementById('ck-'+pid), t=document.getElementById('t-'+pid);
   const done=ck.classList.toggle('ck');
   ck.textContent=done?'✓':''; t.classList.toggle('done',done);
-  setSt(pid, done?'done':'todo');
+  setSt(pid, done?'done':'todo', iid);
 }
-function cycleSt(pid){
+function cycleSt(pid,iid){
   const el=document.getElementById('st-'+pid), cur=el.dataset.st||'todo';
-  setSt(pid, ST.cycle[(ST.cycle.indexOf(cur)+1)%3]);
+  setSt(pid, ST.cycle[(ST.cycle.indexOf(cur)+1)%3], iid);
 }
-function setSt(pid,st){
-  const el=document.getElementById('st-'+pid); if(!el) return;
-  el.dataset.st=st; el.className=`st-bdg ${ST.cls[st]}`; el.textContent=`${ST.ico[st]} ${ST.lbl[st]}`;
+function setSt(pid,st,iid){
+  const el=document.getElementById('st-'+pid);
+  if(el){
+    el.dataset.st=st; el.className=`st-bdg ${ST.cls[st]}`; el.textContent=`${ST.ico[st]} ${ST.lbl[st]}`;
+  }
+  if(iid) persistItemStatus(iid, st);
+}
+
+/** 업무 상태를 history와 Firestore 양쪽에 반영한다. */
+function persistItemStatus(itemId, st){
+  const meeting=history.find(m=>(m.items||[]).some(it=>it.id===itemId));
+  if(!meeting){ return; }
+  const item=meeting.items.find(it=>it.id===itemId);
+  if(!item || item.status===st) return;
+  item.status=st;
+
+  /* 같은 업무가 다른 화면에도 그려져 있으면 함께 갱신 */
+  document.querySelectorAll(`[onclick*="'${itemId}'"]`).forEach(el=>{
+    if(el.classList.contains('st-bdg')){
+      el.dataset.st=st; el.className=`st-bdg ${ST.cls[st]}`; el.textContent=`${ST.ico[st]} ${ST.lbl[st]}`;
+    }
+  });
+
+  /* 아직 저장 전인 회의는 저장될 때 함께 기록되므로 여기서는 건너뛴다 */
+  if(!meeting.id || !currentProject) return;
+  window.mfDb.updateMeeting(currentProject.id, meeting.id, {items:meeting.items})
+    .catch(e=>{
+      console.error('[MeetFlow] 상태 저장 실패', e);
+      toast('상태를 저장하지 못했어요.','error');
+    });
 }
 
 function renderAll(){

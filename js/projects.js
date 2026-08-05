@@ -282,6 +282,10 @@ async function loadProjectHistory(){
   const projectId=currentProject.id;
   try{
     const list=await window.mfDb.listMeetings(projectId);
+    /* 업무 ID가 없는 예전 데이터는 여기서 채워 넣는다 (체크 상태 저장에 필요) */
+    list.forEach(m=>{
+      (m.items||[]).forEach((it,i)=>{ if(!it.id) it.id='i'+(m.id||'x')+'_'+i; });
+    });
     /* 늦게 도착한 응답이 그 사이 바뀐 프로젝트를 덮어쓰지 않도록 확인 */
     if(currentProject && currentProject.id===projectId){
       history=list;

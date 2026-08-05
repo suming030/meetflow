@@ -342,6 +342,9 @@
         </div>
       </div>
 
+      <!-- 지난 회의에서 이어진 일 + AI가 짚은 빈틈 -->
+      <div id="up-carry"></div>
+
     </div>
 
     <!-- 초기 빈 상태 -->
@@ -638,6 +641,9 @@
     addMeeting: async (projectId, meeting) => {
       const ref = await addDoc(collection(db, "projects", projectId, "meetings"), meeting);
       return ref.id;
+    },
+    updateMeeting: async (projectId, meetingId, patch) => {
+      await updateDoc(doc(db, "projects", projectId, "meetings", meetingId), patch);
     },
     /* 초대 코드 발급/조회/참여 */
     createInvite: async (code, projectId, ownerUid) => {
