@@ -60,6 +60,53 @@ function renderTimeline(){
     return;
   }
 
-  /* TODO: 여기에 타임라인을 그리세요. */
-  wrap.innerHTML = `<div class="panel">회의 ${history.length}건</div>`;
+  /* history는 최신순([0]이 최신)이라, 1차부터 위→아래로 보이도록 뒤집는다. */
+  const chrono = [...history].reverse();
+  const total  = chrono.length;
+
+  wrap.innerHTML = chrono.map((m, idx)=>{
+    const no      = idx+1;
+    const isLast  = idx===total-1;
+    const dateStr = (m.date||'').slice(0,10);
+    const items   = m.items||[];
+    const pfx     = 'tl'+no;
+
+    return `
+      <div style="display:flex;gap:16px;align-items:stretch;">
+        <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0;">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--pk),var(--pk-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;box-shadow:0 3px 10px rgba(124,58,237,.25);">${no}</div>
+          ${!isLast?`<div style="flex:1;width:2px;background:var(--bd-s);margin:4px 0;min-height:24px;"></div>`:''}
+        </div>
+        <div style="flex:1;min-width:0;padding-bottom:${isLast?'0':'20px'};">
+          <div class="panel">
+            <div class="panel-hd">
+              <div class="panel-ttl">🕒 ${no}차 회의${isLast?' <span class="bdg b-person" style="margin-left:6px;">✨ 최신</span>':''}</div>
+              <div style="font-size:12px;color:var(--muted);">${dateStr?`📅 ${dateStr}`:''}${m.createdByName?` · 👤 ${m.createdByName} 분석`:''}</div>
+            </div>
+            ${items.length?`
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="tl-toggle-chip" onclick="toggleTlBlock('items-${pfx}')">🆕 새로 생긴 업무 ${items.length}개 <span class="tl-chev" id="tl-chev-items-${pfx}">▸</span></div>
+                <div class="tl-toggle-chip" onclick="toggleTlBlock('analysis-${pfx}')">📊 분석 결과 <span class="tl-chev" id="tl-chev-analysis-${pfx}">▸</span></div>
+              </div>
+              <div class="ac-grid" id="tl-items-${pfx}" style="display:none;margin-top:10px;">${items.map((it,i)=>acHTML(it,i,pfx)).join('')}</div>
+              <div id="tl-analysis-${pfx}" style="display:none;margin-top:10px;">
+                <div class="metrics" style="margin-bottom:14px;">${metricsHTML(calcStats(items),pfx)}</div>
+                ${prioChartHTML(items)}
+              </div>`:''}
+            ${m.summary?`<div style="font-size:14px;line-height:1.85;color:var(--text);background:var(--pk-bg);padding:14px 16px;border-radius:10px;${items.length?'margin-top:14px;':''}">${m.summary}</div>`:''}
+          </div>
+          ${carryOverHTML(m)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/** 회의 카드 안 토글 블록("새로 생긴 업무" / "분석 결과")을 접었다 펼친다. */
+function toggleTlBlock(key){
+  const box=document.getElementById('tl-'+key);
+  const chev=document.getElementById('tl-chev-'+key);
+  if(!box) return;
+  const show=box.style.display==='none';
+  box.style.display=show?(box.classList.contains('ac-grid')?'flex':'block'):'none';
+  if(chev) chev.textContent=show?'▾':'▸';
 }
