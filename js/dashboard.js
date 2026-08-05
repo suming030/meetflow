@@ -154,6 +154,9 @@ function renderAll(){
   renderOverview();
   renderAllActions();
   renderMembers();
+  /* 회의 타임라인은 js/timeline.js에 있다 (담당: 디자인 B).
+     아직 안 만들어졌을 수 있으므로 있을 때만 부른다. */
+  if(typeof renderTimeline==='function') renderTimeline();
   renderMilestones();
   renderTaskFlow();
   renderBriefing();
