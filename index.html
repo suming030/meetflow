@@ -35,7 +35,10 @@
     <span onclick="gp('upload')">회의 분석</span>
   </div>
   <div class="nav-right">
-    <div class="nav-project" id="nav-project" style="display:none;" onclick="gp('dash')" title="현재 프로젝트 워크스페이스로 이동"></div>
+    <div class="nav-project-wrap" id="nav-project-wrap">
+      <div class="nav-project" id="nav-project" style="display:none;" onclick="toggleProjectMenu()" title="최근 회의 · 새 회의 분석"></div>
+      <div class="nav-project-menu" id="nav-project-menu"></div>
+    </div>
     <button class="btn-pk btn-pk-sm" id="nav-cta" style="display:none;" onclick="navCta()">📁 내 프로젝트</button>
     <div id="auth-area"></div>
   </div>
@@ -74,12 +77,9 @@
             <span style="font-size:11px;font-weight:800;">MeetFlow</span>
           </div>
           <div class="hp-sb-item">📊 개요</div>
-          <div class="hp-sb-item">✅ Action Items</div>
-          <div class="hp-sb-item">👥 담당자별</div>
+          <div class="hp-sb-item">🗂️ 업무 ▸</div>
           <div class="hp-sb-item a">🕒 회의 타임라인</div>
-          <div class="hp-sb-item">🧭 마일스톤</div>
-          <div class="hp-sb-item">🔗 Task Flow</div>
-          <div class="hp-sb-item">📋 브리핑</div>
+          <div class="hp-sb-item">📋 브리핑 ▸</div>
         </div>
         <!-- 3차례 회의가 쌓이며 선명해지는 모습을 그대로 축소해 보여준다 (실제 회의 타임라인 화면과 같은 구성) -->
         <div class="hp-main">
@@ -430,14 +430,26 @@
       <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
       <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
-      <div class="sb-item" onclick="gp('upload')"><span class="sico">📝</span> 새 회의 분석</div>
       <div class="sb-item on"  id="sb-overview"  onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
-      <div class="sb-item"     id="sb-actions"   onclick="sdt('actions')"><span class="sico">✅</span> Action Items</div>
-      <div class="sb-item"     id="sb-members"   onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
+
+      <div class="sb-group">
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
+        <div class="sb-sub" id="sb-sub-work">
+          <div class="sb-item sb-child" id="sb-actions"   onclick="sdt('actions')"><span class="sico">✅</span> Action Items</div>
+          <div class="sb-item sb-child" id="sb-members"   onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
+          <div class="sb-item sb-child" id="sb-taskflow"  onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
+        </div>
+      </div>
+
       <div class="sb-item"     id="sb-timeline"  onclick="sdt('timeline')"><span class="sico">🕒</span> 회의 타임라인</div>
-      <div class="sb-item"     id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
-      <div class="sb-item"     id="sb-taskflow"  onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
-      <div class="sb-item"     id="sb-briefing"  onclick="sdt('briefing')"><span class="sico">📋</span> 브리핑</div>
+
+      <div class="sb-group">
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('brief')"><span class="sico">📋</span> 브리핑<span class="sb-chev" id="sb-chev-brief">▸</span></div>
+        <div class="sb-sub" id="sb-sub-brief">
+          <div class="sb-item sb-child" id="sb-briefing"   onclick="sdt('briefing')"><span class="sico">📋</span> 회의 브리핑</div>
+          <div class="sb-item sb-child" id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
+        </div>
+      </div>
       <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
       <div class="sb-ws"><span class="sico">📹</span> Google Meet</div>
       <div class="sb-ws"><span class="sico">📄</span> Google Docs</div>
@@ -475,7 +487,10 @@
               <div class="ac-grid" id="ov-ac-grid"></div>
             </div>
             <div class="panel">
-              <div class="panel-hd"><div class="panel-ttl">👥 담당자 현황</div></div>
+              <div class="panel-hd">
+                <div class="panel-ttl">👥 담당자 현황</div>
+                <span class="panel-lnk" onclick="sdt('members')">전체 보기 →</span>
+              </div>
               <div id="ov-as-summary"></div>
             </div>
           </div>
