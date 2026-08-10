@@ -221,3 +221,108 @@ topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분)
 
   return parsed;
 }
+
+/* ════════════════════════════════
+   프로젝트 마무리 — 사람별 역할·기여·배운 점 정리
+
+   회의가 쌓인 결과를 프로젝트가 끝나는 시점에 한 번 정리한다.
+   업무 배정과 회의 내용이 이미 사람 단위로 남아 있으므로 그걸 근거로 쓴다.
+════════════════════════════════ */
+
+/**
+ * @param {object} project  현재 프로젝트 {name, track}
+ * @param {Array}  meets    회의 이력 (최신순)
+ */
+async function callProjectWrapup(project, meets){
+  const chrono=[...meets].reverse();   /* 오래된 회의부터 읽어야 흐름이 보인다 */
+
+  const meetingBlock=chrono.map((m,i)=>{
+    const topics=(m.topics||[]).map(t=>`  · ${t.title}: ${(t.discussion||[]).slice(0,4).join(' / ')}`);
+    return [
+      `[${i+1}차 회의${m.date?` — ${m.date.slice(0,10)}`:''}]`,
+      m.summary?`요약: ${m.summary}`:'',
+      topics.length?`안건:\n${topics.join('\n')}`:''
+    ].filter(Boolean).join('\n');
+  }).join('\n\n');
+
+  /* 사람별로 실제 맡았던 업무 — 역할과 기여를 판단할 근거가 된다 */
+  const byPerson={};
+  chrono.forEach((m,i)=>{
+    (m.items||[]).forEach(it=>{
+      const who=(it.assignee&&it.assignee!=='미지정')?it.assignee:null;
+      if(!who) return;
+      (byPerson[who]=byPerson[who]||[]).push(
+        `- ${it.task} (${i+1}차 회의, ${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''})`);
+    });
+  });
+  const names=Object.keys(byPerson);
+  const peopleBlock=names.length
+    ? Object.entries(byPerson).map(([n,ts])=>`[${n}]\n${ts.join('\n')}`).join('\n\n')
+    : '(업무에 담당자가 지정된 기록이 없습니다.)';
+
+  const prompt=`아래는 "${project.name||'이름 없는 프로젝트'}" 프로젝트(${TRACK_LBL[project.track]||'팀 프로젝트'})의
+회의 ${chrono.length}건 전체 기록입니다. 프로젝트가 끝나서 회고 문서를 만들려고 합니다.
+
+===== 회의 기록 =====
+${meetingBlock}
+
+===== 사람별로 맡았던 업무 =====
+${peopleBlock}
+
+작성 규칙:
+- members에는 위 "사람별로 맡았던 업무"에 이름이 나온 사람만 넣으세요.
+  ${names.length?`이번 프로젝트의 대상: ${names.join(', ')}`:'대상이 없으면 빈 배열로 두세요.'}
+- 이름을 새로 만들지 마세요. "미지정"은 사람이 아니므로 넣지 마세요.
+- role: 이 사람이 프로젝트에서 실제로 맡은 역할을 한 문장으로. 기록에 근거해서 쓰세요.
+- contributions: 실제로 한 일을 3~6개. 회의 기록에 있는 구체적인 내용으로 쓰세요.
+  "열심히 참여함" 같은 빈말 말고 무엇을 했는지 적으세요.
+- learned: 그 일을 하면서 얻었을 경험·역량을 2~4개.
+  기록에서 드러나는 것만 쓰고 확대해석하지 마세요.
+  (예: 여러 부서와 일정을 조율한 기록이 있으면 "일정 조율" — 없는 성과를 지어내지 말 것)
+- overview: 프로젝트가 어떻게 시작해서 어떻게 마무리됐는지 3~5문장.
+- teamLearnings: 팀 전체가 배운 것 3~5개.
+- keepNext: 다음 프로젝트에서 이어가면 좋을 것과 고치면 좋을 것 3~5개.
+  회의에서 반복해 미뤄진 일이나 결정이 늦어진 지점이 있으면 짚어주세요.
+- 자기소개서에 그대로 쓸 수 있을 만큼 구체적으로, 한국어로 쓰세요.`;
+
+  const schema={
+    type:'object',
+    properties:{
+      overview:{type:'string'},
+      members:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            name:         {type:'string'},
+            role:         {type:'string'},
+            contributions:{type:'array', items:{type:'string'}},
+            learned:      {type:'array', items:{type:'string'}},
+          },
+          required:['name','role','contributions','learned']
+        }
+      },
+      teamLearnings:{type:'array', items:{type:'string'}},
+      keepNext:     {type:'array', items:{type:'string'}}
+    },
+    required:['overview','members','teamLearnings','keepNext']
+  };
+
+  const parsed=await geminiRequest(prompt,schema,16384);
+
+  /* 기록에 없는 사람을 지어내는 경우가 있어 실제 담당자 명단으로 한 번 거른다 */
+  const allow=new Set(names);
+  parsed.members=Array.isArray(parsed.members)
+    ? parsed.members
+        .filter(m=>m&&m.name&&(allow.size===0||allow.has(String(m.name).trim())))
+        .map(m=>({
+          name:String(m.name).trim(),
+          role:m.role||'',
+          contributions:Array.isArray(m.contributions)?m.contributions.filter(Boolean):[],
+          learned:Array.isArray(m.learned)?m.learned.filter(Boolean):[]
+        }))
+    : [];
+  parsed.teamLearnings=Array.isArray(parsed.teamLearnings)?parsed.teamLearnings.filter(Boolean):[];
+  parsed.keepNext=Array.isArray(parsed.keepNext)?parsed.keepNext.filter(Boolean):[];
+  return parsed;
+}

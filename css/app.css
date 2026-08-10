@@ -287,6 +287,38 @@
 .mt-name{flex:1;font-size:13px;font-weight:500;}
 
 /* ══════════════════════
+   프로젝트 마무리 — 회고 (js/wrapup.js)
+══════════════════════ */
+.sb-wrapup{
+  margin-top:var(--sp-2);color:var(--pk-dark);font-weight:var(--fw-bold);
+  background:var(--pk-bg);border:1px dashed var(--bd-s);
+}
+.sb-wrapup:hover{background:var(--pk-light);border-style:solid;}
+
+.wrap-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-2);margin:var(--sp-5) 0;}
+.wrap-stat-c{background:var(--pk-bg);border:1px solid var(--bd);border-radius:var(--r-md);padding:var(--sp-4);text-align:center;}
+.wrap-stat-v{font-size:var(--fs-3xl);font-weight:var(--fw-black);color:var(--pk-dark);}
+.wrap-stat-l{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;}
+
+.wrap-note{font-size:var(--fs-sm);color:var(--muted);text-align:center;line-height:2.2;}
+.wrap-warn{
+  background:var(--amber-lt);color:var(--amber);border-radius:var(--r-md);
+  padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);line-height:1.75;margin-top:var(--sp-3);
+}
+
+.wrap-h{font-size:var(--fs-md);margin:var(--sp-6) 0 var(--sp-3);padding-bottom:var(--sp-2);border-bottom:1px solid var(--bd);}
+.wrap-p{font-size:var(--fs-base);line-height:1.9;color:var(--text);}
+.wrap-ul{margin:0 0 var(--sp-3);padding-left:var(--sp-5);}
+.wrap-ul li{font-size:var(--fs-base);line-height:1.85;margin-bottom:3px;}
+
+.wrap-member{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r-md);padding:var(--sp-4);margin-bottom:var(--sp-3);}
+.wrap-member-hd{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);}
+.wrap-member-name{font-size:var(--fs-md);font-weight:var(--fw-black);}
+.wrap-member-role{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;}
+.wrap-sub{font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--hint);
+  text-transform:uppercase;letter-spacing:.05em;margin:var(--sp-3) 0 var(--sp-1);}
+
+/* ══════════════════════
    TASK FLOW
 ══════════════════════ */
 .flow-board{overflow-x:auto;padding-bottom:12px;}
