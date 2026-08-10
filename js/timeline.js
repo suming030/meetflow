@@ -101,6 +101,8 @@ function renderTimeline(){
             ${m.summary?`<div style="font-size:14px;line-height:1.85;color:var(--text);background:var(--pk-bg);padding:14px 16px;border-radius:10px;${items.length?'margin-top:14px;':''}">${m.summary}</div>`:''}
           </div>
           ${carryOverHTML(m)}
+          ${/* "놓치고 있는 부분" 바로 아래 — 못 정한 것을 웹에서 찾아보게 잇는다 (js/research.js) */''}
+          ${researchBlockHTML(m, pfx)}
         </div>
       </div>`;
   }).join('');
