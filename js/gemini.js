@@ -1,6 +1,35 @@
 /* MeetFlow — Gemini 공통 호출·JSON 파싱
    소유자: 기능 C */
 
+/* AI 호출 실패를 화면에 보여줄 안내로 바꾼다. 원인마다 사용자가 할 일이 달라서
+   (기다리기 / 콘솔 설정 고치기 / 그냥 재시도) 구분해준다. */
+function aiErrorInfo(e){
+  const msg=(e&&e.message)||String(e||'');
+  if(/quota|RESOURCE_EXHAUSTED|429/i.test(msg)) return {
+    title:'AI 사용량 한도를 넘었어요',
+    desc:'Gemini 무료 할당량을 다 썼어요. 분당 한도면 1분 뒤 다시 되고, ' +
+         '하루 한도면 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요. ' +
+         'Firebase 콘솔에서 요금제를 올리면 한도가 늘어납니다.',
+    retry:true, wait:true
+  };
+  if(/App Check/i.test(msg)) return {
+    title:'App Check에 막혔어요',
+    desc:'Firebase 콘솔의 App Check 설정 문제예요. 코드를 고쳐도 해결되지 않아요.',
+    retry:false
+  };
+  if(/permission|PERMISSION_DENIED|403/i.test(msg)) return {
+    title:'AI 서비스 권한 오류예요',
+    desc:'Firebase AI Logic 설정을 확인해주세요.',
+    retry:false
+  };
+  if(/network|fetch|Failed to fetch/i.test(msg)) return {
+    title:'네트워크에 연결하지 못했어요',
+    desc:'인터넷 연결을 확인하고 다시 시도해주세요.',
+    retry:true
+  };
+  return { title:'AI 호출에 실패했어요', desc:msg||'알 수 없는 오류예요.', retry:true };
+}
+
 /* ──── Gemini 공통 호출/파싱 ──── */
 async function geminiRequest(prompt,schema,maxTokens=4096){
   /* Firebase AI Logic 경유 — 사용자가 Gemini API 키를 입력할 필요 없음 */

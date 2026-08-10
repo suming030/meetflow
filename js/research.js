@@ -86,13 +86,14 @@ async function runResearchFor(meeting, targetId){
     renderResearch(res, targetId, meeting);
   }catch(e){
     console.error('[MeetFlow] 자료 찾기 실패', e);
+    const info=aiErrorInfo(e);
     wrap.innerHTML = `
       <div class="panel">
         <div class="empty">
-          <div class="e-ico">🔍</div>
-          <h3>자료를 찾지 못했어요</h3>
-          <p>${(e && e.message) ? esc2(e.message) : '알 수 없는 오류예요.'}</p>
-          <button class="btn-out" onclick="retryResearch('${esc2(targetId)}')">다시 시도</button>
+          <div class="e-ico">${info.wait?'⏳':'🔍'}</div>
+          <h3>${esc2(info.title)}</h3>
+          <p>${esc2(info.desc)}</p>
+          ${info.retry?`<button class="btn-out" onclick="retryResearch('${esc2(targetId)}')">다시 시도</button>`:''}
         </div>
       </div>`;
   }finally{
