@@ -194,6 +194,37 @@
 .sb-item.on{background:var(--pk-light);color:var(--pk-dark);font-weight:700;}
 .sb-item .sico{font-size:16px;width:20px;text-align:center;}
 .sb-cnt{margin-left:auto;background:var(--pk);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;}
+.sb-chev{margin-left:auto;font-size:10px;color:var(--hint);}
+.sb-parent.sb-parent-on{color:var(--pk-dark);font-weight:700;}
+.sb-sub{max-height:0;overflow:hidden;transition:max-height .2s ease;}
+.sb-sub.open{max-height:220px;}
+.sb-child{padding-left:34px;}
+
+/* 상단 nav의 프로젝트 배지 — 클릭하면 최근 회의 미리보기 + 빠른 진입 드롭다운 */
+.nav-project-wrap{position:relative;}
+.nav-project-menu{
+  display:none;position:absolute;top:calc(100% + 8px);right:0;width:280px;
+  background:var(--surface);border:1px solid var(--bd);border-radius:14px;
+  box-shadow:var(--shadow-card);padding:14px;z-index:200;
+}
+.nav-project-menu.show{display:block;}
+.npm-title{font-size:11px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.npm-meeting{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--pk-bg);margin-bottom:6px;}
+.npm-meeting:last-child{margin-bottom:0;}
+.npm-no{font-size:12px;font-weight:700;color:var(--pk-dark);}
+.npm-date{font-size:11px;color:var(--muted);}
+.npm-empty{font-size:12px;color:var(--muted);padding:2px 2px 14px;}
+.npm-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);}
+.npm-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+.npm-btn-primary{background:linear-gradient(135deg,var(--pk),var(--pk-dark));color:#fff;}
+.npm-btn-primary:hover{opacity:.92;}
+.npm-btn-ghost{background:var(--pk-bg);color:var(--pk-dark);}
+.npm-btn-ghost:hover{background:var(--pk-light);}
+
+/* 회의 타임라인 — 업무·분석 결과 토글 칩 */
+.tl-toggle-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:var(--pk-bg);color:var(--pk-dark);font-size:12px;font-weight:700;cursor:pointer;user-select:none;transition:background .15s;}
+.tl-toggle-chip:hover{background:var(--pk-light);}
+.tl-chev{font-size:10px;color:inherit;opacity:.7;}
 .sb-ws{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;font-size:12px;color:var(--hint);}
 .sb-ws .sico{font-size:14px;}
 .sb-new{

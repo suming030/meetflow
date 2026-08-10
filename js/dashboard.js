@@ -150,6 +150,65 @@ function persistItemStatus(itemId, st){
     });
 }
 
+/* 사이드바 업무·브리핑 그룹 접기/펼치기 */
+const SB_GROUP_OF={actions:'work',members:'work',taskflow:'work',briefing:'brief',milestones:'brief'};
+function toggleSbGroup(key){
+  const sub=document.getElementById('sb-sub-'+key), chev=document.getElementById('sb-chev-'+key);
+  if(!sub) return;
+  const open=sub.classList.toggle('open');
+  if(chev) chev.textContent=open?'▾':'▸';
+}
+function openSbGroup(key){
+  const sub=document.getElementById('sb-sub-'+key);
+  if(sub && !sub.classList.contains('open')) toggleSbGroup(key);
+}
+/* sdt()는 js/router.js(공용) 소유라 그 파일은 건드리지 않고, 여기서 감싸서
+   하위 탭이 활성화될 때(사이드바 클릭이든 URL 직접 진입·뒤로가기든) 소속 그룹을 자동으로 편다. */
+const _sdt=sdt;
+sdt=function(id,opts){
+  _sdt(id,opts);
+  document.querySelectorAll('.sb-parent').forEach(p=>p.classList.remove('sb-parent-on'));
+  const key=SB_GROUP_OF[id];
+  if(!key) return;
+  openSbGroup(key);
+  const parent=document.getElementById('sb-sub-'+key).closest('.sb-group').querySelector('.sb-parent');
+  if(parent) parent.classList.add('sb-parent-on');
+};
+
+/* 상단 nav의 프로젝트 배지("캡스톤" 등) — 클릭하면 최근 회의 미리보기 +
+   새 회의 분석·전체 타임라인 진입 버튼을 보여준다. */
+function toggleProjectMenu(){
+  const menu=document.getElementById('nav-project-menu');
+  if(!menu) return;
+  if(menu.classList.contains('show')){ menu.classList.remove('show'); return; }
+  renderProjectMenu();
+  menu.classList.add('show');
+}
+function closeProjectMenu(){
+  document.getElementById('nav-project-menu')?.classList.remove('show');
+}
+function renderProjectMenu(){
+  const menu=document.getElementById('nav-project-menu');
+  if(!menu) return;
+  const total=history.length;
+  const recent=history.slice(0,3);
+  menu.innerHTML=`
+    <div class="npm-title">최근 회의</div>
+    ${recent.length?recent.map((m,i)=>`
+      <div class="npm-meeting">
+        <span class="npm-no">${total-i}차 회의</span>
+        <span class="npm-date">${(m.date||'').slice(0,10)}</span>
+      </div>`).join(''):`<div class="npm-empty">아직 분석된 회의가 없어요.</div>`}
+    <div class="npm-actions">
+      <div class="npm-btn npm-btn-primary" onclick="closeProjectMenu();gp('upload');">✨ 새 회의 분석하기</div>
+      <div class="npm-btn npm-btn-ghost" onclick="closeProjectMenu();gp('dash',{tab:'timeline'});">🕒 전체 타임라인 보기 →</div>
+    </div>`;
+}
+document.addEventListener('click', e=>{
+  const wrap=document.getElementById('nav-project-wrap');
+  if(wrap && !wrap.contains(e.target)) closeProjectMenu();
+});
+
 function renderAll(){
   renderOverview();
   renderAllActions();
