@@ -326,3 +326,119 @@ ${peopleBlock}
   parsed.keepNext=Array.isArray(parsed.keepNext)?parsed.keepNext.filter(Boolean):[];
   return parsed;
 }
+
+/* ────────────────────────────────
+   개인 경험 정리 — 한 사람만 깊게
+
+   전체 회고(callProjectWrapup)가 팀 단위 요약이라면, 이건 한 사람이
+   자기소개서·포트폴리오에 쓸 수 있을 만큼 자세히 파는 쪽이다.
+   담당자가 팀 이름("홍보팀")인 경우도 있어 사람/팀을 가리지 않고 "담당 주체"로 다룬다.
+   ──────────────────────────────── */
+
+/**
+ * @param {object} project 현재 프로젝트
+ * @param {Array}  meets   회의 이력 (최신순)
+ * @param {string} who     정리할 담당자 이름
+ */
+async function callMemberWrapup(project, meets, who){
+  const chrono=[...meets].reverse();
+
+  /* 이 사람이 맡은 업무를 회차별로 */
+  const myTasks=[];
+  chrono.forEach((m,i)=>{
+    (m.items||[]).forEach(it=>{
+      if(it.assignee===who)
+        myTasks.push(`- [${i+1}차] ${it.task} (${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''})`);
+    });
+  });
+
+  /* 이 사람 이름이 언급된 회의 내용 — 업무 목록만으로는 안 보이는 맥락이 여기 있다 */
+  const mentions=[];
+  chrono.forEach((m,i)=>{
+    (m.topics||[]).forEach(t=>{
+      (t.discussion||[]).forEach(d=>{
+        if(d.includes(who)) mentions.push(`- [${i+1}차 · ${t.title}] ${d}`);
+      });
+    });
+    (m.carriedOver||[]).forEach(c=>{
+      if((c.task||'').includes(who)||(c.note||'').includes(who))
+        mentions.push(`- [${i+1}차 · 이어진 업무] ${c.task}: ${c.note||''}`);
+    });
+  });
+
+  /* 팀 전체 흐름 — 이 사람의 일이 어디에 놓였는지 알아야 역할을 제대로 쓴다 */
+  const flow=chrono.map((m,i)=>
+    `[${i+1}차${m.date?` · ${m.date.slice(0,10)}`:''}] ${m.summary||''}`).join('\n');
+
+  const prompt=`"${project.name||'프로젝트'}"(${TRACK_LBL[project.track]||'팀 프로젝트'})에서
+**${who}**가 한 일을 정리해 개인 경험 기록을 만들려고 합니다.
+
+===== 프로젝트 전체 흐름 (회의 ${chrono.length}건) =====
+${flow}
+
+===== ${who}가 맡은 업무 =====
+${myTasks.length?myTasks.join('\n'):'(배정된 업무 기록이 없습니다.)'}
+
+===== 회의에서 ${who}가 언급된 대목 =====
+${mentions.length?mentions.join('\n'):'(직접 언급된 대목이 없습니다.)'}
+
+작성 규칙:
+- 주인공은 ${who}입니다. 다른 사람이 한 일을 ${who}의 성과로 쓰지 마세요.
+- **기록에 있는 것만 쓰세요.** 없는 성과·수치·직함을 지어내면 안 됩니다.
+  근거가 부족하면 항목을 적게 쓰는 편이 낫습니다.
+- role: ${who}가 이 프로젝트에서 맡은 역할을 한 문장으로.
+- summary: 무엇을 맡아 어떻게 해냈는지 3~4문장. 자기소개서 도입부처럼 쓰세요.
+- timeline: 회차별로 무엇을 했는지. when은 "1차 회의"처럼, what은 한 문장으로.
+  업무가 있던 회차만 넣으세요.
+- highlights: 대표 경험 2~3개를 상황·행동·결과로 나눠 쓰세요.
+  situation은 그때 어떤 문제나 필요가 있었는지, action은 ${who}가 실제로 한 행동,
+  result는 그래서 어떻게 됐는지. result가 기록에 없으면 "진행 중"처럼 사실대로 쓰세요.
+- skills: 이 경험으로 보여줄 수 있는 역량 3~5개. 한 단어~짧은 구로.
+- growth: 배운 점·성장한 부분 2~4개를 문장으로.
+- selfIntro: 자기소개서에 그대로 붙여 쓸 수 있는 한 문단(4~6문장).
+  과장 없이, 위 기록에 있는 사실만으로 쓰세요.
+- 한국어로 쓰세요.`;
+
+  const schema={
+    type:'object',
+    properties:{
+      role:   {type:'string'},
+      summary:{type:'string'},
+      timeline:{
+        type:'array',
+        items:{ type:'object',
+          properties:{ when:{type:'string'}, what:{type:'string'} },
+          required:['when','what'] }
+      },
+      highlights:{
+        type:'array',
+        items:{ type:'object',
+          properties:{
+            title:    {type:'string'},
+            situation:{type:'string'},
+            action:   {type:'string'},
+            result:   {type:'string'},
+          },
+          required:['title','situation','action','result'] }
+      },
+      skills:   {type:'array', items:{type:'string'}},
+      growth:   {type:'array', items:{type:'string'}},
+      selfIntro:{type:'string'}
+    },
+    required:['role','summary','timeline','highlights','skills','growth','selfIntro']
+  };
+
+  const parsed=await geminiRequest(prompt,schema,16384);
+  const arr=v=>Array.isArray(v)?v.filter(Boolean):[];
+  return {
+    name:who,
+    role:parsed.role||'',
+    summary:parsed.summary||'',
+    timeline:arr(parsed.timeline).filter(t=>t.when&&t.what),
+    highlights:arr(parsed.highlights).filter(h=>h.title),
+    skills:arr(parsed.skills),
+    growth:arr(parsed.growth),
+    selfIntro:parsed.selfIntro||'',
+    createdAt:new Date().toISOString()
+  };
+}

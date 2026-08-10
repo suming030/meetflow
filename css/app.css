@@ -318,6 +318,39 @@
 .wrap-sub{font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--hint);
   text-transform:uppercase;letter-spacing:.05em;margin:var(--sp-3) 0 var(--sp-1);}
 
+/* 참여자 배지 — 누르면 그 사람 경험만 자세히 */
+.wrap-person{cursor:pointer;transition:all .15s;}
+.wrap-person:hover{background:var(--pk);color:#fff;transform:translateY(-1px);}
+
+/* 개인 경험 정리 */
+.mem-hero{display:flex;align-items:center;gap:var(--sp-4);padding-bottom:var(--sp-4);
+  border-bottom:1px solid var(--bd);margin-bottom:var(--sp-4);}
+.mem-name{font-size:var(--fs-2xl);font-weight:var(--fw-black);}
+.mem-role{font-size:var(--fs-base);color:var(--muted);margin-top:3px;}
+
+.mem-skills{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4);}
+.mem-skill{background:var(--pk-light);color:var(--pk-dark);font-size:var(--fs-sm);
+  font-weight:var(--fw-bold);padding:var(--sp-1) var(--sp-3);border-radius:var(--r-pill);}
+
+.mem-tl{border-left:2px solid var(--bd-s);padding-left:var(--sp-4);margin-left:var(--sp-2);}
+.mem-tl-row{position:relative;padding-bottom:var(--sp-4);}
+.mem-tl-row:last-child{padding-bottom:0;}
+.mem-tl-row::before{content:'';position:absolute;left:calc(-1 * var(--sp-4) - 5px);top:5px;
+  width:8px;height:8px;border-radius:50%;background:var(--pk);}
+.mem-tl-when{font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--pk-dark);}
+.mem-tl-what{font-size:var(--fs-base);line-height:1.75;margin-top:2px;}
+
+.mem-hl{background:var(--bg);border:1px solid var(--bd);border-left:3px solid var(--pk);
+  border-radius:0 var(--r-md) var(--r-md) 0;padding:var(--sp-4);margin-bottom:var(--sp-3);}
+.mem-hl-ttl{font-size:var(--fs-md);font-weight:var(--fw-black);margin-bottom:var(--sp-3);}
+.mem-hl-row{display:flex;gap:var(--sp-3);font-size:var(--fs-base);line-height:1.75;margin-bottom:var(--sp-2);}
+.mem-hl-row:last-child{margin-bottom:0;}
+.mem-hl-lbl{flex-shrink:0;width:32px;font-size:var(--fs-xs);font-weight:var(--fw-bold);
+  color:var(--hint);padding-top:3px;}
+
+.mem-intro{background:var(--pk-bg);border:1px solid var(--bd-s);border-radius:var(--r-md);padding:var(--sp-5);}
+.mem-intro p{font-size:var(--fs-base);line-height:2;color:var(--text);}
+
 /* ══════════════════════
    TASK FLOW
 ══════════════════════ */
