@@ -392,6 +392,21 @@
       <!-- 지난 회의에서 이어진 일 + AI가 짚은 빈틈 -->
       <div id="up-carry"></div>
 
+      <!-- 분석이 끝난 뒤 다음 행동 — 추가 자료 찾기 / 타임라인으로 이동 -->
+      <div class="next-step" id="up-next">
+        <div class="next-step-hd">
+          <div class="next-step-ttl">이제 뭘 해볼까요?</div>
+          <div class="next-step-sub">회의 분석이 끝났어요. 여기서 이어서 진행할 수 있어요.</div>
+        </div>
+        <div class="next-step-btns">
+          <button class="btn-pk" onclick="runMeetingResearch()">🔍 추가 분석 자료 찾기</button>
+          <button class="btn-out" onclick="gp('dash',{tab:'timeline'})">🕒 전체 회의 타임라인으로 →</button>
+        </div>
+      </div>
+
+      <!-- 그라운딩 검색 결과 -->
+      <div id="up-research"></div>
+
     </div>
 
     <!-- 초기 빈 상태 -->
@@ -649,6 +664,7 @@
 <script src="js/meetings.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/timeline.js"></script>
+<script src="js/research.js"></script>
 <script src="js/google.js"></script>
 <script src="js/main.js"></script>
 
@@ -799,6 +815,29 @@
     });
     const result = await model.generateContent(prompt);
     return result.response.text();
+  };
+
+  /* Google 검색 그라운딩 — 회의 내용을 바탕으로 실제 웹 자료를 찾아온다.
+     주의: 구조화 JSON(responseSchema)과 함께 쓰면 출처(groundingChunks)가 비어서
+     돌아오는 문제가 보고돼 있어, 회의 분석(mfGenerateJSON)과 반드시 분리해 호출한다.
+     반환하는 metadata는 Google 정책상 화면에 표시해야 하는 검색 제안·출처를 담고 있다. */
+  window.mfGroundedSearch = async (prompt, maxOutputTokens = 8192) => {
+    const model = getGenerativeModel(ai, {
+      model: "gemini-3.6-flash",
+      tools: [{ googleSearch: {} }],
+      generationConfig: { temperature: 0.3, maxOutputTokens }
+    });
+    const result = await model.generateContent(prompt);
+    const cand = result.response.candidates?.[0];
+    const gm = cand?.groundingMetadata || {};
+    return {
+      text: result.response.text(),
+      queries: gm.webSearchQueries || [],
+      chunks: (gm.groundingChunks || [])
+        .map(c => c.web).filter(Boolean)
+        .map(w => ({ uri: w.uri, title: w.title || w.domain || w.uri })),
+      searchEntryPoint: gm.searchEntryPoint?.renderedContent || ''
+    };
   };
 
   /* 오디오(회의 녹음) → 텍스트 전사 */

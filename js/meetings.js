@@ -229,6 +229,8 @@ function editItemTask(ev, itemId){
 /* ──── 업로드 결과 렌더링 ──── */
 function renderUpResult(result){
   const items=result.items;
+  lastResult=result;                                  /* 자료 찾기(js/research.js)가 참고한다 */
+  document.getElementById('up-research').innerHTML=''; /* 지난 회의의 검색 결과를 남기지 않는다 */
   document.getElementById('result-wrap').classList.add('show');
   document.getElementById('up-empty').style.display='none';
 
