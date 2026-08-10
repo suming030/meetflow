@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeetFlow AI — AI 기반 회의 업무 자동화</title>
+<meta name="description" content="회의가 쌓일수록 프로젝트가 선명해져요. 지난 회의에서 못 끝낸 일을 이번 회의 분석에 자동으로 이어 붙이는 AI 팀플 매니저.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MeetFlow AI">
+<meta property="og:title" content="MeetFlow AI — 회의가 쌓일수록 프로젝트가 선명해져요">
+<meta property="og:description" content="지난 회의에서 못 끝낸 일을 이번 회의 분석에 자동으로 이어 붙이는 AI 팀플 매니저.">
+<meta property="og:image" content="https://suming030.github.io/meetflow/assets/og-image.png">
+<meta property="og:url" content="https://suming030.github.io/meetflow/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MeetFlow AI — 회의가 쌓일수록 프로젝트가 선명해져요">
+<meta name="twitter:description" content="지난 회의에서 못 끝낸 일을 이번 회의 분석에 자동으로 이어 붙이는 AI 팀플 매니저.">
+<meta name="twitter:image" content="https://suming030.github.io/meetflow/assets/og-image.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +52,7 @@
   <!-- HERO -->
   <div class="hero">
     <img src="assets/logo-full.png" alt="MeetFlow — Meet. Plan. Flow Together." class="hero-logo">
-    <div class="hero-badge">💜 여러 회의를 하나로 잇는 프로젝트 AI</div>
+    <div class="hero-badge">여러 회의를 하나로 잇는 프로젝트 AI</div>
     <h1>회의가 쌓일수록<br><em>프로젝트가 선명해</em>져요</h1>
     <p>서기 없이 회의록이 정리되는 건 기본이에요.<br>
        지난 회의에서 못 끝낸 일을 이번 회의에 자동으로 이어 붙여,<br>
@@ -65,23 +76,37 @@
             <div class="hp-sb-ico">💜</div>
             <span style="font-size:11px;font-weight:800;">MeetFlow</span>
           </div>
-          <div class="hp-sb-item a">📊 대시보드</div>
-          <div class="hp-sb-item">✅ Action Items</div>
-          <div class="hp-sb-item">👥 담당자별</div>
-          <div class="hp-sb-item">🔗 Task Flow</div>
-          <div class="hp-sb-item">📋 브리핑</div>
+          <div class="hp-sb-item">📊 개요</div>
+          <div class="hp-sb-item">🗂️ 업무 ▸</div>
+          <div class="hp-sb-item a">🕒 회의 타임라인</div>
+          <div class="hp-sb-item">📋 브리핑 ▸</div>
         </div>
+        <!-- 3차례 회의가 쌓이며 선명해지는 모습을 그대로 축소해 보여준다 (실제 회의 타임라인 화면과 같은 구성) -->
         <div class="hp-main">
-          <div class="hp-metrics">
-            <div class="hp-mc"><div class="hp-mc-v" style="color:var(--pk);">12</div><div class="hp-mc-l">Action Items</div></div>
-            <div class="hp-mc"><div class="hp-mc-v" style="color:var(--teal);">4명</div><div class="hp-mc-l">담당자</div></div>
-            <div class="hp-mc"><div class="hp-mc-v" style="color:var(--amber);">8개</div><div class="hp-mc-l">마감일 명시</div></div>
-            <div class="hp-mc"><div class="hp-mc-v" style="color:var(--violet);">42%</div><div class="hp-mc-l">완료율</div></div>
-          </div>
-          <div class="hp-cards">
-            <div class="hp-card"><div class="hp-ck d">✓</div><span style="flex:1;">2분기 마케팅 기획서 작성</span><span class="hp-bdg pk">홍길동</span><span class="hp-bdg tl">✅ 완료</span></div>
-            <div class="hp-card"><div class="hp-ck"></div><span style="flex:1;">경쟁사 분석 리포트 공유</span><span class="hp-bdg pk">김영희</span><span class="hp-bdg am">📅 D-3</span></div>
-            <div class="hp-card"><div class="hp-ck"></div><span style="flex:1;">SNS 콘텐츠 캘린더 완성</span><span class="hp-bdg pk">이철수</span><span class="hp-bdg bl">🔄 진행중</span></div>
+          <div class="hp-tl">
+            <div class="hp-tl-row">
+              <div class="hp-tl-node">1</div>
+              <div class="hp-tl-card">
+                <div class="hp-tl-ttl">1차 회의</div>
+                <div class="hp-tl-task">✅ 마케팅 기획서 작성</div>
+              </div>
+            </div>
+            <div class="hp-tl-row">
+              <div class="hp-tl-node">2</div>
+              <div class="hp-tl-card">
+                <div class="hp-tl-ttl">2차 회의</div>
+                <div class="hp-tl-task">✅ 백엔드 API 문서화</div>
+                <div class="hp-tl-task muted">⏳ 경쟁사 분석 — 이어짐</div>
+              </div>
+            </div>
+            <div class="hp-tl-row">
+              <div class="hp-tl-node on">3</div>
+              <div class="hp-tl-card on">
+                <div class="hp-tl-ttl">3차 회의<span class="hp-tl-new">최신</span></div>
+                <div class="hp-tl-task">🔄 발표 슬라이드 디자인</div>
+                <div class="hp-tl-task">📅 QA 테스트 시나리오</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -134,7 +159,6 @@
       <div class="gw-badge"><span class="ico">📄</span> Google Docs</div>
       <div class="gw-badge"><span class="ico">📅</span> Google Calendar</div>
       <div class="gw-badge"><span class="ico">✨</span> Gemini AI</div>
-      <div class="gw-badge"><span class="ico">📊</span> Google Sheets</div>
     </div>
   </div>
 
@@ -373,7 +397,7 @@
     <!-- 초기 빈 상태 -->
     <div class="up-panel" id="up-empty">
       <div class="empty">
-        <div class="e-ico">💜</div>
+        <img src="assets/logo-icon.png" alt="MeetFlow" class="e-ico" style="width:52px;height:52px;border-radius:14px;">
         <h3>회의 내용을 입력해보세요</h3>
         <p>위 입력창에 회의 텍스트를 붙여넣고 AI 분석 시작을 눌러주세요.<br>
            샘플 버튼으로 바로 테스트해볼 수 있어요!</p>
