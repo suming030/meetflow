@@ -221,10 +221,15 @@
 .npm-btn-ghost{background:var(--pk-bg);color:var(--pk-dark);}
 .npm-btn-ghost:hover{background:var(--pk-light);}
 
-/* 회의 타임라인 — 업무·분석 결과 토글 칩 */
+/* 회의 타임라인 — 업무·분석 결과·회의록 토글 칩 */
 .tl-toggle-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:var(--pk-bg);color:var(--pk-dark);font-size:12px;font-weight:700;cursor:pointer;user-select:none;transition:background .15s;}
 .tl-toggle-chip:hover{background:var(--pk-light);}
 .tl-chev{font-size:10px;color:inherit;opacity:.7;}
+
+/* 회의록 보기 모달 */
+.minutes-box{background:var(--surface);border-radius:18px;width:720px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 28px 64px rgba(75,107,251,.18);animation:slideUp .25s ease;}
+.minutes-hd{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--bd);border-radius:18px 18px 0 0;}
+.minutes-body{padding:28px 32px;}
 .sb-ws{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;font-size:12px;color:var(--hint);}
 .sb-ws .sico{font-size:14px;}
 .sb-new{
