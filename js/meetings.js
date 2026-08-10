@@ -109,6 +109,123 @@ async function applyCarriedOver(carried){
   return count;
 }
 
+/* ════════════════════════════════
+   담당자·마감일 직접 수정
+
+   AI 배정은 틀릴 수 있고("화자2"만 들린 경우 등), 회의 뒤에 담당자가 바뀌기도 한다.
+   그래서 업무 카드의 담당자·마감일 배지를 그 자리에서 고칠 수 있게 한다.
+   저장 방식은 상태 변경(persistItemStatus)과 같다 — history를 고치고 회의 문서를 갱신.
+════════════════════════════════ */
+
+/** itemId로 그 업무가 속한 회의와 업무 객체를 찾는다. */
+function findItemById(itemId){
+  const meeting=history.find(m=>(m.items||[]).some(it=>it.id===itemId));
+  if(!meeting) return null;
+  return {meeting, item:meeting.items.find(it=>it.id===itemId)};
+}
+
+/** 업무의 담당자/마감일을 history와 Firestore 양쪽에 반영한다. */
+function persistItemField(itemId, patch){
+  const found=findItemById(itemId);
+  if(!found){ renderAll(); return; }
+  const {meeting,item}=found;
+
+  let changed=false;
+  Object.keys(patch).forEach(k=>{ if(item[k]!==patch[k]){ item[k]=patch[k]; changed=true; } });
+
+  /* 같은 업무가 개요·Action Items·담당자별·타임라인에 동시에 그려져 있어서
+     한 군데만 고치면 나머지가 어긋난다. 편집이 끝나면 항상 전체를 다시 그린다. */
+  renderAll();
+  if(!changed) return;
+
+  /* 아직 저장 전인 회의는 저장될 때 함께 기록되므로 여기서는 건너뛴다 */
+  if(!meeting.id || !currentProject) return;
+  window.mfDb.updateMeeting(currentProject.id, meeting.id, {items:meeting.items})
+    .catch(e=>{
+      console.error('[MeetFlow] 업무 수정 저장 실패', e);
+      toast('수정한 내용을 저장하지 못했어요.','error');
+    });
+}
+
+/** 이미 쓰인 담당자 이름을 자동완성으로 제안한다 — 같은 사람을 다르게 적는 걸 줄인다.
+    이름에 따옴표가 섞여도 안전하도록 innerHTML 대신 DOM으로 만든다. */
+function ensureAssigneeList(){
+  let dl=document.getElementById('ac-assignees');
+  if(!dl){ dl=document.createElement('datalist'); dl.id='ac-assignees'; document.body.appendChild(dl); }
+  const names=[...new Set(history.flatMap(m=>(m.items||[]).map(i=>i.assignee)))]
+    .filter(n=>n&&n!=='미지정');
+  dl.innerHTML='';
+  names.forEach(n=>{ const o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+  return dl;
+}
+
+/** 배지를 그 자리에서 입력창으로 바꾼다. Enter·포커스 아웃이면 저장, Esc면 취소.
+    cssExtra로 배지용(작은 알약)과 업무 제목용(넓은 칸) 모양을 구분한다. */
+function openInlineEdit(span, type, value, placeholder, onSave, cssExtra){
+  if(span.dataset.editing==='1') return;
+  span.dataset.editing='1';
+
+  const inp=document.createElement('input');
+  inp.type=type;
+  inp.value=value||'';
+  if(placeholder) inp.placeholder=placeholder;
+  inp.style.cssText='font-family:inherit;border:1.5px solid var(--pk);outline:none;'+
+                    'background:#fff;color:var(--text);'+
+                    (cssExtra || 'font-size:11px;padding:3px 8px;border-radius:20px;'+
+                                 (type==='date'?'width:132px;':'width:96px;'));
+  if(type==='text'&&!cssExtra){ ensureAssigneeList(); inp.setAttribute('list','ac-assignees'); }
+
+  span.replaceWith(inp);
+  inp.focus();
+  if(type==='text') inp.select();
+
+  let done=false;
+  const finish=save=>{
+    if(done) return;            /* Enter로 저장하면 blur가 또 불려서 두 번 실행된다 */
+    done=true;
+    if(save) onSave(inp.value); else renderAll();
+  };
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'){ e.preventDefault(); finish(true); }
+    else if(e.key==='Escape'){ e.preventDefault(); finish(false); }
+  };
+  inp.onblur=()=>finish(true);
+}
+
+/** 담당자 배지 클릭 — 비어 있으면 새로 채우고, 있으면 고친다. */
+function editItemAssignee(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  const cur=(found.item.assignee&&found.item.assignee!=='미지정')?found.item.assignee:'';
+  openInlineEdit(ev.currentTarget,'text',cur,'담당자 이름',v=>{
+    /* 비우면 다시 미지정으로 — 코드 전반이 '미지정'을 담당자 없음으로 취급한다 */
+    persistItemField(itemId,{assignee:v.trim()||'미지정'});
+  });
+}
+
+/** 마감일 배지 클릭 — 날짜 선택기로 고친다. 비우면 '마감일 미정'으로 돌아간다. */
+function editItemDeadline(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  openInlineEdit(ev.currentTarget,'date',found.item.deadline||'','',v=>{
+    persistItemField(itemId,{deadline:v||null});
+  });
+}
+
+/** 업무 제목 클릭 — AI가 25자로 줄이면서 뜻이 달라지는 경우가 있어 직접 고칠 수 있게 한다.
+    제목 없는 업무는 목록에서 빈 줄로만 보이므로, 비우면 저장하지 않고 원래대로 되돌린다. */
+function editItemTask(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  const before=found.item.task;
+  openInlineEdit(ev.currentTarget,'text',before,'업무 내용',v=>{
+    persistItemField(itemId,{task:v.trim()||before});
+  },'font-size:13.5px;font-weight:500;padding:5px 10px;border-radius:8px;width:100%;');
+}
+
 /* ──── 업로드 결과 렌더링 ──── */
 function renderUpResult(result){
   const items=result.items;
@@ -176,6 +293,9 @@ async function saveHistory(result,text){
        분석 당시의 판단을 회의 문서에 함께 남겨야 한다. */
     carriedOver:result.carriedOver||[],
     gaps:result.gaps||[],
+    /* 안건별 논의 내용 — 회의 타임라인의 회의록 본문이 된다.
+       이 필드가 없는 과거 회의는 회의록에서 요약+업무 표로 자동 폴백한다. */
+    topics:result.topics||[],
     date:new Date().toISOString(),
     createdBy:currentUser?currentUser.uid:null,
     createdByName:currentUser?(currentUser.displayName||currentUser.email||''):''

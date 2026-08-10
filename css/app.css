@@ -159,6 +159,12 @@
 .b-person{background:var(--pk-light);color:var(--pk-dark);}
 .b-dl{background:var(--amber-lt);color:var(--amber);}
 .b-nodl{background:#f3f3f6;color:var(--hint);}
+/* 담당자·마감일 배지는 눌러서 그 자리에서 고칠 수 있다 (편집 로직은 js/meetings.js) */
+.ac-ed{cursor:pointer;box-shadow:inset 0 0 0 1px transparent;transition:box-shadow .15s;}
+.ac-ed:hover{box-shadow:inset 0 0 0 1px var(--pk-mid);}
+/* 업무 제목도 눌러서 고칠 수 있다 — AI가 25자로 줄이며 뜻이 달라지는 경우가 있어서 */
+.ac-ed-task{cursor:pointer;border-radius:6px;transition:background .15s;}
+.ac-ed-task:hover{background:var(--pk-bg);}
 .st-bdg{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;cursor:pointer;transition:all .15s;}
 .s-todo{background:#F4F4F7;color:#7a7a9a;}.s-todo:hover{background:var(--pk-light);color:var(--pk-dark);}
 .s-doing{background:var(--blue-lt);color:var(--blue);}

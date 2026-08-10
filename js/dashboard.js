@@ -94,10 +94,22 @@ function acHTML(item,idx,pfx){
       <div class="prio-bar prio-${prio[0]}"></div>
       <div class="ac-chk${st==='done'?' ck':''}" id="ck-${pid}" onclick="toggleCk('${pid}','${iid}')">${st==='done'?'✓':''}</div>
       <div class="ac-body">
-        <div class="ac-task${st==='done'?' done':''}" id="t-${pid}">${item.task}</div>
+        <div class="ac-task${st==='done'?' done':''}${iid?' ac-ed-task':''}" id="t-${pid}"${iid?` title="클릭해서 업무 내용 수정" onclick="editItemTask(event,'${iid}')"`:''}>${item.task}</div>
         <div class="ac-meta">
-          ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
-          ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}
+          ${/* 담당자·마감일은 배지를 눌러 그 자리에서 고친다(js/meetings.js).
+                AI가 잘못 배정하거나 미지정으로 남긴 걸 사람이 채울 수 있어야 해서,
+                비어 있을 때도 배지를 감추지 않고 "지정" 자리표시자로 띄운다.
+                id가 없는 업무(저장 전)는 찾을 수 없으므로 편집을 걸지 않는다. */''}
+          ${iid?`
+            ${item.assignee&&item.assignee!=='미지정'
+              ?`<span class="bdg b-person ac-ed" title="클릭해서 담당자 변경" onclick="editItemAssignee(event,'${iid}')">👤 ${item.assignee}</span>`
+              :`<span class="bdg b-nodl ac-ed" title="클릭해서 담당자 지정" onclick="editItemAssignee(event,'${iid}')">👤 담당자 지정</span>`}
+            ${item.deadline
+              ?`<span class="bdg b-dl ac-ed" title="클릭해서 마감일 변경" onclick="editItemDeadline(event,'${iid}')">📅 ${item.deadline}</span>`
+              :`<span class="bdg b-nodl ac-ed" title="클릭해서 마감일 지정" onclick="editItemDeadline(event,'${iid}')">📅 마감일 지정</span>`}`
+          :`
+            ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
+            ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}`}
           <span class="st-bdg ${ST.cls[st]}" id="st-${pid}" data-st="${st}" onclick="cycleSt('${pid}','${iid}')">${ST.ico[st]} ${ST.lbl[st]}</span>
         </div>
       </div>
