@@ -261,29 +261,71 @@ function renderAllActions(){
   wrap.innerHTML=`<div class="panel"><div class="ac-grid">${all.map((it,i)=>acHTML(it,i,'all')).join('')}</div></div>`;
 }
 
-/* 담당자별 */
+/* 담당자별 — 카드는 기본 접힌 요약만 보여주고, 누르면 업무 리스트를 펼친다.
+   회의가 쌓일수록 업무가 계속 늘어나므로 펼친 상태로 다 쏟아내면 스크롤만 길어진다. */
 function renderMembers(){
   const wrap=document.getElementById('members-wrap');
   if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">👥</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
   const all=history.flatMap(e=>e.items);
   const g=groupBy(all);
-  wrap.innerHTML=Object.entries(g).map(([name,tasks])=>`
+  const today=new Date(); today.setHours(0,0,0,0);
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  const row=t=>{
+    const diff=t.deadline?Math.ceil((new Date(t.deadline)-today)/86400000):null;
+    const urgent=diff!==null&&diff<=3;
+    return `
+      <div class="mini-task">
+        <div class="mt-name">${t.task}</div>
+        ${t.deadline?`<span class="mt-dl${urgent?' urg':''}">${urgent?'⚠️ ':'📅 '}${t.deadline}</span>`:''}
+        <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>
+      </div>`;
+  };
+
+  wrap.innerHTML=Object.entries(g).map(([name,tasks],mi)=>{
+    const doing=tasks.filter(t=>t.status==='doing').sort(byDeadline);
+    const todo=tasks.filter(t=>(t.status||'todo')==='todo').sort(byDeadline);
+    const done=tasks.filter(t=>t.status==='done').sort(byDeadline);
+    const rate=tasks.length?Math.round(done.length/tasks.length*100):0;
+    return `
     <div class="as-group">
-      <div class="as-hd">
+      <div class="as-hd" onclick="toggleMemberCard(${mi})">
         <div class="av ${avCls(name)}">${name[0]}</div>
-        <div><div class="as-name">${name}</div><div class="as-ct">업무 ${tasks.length}개 · 완료 ${tasks.filter(t=>t.status==='done').length}개</div></div>
-        <div style="margin-left:auto;">
-          <div class="prog-wrap" style="width:80px;"><div class="prog-fill" style="width:${tasks.length?tasks.filter(t=>t.status==='done').length/tasks.length*100:0}%"></div></div>
+        <div style="flex:1;min-width:0;">
+          <div class="as-name">${name}</div>
+          <div class="as-ct">진행중 ${doing.length} · 미시작 ${todo.length} · 완료 ${done.length}</div>
         </div>
+        <div style="width:80px;flex-shrink:0;">
+          <div class="prog-wrap"><div class="prog-fill" style="width:${rate}%"></div></div>
+          <div style="font-size:11px;color:var(--muted);text-align:right;margin-top:3px;">${rate}%</div>
+        </div>
+        <span class="tl-chev" id="as-chev-${mi}">▸</span>
       </div>
-      ${tasks.map((t,i)=>`
-        <div class="mini-task">
-          <span class="prio-bar prio-${(t.priority||'m')[0]}" style="height:30px;margin-right:2px;"></span>
-          <div class="mt-name">${t.task}</div>
-          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">${t.deadline}</span>`:''}
-          <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>
-        </div>`).join('')}
-    </div>`).join('');
+      <div class="as-body" id="as-body-${mi}" style="display:none;">
+        ${doing.map(row).join('')}
+        ${todo.map(row).join('')}
+        ${done.length?`
+          <div class="tl-toggle-chip" style="margin-top:6px;" onclick="event.stopPropagation();toggleMemberDone(${mi})">✅ 완료 ${done.length}개 <span class="tl-chev" id="as-done-chev-${mi}">▸</span></div>
+          <div id="as-done-${mi}" style="display:none;margin-top:8px;">${done.map(row).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** 담당자 카드를 접었다 펼친다. */
+function toggleMemberCard(i){
+  const body=document.getElementById('as-body-'+i), chev=document.getElementById('as-chev-'+i);
+  if(!body) return;
+  const show=body.style.display==='none';
+  body.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
+}
+/** 완료된 업무 목록을 접었다 펼친다. */
+function toggleMemberDone(i){
+  const box=document.getElementById('as-done-'+i), chev=document.getElementById('as-done-chev-'+i);
+  if(!box) return;
+  const show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
 }
 
 /* Task Flow */
