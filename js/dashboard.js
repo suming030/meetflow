@@ -253,12 +253,48 @@ function renderOverview(){
   document.getElementById('ov-as-summary').innerHTML=asSummaryHTML(all);
 }
 
-/* 전체 Action Items */
+/* 전체 Action Items — 회의가 쌓일수록 계속 늘어나므로 상태별로 나누고
+   완료는 접어서, 지금 봐야 할 업무(진행중·미시작)가 먼저 눈에 들어오게 한다. */
 function renderAllActions(){
   const wrap=document.getElementById('all-ac-wrap');
   if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">📋</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
   const all=history.flatMap(e=>e.items);
-  wrap.innerHTML=`<div class="panel"><div class="ac-grid">${all.map((it,i)=>acHTML(it,i,'all')).join('')}</div></div>`;
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  const doing=all.filter(i=>i.status==='doing').sort(byDeadline);
+  const todo=all.filter(i=>(i.status||'todo')==='todo').sort(byDeadline);
+  const done=all.filter(i=>i.status==='done').sort(byDeadline);
+
+  const section=(label,items,pfx,first)=>items.length?`
+    <div class="m-lbl" style="margin:${first?'0':'18px'} 0 10px;">${label} ${items.length}개</div>
+    <div class="ac-grid">${items.map((it,i)=>acHTML(it,i,'all-'+pfx)).join('')}</div>`:'';
+
+  const pending=doing.length||todo.length;
+
+  wrap.innerHTML=`
+    <div class="panel">
+      ${pending?`
+        ${section('🔄 진행중',doing,'doing',true)}
+        ${section('⬜ 미시작',todo,'todo',!doing.length)}
+      `:`
+        <div style="text-align:center;padding:20px 0 4px;">
+          <div style="font-size:40px;margin-bottom:12px;">🎉</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">진행중·미시작 업무가 없어요!</div>
+          <div style="font-size:13px;color:var(--muted);">다음 회의를 분석해보세요.</div>
+        </div>`}
+      ${done.length?`
+        <div class="tl-toggle-chip" style="margin-top:${pending?'18px':'20px'};" onclick="toggleAllDone()">✅ 완료 ${done.length}개 <span class="tl-chev" id="all-done-chev">▸</span></div>
+        <div id="all-done-wrap" style="display:none;margin-top:10px;">
+          <div class="ac-grid">${done.map((it,i)=>acHTML(it,i,'all-done')).join('')}</div>
+        </div>`:''}
+    </div>`;
+}
+/** 전체 Action Items의 완료 목록을 접었다 펼친다. */
+function toggleAllDone(){
+  const box=document.getElementById('all-done-wrap'), chev=document.getElementById('all-done-chev');
+  if(!box) return;
+  const show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
 }
 
 /* 담당자별 — 카드는 기본 접힌 요약만 보여주고, 누르면 업무 리스트를 펼친다.
