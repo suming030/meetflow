@@ -46,9 +46,9 @@ function asSummaryHTML(items){
         <div style="font-size:11px;color:var(--muted);">업무 ${tasks.length}개</div>
       </div>
       ${tasks.map(t=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);">
-          <div style="flex:1;font-size:12px;">${t.task}</div>
-          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">📅 ${t.deadline}</span>`:''}
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap;">
+          <div style="flex:1;min-width:100px;font-size:12px;">${t.task}</div>
+          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;flex-shrink:0;">📅 ${t.deadline}</span>`:''}
         </div>`).join('')}
     </div>`).join('');
 }
@@ -270,6 +270,13 @@ function renderMembers(){
   const g=groupBy(all);
   const today=new Date(); today.setHours(0,0,0,0);
   const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  /* 내 카드를 맨 위로, 나머지는 배정된 업무가 많은 순으로 */
+  const myName=(currentUser&&currentUser.displayName||'').trim();
+  const entries=Object.entries(g).sort((a,b)=>{
+    const aMe=myName&&a[0]===myName, bMe=myName&&b[0]===myName;
+    if(aMe!==bMe) return aMe?-1:1;
+    return b[1].length-a[1].length;
+  });
   const row=t=>{
     const diff=t.deadline?Math.ceil((new Date(t.deadline)-today)/86400000):null;
     const urgent=diff!==null&&diff<=3;
@@ -281,7 +288,7 @@ function renderMembers(){
       </div>`;
   };
 
-  wrap.innerHTML=Object.entries(g).map(([name,tasks],mi)=>{
+  wrap.innerHTML=entries.map(([name,tasks],mi)=>{
     const doing=tasks.filter(t=>t.status==='doing').sort(byDeadline);
     const todo=tasks.filter(t=>(t.status||'todo')==='todo').sort(byDeadline);
     const done=tasks.filter(t=>t.status==='done').sort(byDeadline);
