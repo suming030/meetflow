@@ -786,6 +786,107 @@
   /* ── Firebase AI Logic (Gemini) — 사용자가 API 키를 넣지 않아도 동작 ── */
   const ai = getAI(app, { backend: new GoogleAIBackend() });
 
+  /* ── 모델 후보와 폴백 ──
+     무료 티어에서 쓸 수 있는 모델은 계정·시기마다 달라서, 최신 모델이 무료 티어에
+     아예 없으면 하루를 기다려도 계속 429가 난다. 그래서 한 모델이 한도/미지원으로
+     막히면 아래로 한 단계씩 내려가며 시도한다. 위쪽이 성능 좋고, 아래로 갈수록
+     무료 한도가 넉넉하다. */
+  /* Firebase AI Logic이 Gemini Developer API로 지원한다고 문서에 올라온 GA 모델만 적는다.
+     문서에 없는 ID는(예전에 쓰던 gemini-3.6-flash) 404가 나고, 은퇴한 모델은
+     (gemini-2.5-flash) "no longer available to new users"로 막힌다. */
+  const MF_MODELS = [
+    "gemini-3.7-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite"
+  ];
+  let mfWorkingModel = null;   /* 한 번 성공한 모델은 기억해 다음 호출부터 바로 쓴다 */
+
+  /* 없는 모델(404)은 내일도 없다. 매번 헛호출하지 않도록 브라우저에 적어둔다.
+     한도(429)는 시간이 지나면 풀리니 기억하지 않는다. */
+  const MF_DEAD_KEY = "mf.deadModels";
+  const mfDeadModels = (() => {
+    try{ return new Set(JSON.parse(localStorage.getItem(MF_DEAD_KEY) || "[]")); }
+    catch(e){ return new Set(); }
+  })();
+  function mfMarkDead(name){
+    mfDeadModels.add(name);
+    try{ localStorage.setItem(MF_DEAD_KEY, JSON.stringify([...mfDeadModels])); }catch(e){}
+  }
+
+  const mfSleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const mfMsg = (e) => (e && e.message) || "";
+  /* 그 모델이 아예 없는 경우 — 영구적이라 다시 시도할 이유가 없다 */
+  const mfIsMissing = (e) =>
+    /\b404\b|no longer available|is not found|not supported|unsupported/i.test(mfMsg(e));
+  /* 한도에 걸린 경우 — 시간이 지나면 풀린다 */
+  const mfIsQuota = (e) => /\b429\b|quota|RESOURCE_EXHAUSTED/i.test(mfMsg(e));
+  /* 분당 한도는 잠깐 기다리면 풀린다 — 모델을 바꾸기 전에 한 번 더 준다 */
+  const mfIsPerMinute = (e) => /per minute|PerMinute|\bRPM\b/i.test(mfMsg(e));
+
+  /** 오류 원문에서 사람이 읽을 한 줄만 뽑는다 (URL·JSON 잡음 제거) */
+  function mfShortReason(e){
+    const m = mfMsg(e).replace(/\s*\[\{.*$/s, "");           /* 뒤에 붙는 JSON details 제거 */
+    const bracket = m.match(/\[(\d{3})\s*\]\s*([\s\S]*)/);   /* "[429 ] 본문" 형태 */
+    const body = bracket ? bracket[2] : m;
+    const code = bracket ? bracket[1] + " " : "";
+    return (code + body.split(/(?:\.\s|https?:\/\/)/)[0]).trim().slice(0, 140);
+  }
+
+  /** run(모델이름)을 후보 모델에 순서대로 시도한다. 전부 막히면 마지막 오류를 던지되,
+      어느 모델이 왜 막혔는지를 err.mfAttempts에 담아 화면에서 볼 수 있게 한다.
+
+      opts.sharedQuota: 모델과 무관하게 기능 단위로 할당량을 쓰는 호출(검색 그라운딩).
+      이 경우 한도에 걸리면 다른 모델로 바꿔도 똑같이 막히므로 즉시 포기한다. */
+  async function mfCallWithFallback(run, opts){
+    opts = opts || {};
+    const alive = MF_MODELS.filter(m => !mfDeadModels.has(m));
+    const order = mfWorkingModel
+      ? [mfWorkingModel, ...alive.filter(m => m !== mfWorkingModel)]
+      : alive;
+
+    if(!order.length){
+      const e = new Error("후보 모델이 전부 없는 모델로 확인됐어요. MF_MODELS 목록을 갱신해주세요. (404)");
+      e.mfAttempts = MF_MODELS.map(m => ({ model: m, reason: "없는 모델로 확인됨" }));
+      throw e;
+    }
+
+    const attempts = [];
+    let lastErr;
+    for(const name of order){
+      for(let attempt = 0; attempt < 2; attempt++){
+        try{
+          const out = await run(name);
+          if(mfWorkingModel !== name){
+            console.info("[MeetFlow] 사용 모델:", name);
+            mfWorkingModel = name;
+          }
+          return out;
+        }catch(e){
+          lastErr = e;
+          /* 한도·모델 문제가 아니면(App Check, 네트워크 등) 모델을 바꿔도 소용없다 */
+          if(!mfIsMissing(e) && !mfIsQuota(e)) throw e;
+          /* 기능 단위 할당량이면 다른 모델도 같은 주머니를 쓴다 — 헛되이 더 부르지 않는다 */
+          if(opts.sharedQuota && mfIsQuota(e)){
+            e.mfFeature = opts.feature;
+            e.mfAttempts = attempts.concat({ model: name, reason: mfShortReason(e) });
+            throw e;
+          }
+          if(attempt === 0 && mfIsPerMinute(e)){ await mfSleep(15000); continue; }
+          if(mfIsMissing(e)) mfMarkDead(name);
+          break;
+        }
+      }
+      attempts.push({ model: name, reason: mfShortReason(lastErr) });
+      console.warn("[MeetFlow] " + name + " 사용 불가 — " + mfShortReason(lastErr));
+    }
+    if(lastErr){
+      lastErr.mfAttempts = attempts;
+      lastErr.mfFeature = opts.feature;
+    }
+    throw lastErr;
+  }
+
   /* 앱 코드의 플레인 JSON 스키마를 Firebase AI의 Schema 객체로 변환 */
   function toFirebaseSchema(node){
     if(!node || typeof node!=='object') return Schema.string();
@@ -806,61 +907,64 @@
     }
   }
 
-  window.mfGenerateJSON = async (prompt, plainSchema, maxOutputTokens = 4096) => {
-    const model = getGenerativeModel(ai, {
-      model: "gemini-3.6-flash",
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens,
-        responseMimeType: "application/json",
-        responseSchema: toFirebaseSchema(plainSchema)
-      }
+  window.mfGenerateJSON = async (prompt, plainSchema, maxOutputTokens = 4096) =>
+    mfCallWithFallback(async (modelName) => {
+      const model = getGenerativeModel(ai, {
+        model: modelName,
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens,
+          responseMimeType: "application/json",
+          responseSchema: toFirebaseSchema(plainSchema)
+        }
+      });
+      const result = await model.generateContent(prompt);
+      return result.response.text();
     });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  };
 
   /* Google 검색 그라운딩 — 회의 내용을 바탕으로 실제 웹 자료를 찾아온다.
      주의: 구조화 JSON(responseSchema)과 함께 쓰면 출처(groundingChunks)가 비어서
      돌아오는 문제가 보고돼 있어, 회의 분석(mfGenerateJSON)과 반드시 분리해 호출한다.
      반환하는 metadata는 Google 정책상 화면에 표시해야 하는 검색 제안·출처를 담고 있다. */
-  window.mfGroundedSearch = async (prompt, maxOutputTokens = 8192) => {
-    const model = getGenerativeModel(ai, {
-      model: "gemini-3.6-flash",
-      tools: [{ googleSearch: {} }],
-      generationConfig: { temperature: 0.3, maxOutputTokens }
-    });
-    const result = await model.generateContent(prompt);
-    const cand = result.response.candidates?.[0];
-    const gm = cand?.groundingMetadata || {};
-    return {
-      text: result.response.text(),
-      queries: gm.webSearchQueries || [],
-      chunks: (gm.groundingChunks || [])
-        .map(c => c.web).filter(Boolean)
-        .map(w => ({ uri: w.uri, title: w.title || w.domain || w.uri })),
-      searchEntryPoint: gm.searchEntryPoint?.renderedContent || ''
-    };
-  };
+  window.mfGroundedSearch = async (prompt, maxOutputTokens = 8192) =>
+    mfCallWithFallback(async (modelName) => {
+      const model = getGenerativeModel(ai, {
+        model: modelName,
+        tools: [{ googleSearch: {} }],
+        generationConfig: { temperature: 0.3, maxOutputTokens }
+      });
+      const result = await model.generateContent(prompt);
+      const cand = result.response.candidates?.[0];
+      const gm = cand?.groundingMetadata || {};
+      return {
+        text: result.response.text(),
+        queries: gm.webSearchQueries || [],
+        chunks: (gm.groundingChunks || [])
+          .map(c => c.web).filter(Boolean)
+          .map(w => ({ uri: w.uri, title: w.title || w.domain || w.uri })),
+        searchEntryPoint: gm.searchEntryPoint?.renderedContent || ''
+      };
+    }, { sharedQuota: true, feature: "search" });   /* 검색 그라운딩은 모델과 별개의 할당량 */
 
   /* 오디오(회의 녹음) → 텍스트 전사 */
-  window.mfTranscribeAudio = async (base64Data, mimeType) => {
-    const model = getGenerativeModel(ai, {
-      model: "gemini-3.6-flash",
-      generationConfig: { temperature: 0, maxOutputTokens: 32768 }
+  window.mfTranscribeAudio = async (base64Data, mimeType) =>
+    mfCallWithFallback(async (modelName) => {
+      const model = getGenerativeModel(ai, {
+        model: modelName,
+        generationConfig: { temperature: 0, maxOutputTokens: 32768 }
+      });
+      const prompt =
+        "이 오디오는 회의 녹음입니다. 들리는 말을 그대로 받아쓰세요.\n" +
+        "- 화자가 구분되면 '화자1:', '화자2:' 형태로 표시하세요.\n" +
+        "- 요약하거나 설명을 덧붙이지 말고 발화 내용만 출력하세요.\n" +
+        "- 알아들을 수 없는 부분은 (불분명)으로 표시하세요.\n" +
+        "- 사람 말소리가 없으면 빈 문자열만 출력하세요.";
+      const result = await model.generateContent([
+        prompt,
+        { inlineData: { data: base64Data, mimeType } }
+      ]);
+      return result.response.text();
     });
-    const prompt =
-      "이 오디오는 회의 녹음입니다. 들리는 말을 그대로 받아쓰세요.\n" +
-      "- 화자가 구분되면 '화자1:', '화자2:' 형태로 표시하세요.\n" +
-      "- 요약하거나 설명을 덧붙이지 말고 발화 내용만 출력하세요.\n" +
-      "- 알아들을 수 없는 부분은 (불분명)으로 표시하세요.\n" +
-      "- 사람 말소리가 없으면 빈 문자열만 출력하세요.";
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: base64Data, mimeType } }
-    ]);
-    return result.response.text();
-  };
 </script>
 </body>
 </html>

@@ -69,6 +69,9 @@ python -m http.server 8000
   - `window.mfTranscribeAudio` — 음성 전사
   - `window.mfGroundedSearch` — Google 검색 그라운딩 (추가 자료 찾기)
 
+  셋 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
+  429/404가 나면 아래 후보로 내려갑니다. **모델 이름을 개별 함수에 하드코딩하지 마세요.**
+
 ## 회의 분석 데이터 모양
 
 회의 문서 하나가 담는 것 (`js/gemini.js`의 스키마 = `js/meetings.js`가 저장하는 모양):
@@ -91,6 +94,10 @@ python -m http.server 8000
 
 - AI 호출이 `401 App Check token is invalid`로 막힐 수 있습니다.
   콘솔 설정 문제이니 코드를 고치려 하지 마세요.
+- **무료(Spark) 요금제로 씁니다. 결제 전환은 선택지가 아닙니다.**
+  최신 Gemini 모델은 무료 티어에 없을 때가 있어 계속 429가 납니다. 그래서
+  `MF_MODELS`에 후보를 위→아래(성능 좋음→무료 한도 넉넉함) 순으로 두고 폴백합니다.
+  새 모델이 나오면 목록 맨 위에 추가만 하면 되고, 무료 티어에 없으면 알아서 건너뜁니다.
 - **Google 검색 그라운딩은 구조화 JSON 출력과 함께 쓰지 않습니다.** 같이 쓰면
   출처 정보(`groundingChunks`)가 비어서 돌아오는 문제가 보고돼 있습니다.
   회의 분석(JSON)과 자료 찾기(그라운딩)는 **반드시 별도 호출**로 유지하세요.
