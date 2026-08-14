@@ -22,6 +22,28 @@ const RESEARCH_CACHE = {};        /* 회의별 결과 — 타임라인이 다시
 /** 회의를 캐시에서 찾을 열쇠. 저장 전 회의는 id가 없어 날짜로 대신한다. */
 function researchKeyOf(m){ return (m && (m.id || m.date)) || ''; }
 
+/** 이미 찾아둔 자료 — 메모리 캐시가 없으면 회의에 저장해둔 것을 쓴다. */
+function cachedResearch(m){
+  if(!m) return null;
+  const key = researchKeyOf(m);
+  return (key && RESEARCH_CACHE[key]) || m.research || null;
+}
+
+/** 찾은 자료를 회의 문서에 붙여 저장한다.
+   AI 호출 한 번이 무료 한도를 꽤 먹는데 지금까지는 메모리에만 있어서
+   새로고침하면 사라졌다. 저장해두면 다시 찾을 필요가 없다. */
+async function saveResearch(meeting, res){
+  if(!meeting || !meeting.id || !currentProject) return;
+  meeting.research = res;
+  try{
+    await window.mfDb.updateMeeting(currentProject.id, meeting.id, { research: res });
+  }catch(e){
+    /* 저장 실패해도 화면에는 이미 결과가 떠 있다 — 새로고침하면 사라질 뿐이다 */
+    console.error('[MeetFlow] 찾은 자료 저장 실패', e);
+    toast('자료는 찾았지만 저장하지 못했어요. 새로고침하면 사라져요.','error');
+  }
+}
+
 /** 텍스트를 HTML에 넣기 전에 이스케이프한다(utils.js의 esc는 URL 인코딩이라 용도가 다르다). */
 function esc2(s){
   return String(s==null?'':s)
@@ -84,6 +106,7 @@ async function runResearchFor(meeting, targetId){
     const key = researchKeyOf(meeting);
     if(key) RESEARCH_CACHE[key] = res;
     renderResearch(res, targetId, meeting);
+    await saveResearch(meeting, res);
   }catch(e){
     console.error('[MeetFlow] 자료 찾기 실패', e);
     const info=aiErrorInfo(e);
@@ -176,11 +199,11 @@ function renderResearch(res, targetId, meeting){
 }
 
 /** 타임라인 회의 카드에 붙일 "자료 찾기" 버튼 + 결과 자리.
-    타임라인은 renderAll()마다 새로 그려지므로, 이미 찾아둔 결과는 캐시에서 되살린다. */
+    타임라인은 renderAll()마다 새로 그려지므로, 이미 찾아둔 결과는 되살린다.
+    새로고침한 뒤에도 회의에 저장해둔 자료가 있으면 AI 호출 없이 그대로 뜬다. */
 function researchBlockHTML(meeting, pfx){
   const targetId = 'tl-research-'+pfx;
-  const key = researchKeyOf(meeting);
-  const cached = key ? RESEARCH_CACHE[key] : null;
+  const cached = cachedResearch(meeting);
 
   /* 캐시가 있으면 다음 프레임에 다시 그려 넣는다(지금은 아직 DOM에 없다) */
   if(cached){
