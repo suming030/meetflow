@@ -5,19 +5,50 @@
    (기다리기 / 콘솔 설정 고치기 / 그냥 재시도) 구분해준다. */
 function aiErrorInfo(e){
   const msg=(e&&e.message)||String(e||'');
-  if(/quota|RESOURCE_EXHAUSTED|429/i.test(msg)) return {
-    title:'AI 사용량 한도를 넘었어요',
-    desc:'Gemini 무료 할당량을 다 썼어요. 분당 한도면 1분 뒤 다시 되고, ' +
-         '하루 한도면 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요. ' +
-         'Firebase 콘솔에서 요금제를 올리면 한도가 늘어납니다.',
-    retry:true, wait:true
-  };
+  const info=classifyAiError(msg,(e&&e.mfFeature)||'');
+  info.detail=msg;
+  /* 모델 폴백이 어느 모델에서 왜 막혔는지 (index.html의 mfCallWithFallback이 붙여준다) */
+  info.attempts=(e&&e.mfAttempts)||null;
+  return info;
+}
+function classifyAiError(msg,feature){
+  /* App Check을 먼저 본다 — App Check 오류 메시지에 다른 상태코드가 섞여 들어오면
+     아래 규칙에 먼저 걸려 엉뚱한 안내가 나갔었다. */
   if(/App Check/i.test(msg)) return {
     title:'App Check에 막혔어요',
     desc:'Firebase 콘솔의 App Check 설정 문제예요. 코드를 고쳐도 해결되지 않아요.',
     retry:false
   };
-  if(/permission|PERMISSION_DENIED|403/i.test(msg)) return {
+  /* 구글의 일반적인 429 문구에는 "check your plan and billing details"가 늘 붙어 있다.
+     'billing'이라는 단어만 보고 결제 문제로 단정하면 안 된다 — 무료 한도 소진일 뿐이다.
+     여기까지 왔다면 index.html의 모델 폴백이 후보 모델을 전부 시도한 뒤다. */
+  if(/quota|RESOURCE_EXHAUSTED|\b429\b/i.test(msg)){
+    /* 자료 찾기는 Google 검색 그라운딩이라 회의 분석과 할당량 주머니가 다르다.
+       그래서 "회의 분석은 되는데 자료 찾기만 안 되는" 상황이 정상적으로 생긴다. */
+    if(feature==='search') return {
+      title:'웹 검색 할당량을 다 썼어요',
+      desc:'자료 찾기는 Google 검색 그라운딩을 쓰는데, 회의 분석·온보딩과는 ' +
+           '별도의 무료 한도를 씁니다. 그래서 다른 AI 기능은 그대로 되는데 자료 찾기만 막혀요. ' +
+           '모델을 바꿔도 같은 한도라 소용없고, 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요.',
+      retry:true, wait:true
+    };
+    return {
+      title:'오늘 쓸 수 있는 AI 사용량을 다 썼어요',
+      desc:'무료 한도로 쓸 수 있는 모델을 차례로 다 시도했는데 모두 한도에 걸렸어요. ' +
+           '하루 한도는 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요. ' +
+           '녹음 전사가 한 번에 제일 많이 쓰니, 한도를 아끼려면 전사 대신 회의록 텍스트를 붙여넣는 쪽이 오래 갑니다.',
+      retry:true, wait:true
+    };
+  }
+  /* 후보 모델을 전부 시도한 뒤에도 404면 모델 ID가 낡은 것이다. 모델은 은퇴하니 언젠가 또 난다. */
+  if(/\b404\b|no longer available|is not found|not supported/i.test(msg)) return {
+    title:'쓸 수 있는 AI 모델이 없어요',
+    desc:'후보 모델을 차례로 다 시도했는데 전부 없는 모델이라고 나와요. ' +
+         'Gemini 모델이 은퇴하면 생기는 일이라, index.html의 MF_MODELS 목록을 ' +
+         '지금 지원되는 모델 ID로 바꿔주세요.',
+    retry:false
+  };
+  if(/permission|PERMISSION_DENIED|\b403\b/i.test(msg)) return {
     title:'AI 서비스 권한 오류예요',
     desc:'Firebase AI Logic 설정을 확인해주세요.',
     retry:false
@@ -28,6 +59,21 @@ function aiErrorInfo(e){
     retry:true
   };
   return { title:'AI 호출에 실패했어요', desc:msg||'알 수 없는 오류예요.', retry:true };
+}
+/* 원인을 짐작으로 안내만 하면 사용자가 확인할 방법이 없어서, 오류 원문을 접어서 같이 보여준다.
+   모델별로 왜 막혔는지가 특히 중요하다 — 전부 429면 정말 한도 소진이고,
+   404가 섞여 있으면 MF_MODELS 목록이 낡은 것이라 대응이 완전히 다르다. */
+function aiErrorDetailHtml(info){
+  if(!info||!info.detail) return '';
+  const attempts=(info.attempts&&info.attempts.length)
+    ? `<table class="ai-err-models">${info.attempts.map(a=>
+        `<tr><th>${esc2(a.model)}</th><td>${esc2(a.reason)}</td></tr>`).join('')}</table>`
+    : '';
+  return `<details class="ai-err-detail">
+      <summary>자세한 오류</summary>
+      ${attempts}
+      <pre>${esc2(info.detail)}</pre>
+    </details>`;
 }
 
 /* ──── Gemini 공통 호출/파싱 ──── */

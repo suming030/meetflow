@@ -94,6 +94,7 @@ async function runResearchFor(meeting, targetId){
           <h3>${esc2(info.title)}</h3>
           <p>${esc2(info.desc)}</p>
           ${info.retry?`<button class="btn-out" onclick="retryResearch('${esc2(targetId)}')">다시 시도</button>`:''}
+          ${aiErrorDetailHtml(info)}
         </div>
       </div>`;
   }finally{

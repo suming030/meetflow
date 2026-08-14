@@ -144,6 +144,7 @@ async function runWrapup(){
         <h3>${esc2(info.title)}</h3>
         <p>${esc2(info.desc)}</p>
         ${info.retry?`<button class="btn-out" onclick="runWrapup()">다시 시도</button>`:''}
+        ${aiErrorDetailHtml(info)}
       </div>`;
   }finally{
     wrapupBusy=false;
@@ -291,6 +292,7 @@ async function runMemberWrapup(who){
         <h3>${esc2(info.title)}</h3>
         <p>${esc2(info.desc)}</p>
         ${info.retry?`<button class="btn-out" onclick="runMemberWrapup('${esc2(who).replace(/'/g,'&#39;')}')">다시 시도</button>`:''}
+        ${aiErrorDetailHtml(info)}
       </div>`;
   }finally{
     memberBusy=null;
