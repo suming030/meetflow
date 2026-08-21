@@ -792,10 +792,13 @@
      막히면 아래로 한 단계씩 내려가며 시도한다. 위쪽이 성능 좋고, 아래로 갈수록
      무료 한도가 넉넉하다. */
   /* Firebase AI Logic이 Gemini Developer API로 지원한다고 문서에 올라온 GA 모델만 적는다.
-     문서에 없는 ID는(예전에 쓰던 gemini-3.6-flash) 404가 나고, 은퇴한 모델은
+     문서에 없는 ID는 404가 나고, 은퇴한 모델은
      (gemini-2.5-flash) "no longer available to new users"로 막힌다. */
+  /* gemini-3.6-flash는 예전에 넣었다가 404로 막혔던 것인데, 2026-07-21에 정식
+     출시돼 Firebase AI Logic 지원 목록에 올라왔으므로 다시 넣는다. */
   const MF_MODELS = [
     "gemini-3.7-flash",
+    "gemini-3.6-flash",
     "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite"
@@ -804,7 +807,9 @@
 
   /* 없는 모델(404)은 내일도 없다. 매번 헛호출하지 않도록 브라우저에 적어둔다.
      한도(429)는 시간이 지나면 풀리니 기억하지 않는다. */
-  const MF_DEAD_KEY = "mf.deadModels";
+  /* 후보 목록이 바뀌면 예전 404 기록은 버린다 — 새로 넣은 모델이
+     낡은 기록 때문에 시도조차 안 되는 일을 막는다. */
+  const MF_DEAD_KEY = "mf.deadModels:" + MF_MODELS.join(",");
   const mfDeadModels = (() => {
     try{ return new Set(JSON.parse(localStorage.getItem(MF_DEAD_KEY) || "[]")); }
     catch(e){ return new Set(); }
