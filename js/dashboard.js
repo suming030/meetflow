@@ -526,7 +526,10 @@ function agendaPanelHTML(r){
   if(!agenda.length) return '';
   return `
     <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">📋 1차 회의 아젠다</div></div>
+      <div class="panel-hd">
+        <div class="panel-ttl">📋 1차 회의 아젠다</div>
+        <button class="btn-ghost" onclick="openMeetScheduler()">🗓️ 이 회의 일정 잡기</button>
+      </div>
       <ol style="padding-left:20px;font-size:13px;line-height:2;color:var(--text);">
         ${agenda.map(a=>`<li>${a}</li>`).join('')}
       </ol>

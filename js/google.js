@@ -330,7 +330,249 @@ function buildDocsRequests(meeting){
 }
 
 /* ════════════════════════════════════════
-   4) 초기화
+   4) 다음 회의 일정 잡기 — Calendar + Google Meet 링크
+   ════════════════════════════════════════
+   Google Meet REST API는 전사·녹화 조회가 Workspace 유료 플랜 전용이라
+   무료 계정으로는 쓸 수 없다. 대신 Calendar API의 conferenceData로
+   Meet 링크가 딸린 일정을 만드는 건 개인 계정에서도 된다.
+   이미 받아둔 calendar.events 스코프로 되므로 추가 동의도 필요 없다.
+
+   주의: conferenceDataVersion=1을 붙이지 않으면 conferenceData가 조용히 무시된다. */
+
+/** 온보딩이 만들어둔 1차 회의 아젠다 (없으면 빈 배열) */
+function meetAgenda(){
+  const r = currentProject && currentProject.onboarding && currentProject.onboarding.result;
+  return (r && r.firstMeetingAgenda) || [];
+}
+
+/* toISOString()은 UTC로 바꿔버려서 한국 시간 기준 날짜가 하루 밀릴 수 있다 */
+function toLocalISODate(d){
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** 기본 날짜 — 동아리는 다음 정기모임 요일로, 그 외엔 내일로 채워둔다 */
+function defaultMeetingDate(){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+
+  const r = currentProject && currentProject.onboarding && currentProject.onboarding.result;
+  const dow = r && r.recurringMeeting ? Number(r.recurringMeeting.dayOfWeek) : NaN;
+  if(currentProject && currentProject.track === 'club' && Number.isInteger(dow)){
+    while(d.getDay() !== dow) d.setDate(d.getDate() + 1);
+  }
+  return toLocalISODate(d);
+}
+
+/** 일정 모달을 만든다(최초 1회). index.html은 건드리지 않고 JS로 붙인다. */
+function ensureMeetOverlay(){
+  let el = document.getElementById('meet-overlay');
+  if(el) return el;
+  el = document.createElement('div');
+  el.id = 'meet-overlay';
+  el.className = 'overlay';
+  el.onclick = e => { if(e.target.id === 'meet-overlay') closeMeetScheduler(); };
+  el.innerHTML = `<div class="cal-box" id="meet-box"></div>`;
+  document.body.appendChild(el);
+  return el;
+}
+function closeMeetScheduler(){
+  const el = document.getElementById('meet-overlay');
+  if(el) el.classList.remove('show');
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMeetScheduler(); });
+
+/** 입력 화면 — 대시보드 마일스톤 탭의 아젠다 패널에서 연다. */
+function openMeetScheduler(){
+  if(!currentUser){ toast('먼저 구글 로그인을 해주세요.', 'error'); openLogin(); return; }
+  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.', 'error'); return; }
+
+  const el = ensureMeetOverlay();
+  const agenda = meetAgenda();
+  const round = (typeof history !== 'undefined' ? history.length : 0) + 1;
+
+  document.getElementById('meet-box').innerHTML = `
+    <div class="m-ttl">🗓️ 다음 회의 일정 잡기</div>
+    <p class="meet-sub">구글 캘린더에 일정을 만들고 <b>Google Meet 링크</b>를 같이 발급해요.</p>
+
+    <div class="m-lbl">회의 제목</div>
+    <input type="text" id="meet-title" class="m-inp meet-inp"
+           value="${esc2((currentProject.name || '프로젝트') + ' ' + round + '차 회의')}">
+
+    <div class="meet-row">
+      <div>
+        <div class="m-lbl">날짜</div>
+        <input type="date" id="meet-date" class="m-inp meet-inp" value="${defaultMeetingDate()}">
+      </div>
+      <div>
+        <div class="m-lbl">시작</div>
+        <input type="time" id="meet-time" class="m-inp meet-inp" value="19:00">
+      </div>
+      <div>
+        <div class="m-lbl">길이</div>
+        <select id="meet-dur" class="m-inp meet-inp">
+          <option value="30">30분</option>
+          <option value="60" selected>1시간</option>
+          <option value="90">1시간 30분</option>
+          <option value="120">2시간</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="m-lbl">팀원 이메일 <span class="meet-opt">비워두면 나만 등록돼요</span></div>
+    <input type="text" id="meet-guests" class="m-inp meet-inp"
+           placeholder="쉼표로 구분 — hong@gmail.com, kim@gmail.com">
+
+    ${agenda.length ? `
+      <div class="meet-agenda">
+        <div class="meet-agenda-hd">📋 온보딩 아젠다 ${agenda.length}개를 일정 설명에 넣어드려요</div>
+        <ul>${agenda.map(a => `<li>${esc2(a)}</li>`).join('')}</ul>
+      </div>` : ''}
+
+    <button class="btn-pk" style="width:100%;" onclick="createMeetEvent()">
+      📅 일정 만들고 Meet 링크 받기
+    </button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeMeetScheduler()">닫기</button>`;
+
+  el.classList.add('show');
+}
+
+/** 쉼표·공백으로 나눈 뒤 형식이 아닌 건 걸러내 사용자에게 알려준다 */
+function parseGuestEmails(raw){
+  const ok = [], bad = [];
+  (raw || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean)
+    .forEach(p => (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p) ? ok : bad).push(p));
+  return { ok, bad };
+}
+
+async function createMeetEvent(){
+  const title  = (document.getElementById('meet-title').value || '').trim();
+  const date   = document.getElementById('meet-date').value;
+  const time   = document.getElementById('meet-time').value;
+  const durMin = Number(document.getElementById('meet-dur').value) || 60;
+  const guests = parseGuestEmails(document.getElementById('meet-guests').value);
+
+  if(!title){ toast('회의 제목을 입력해주세요.', 'error'); return; }
+  if(!date || !time){ toast('날짜와 시작 시간을 골라주세요.', 'error'); return; }
+  if(guests.bad.length){
+    toast('이메일 형식이 아니에요: ' + guests.bad.join(', '), 'error');
+    return;
+  }
+
+  document.getElementById('meet-box').innerHTML = `
+    <div style="text-align:center;padding:40px 0;">
+      <div class="research-spin" style="margin:0 auto 18px;"></div>
+      <div style="font-size:14px;font-weight:700;">일정을 만들고 있어요…</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
+        Meet 링크가 발급될 때까지 잠깐 기다려요.
+      </div>
+    </div>`;
+
+  try{
+    /* 참석자가 있을 때만 초대 메일이 나가게 한다 */
+    const created = await googleApiRequest(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+        + '?conferenceDataVersion=1&sendUpdates=' + (guests.ok.length ? 'all' : 'none'),
+      { method: 'POST', body: JSON.stringify(buildMeetEvent(title, date, time, durMin, guests.ok)) }
+    );
+    renderMeetResult(await waitForMeetLink(created), guests.ok.length);
+  }catch(e){
+    console.error('[MeetFlow][google.js] 회의 일정 생성 실패:', e);
+    document.getElementById('meet-box').innerHTML = `
+      <div class="m-ttl">일정을 만들지 못했어요</div>
+      <p class="meet-sub">${esc2(e.message || String(e))}</p>
+      <button class="btn-pk" style="width:100%;" onclick="openMeetScheduler()">다시 시도</button>
+      <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeMeetScheduler()">닫기</button>`;
+  }
+}
+
+function buildMeetEvent(title, date, time, durMin, guests){
+  /* 입력값은 한국 시간이다. 오프셋을 명시해야 브라우저 시간대에 끌려가지 않는다. */
+  const start = new Date(`${date}T${time}:00+09:00`);
+  const end   = new Date(start.getTime() + durMin * 60000);
+
+  const agenda = meetAgenda();
+  const description = [
+    ...(agenda.length ? ['📋 아젠다', ...agenda.map((a, i) => `${i + 1}. ${a}`), ''] : []),
+    'MeetFlow에서 만든 회의 일정이에요.',
+  ].join('\n');
+
+  return {
+    summary: title,
+    description,
+    start: { dateTime: start.toISOString(), timeZone: 'Asia/Seoul' },
+    end:   { dateTime: end.toISOString(),   timeZone: 'Asia/Seoul' },
+    attendees: guests.map(email => ({ email })),
+    conferenceData: {
+      createRequest: {
+        /* 같은 requestId로 다시 부르면 같은 회의가 재사용되므로 매번 새로 만든다 */
+        requestId: 'mf-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    },
+  };
+}
+
+function meetLinkOf(ev){
+  const eps = (ev && ev.conferenceData && ev.conferenceData.entryPoints) || [];
+  const video = eps.find(p => p.entryPointType === 'video');
+  return (video && video.uri) || (ev && ev.hangoutLink) || null;
+}
+
+/** Meet 링크 발급은 비동기라 응답이 pending으로 올 수 있다. 붙을 때까지 몇 번 다시 읽는다. */
+async function waitForMeetLink(ev, tries = 4){
+  if(meetLinkOf(ev) || tries <= 0) return ev;
+  await new Promise(r => setTimeout(r, 900));
+  const fresh = await googleApiRequest(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+      + encodeURIComponent(ev.id) + '?conferenceDataVersion=1'
+  );
+  return waitForMeetLink(fresh, tries - 1);
+}
+
+function meetWhenLabel(ev){
+  const s = ev.start && (ev.start.dateTime || ev.start.date);
+  if(!s) return '';
+  try{
+    return new Date(s).toLocaleString('ko-KR',
+      { month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit' });
+  }catch(_){ return s; }
+}
+
+function renderMeetResult(ev, guestCount){
+  const link = meetLinkOf(ev);
+
+  document.getElementById('meet-box').innerHTML = `
+    <div style="text-align:center;">
+      <div style="font-size:40px;margin-bottom:10px;">🗓️</div>
+      <div class="m-ttl" style="margin-bottom:6px;">일정을 만들었어요</div>
+      <p class="meet-sub">
+        ${esc2(ev.summary || '')}<br>${esc2(meetWhenLabel(ev))}
+        ${guestCount ? `<br>팀원 ${guestCount}명에게 초대를 보냈어요` : ''}
+      </p>
+    </div>
+
+    ${link ? `
+      <div class="m-lbl">Google Meet 링크</div>
+      <div class="meet-link">${esc2(link)}</div>
+      <textarea id="meet-link-src" style="position:absolute;left:-9999px;">${esc2(link)}</textarea>
+      <button class="btn-ghost" style="width:100%;margin-bottom:8px;"
+              onclick="copyText(this,'meet-link-src')">📋 링크 복사하기</button>`
+    : `
+      <div class="wrap-warn" style="margin-bottom:12px;">
+        일정은 만들어졌는데 Meet 링크 발급이 아직 끝나지 않았어요.
+        잠시 뒤 구글 캘린더에서 확인해주세요.
+      </div>`}
+
+    ${ev.htmlLink ? `
+      <a class="cal-link" href="${esc2(ev.htmlLink)}" target="_blank" rel="noopener">
+        <span style="font-size:20px;">📅</span> 구글 캘린더에서 열기
+      </a>` : ''}
+    <button class="btn-ghost" style="width:100%;margin-top:6px;" onclick="closeMeetScheduler()">닫기</button>`;
+}
+
+/* ════════════════════════════════════════
+   5) 초기화
    ════════════════════════════════════════
    이 스크립트는 index.html에서 #result-wrap 마크업보다 뒤에 로드되므로
    바로 호출해도 되지만, 혹시 모를 순서 변경에 대비해 DOMContentLoaded에도

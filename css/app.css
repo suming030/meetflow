@@ -562,6 +562,20 @@
 .cal-link{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;text-decoration:none;color:var(--text);font-size:13px;font-weight:600;margin-bottom:8px;transition:all .15s;cursor:pointer;}
 .cal-link:hover{border-color:var(--pk-mid);background:var(--pk-light);color:var(--pk-dark);}
 
+/* 다음 회의 일정 잡기 모달 — js/google.js가 만든다 */
+#meet-overlay .cal-box{width:430px;max-height:90vh;overflow-y:auto;}
+.meet-sub{font-size:var(--fs-base);color:var(--muted);line-height:1.7;margin-bottom:var(--sp-5);}
+.meet-inp{font-family:inherit;margin-bottom:var(--sp-4);}
+.meet-row{display:flex;gap:var(--sp-2);}
+.meet-row>div{flex:1;min-width:0;}
+/* date/time/select은 기본 높이가 제각각이라 한 줄에서 어긋난다 */
+.meet-row .meet-inp{height:42px;}
+.meet-opt{font-weight:var(--fw-medium);color:var(--hint);}
+.meet-agenda{background:var(--pk-bg);border:1px solid var(--bd);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);}
+.meet-agenda-hd{font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--pk-dark);margin-bottom:var(--sp-2);}
+.meet-agenda ul{padding-left:var(--sp-4);font-size:var(--fs-sm);color:var(--muted);line-height:1.9;}
+.meet-link{font-family:monospace;font-size:var(--fs-sm);color:var(--pk-dark);background:var(--pk-bg);border:1px solid var(--bd-s);border-radius:var(--r-sm);padding:var(--sp-3);margin-bottom:var(--sp-3);word-break:break-all;}
+
 /* ══════════════════════
    TOAST
 ══════════════════════ */
