@@ -5,16 +5,27 @@
 
 **5인 팀입니다 (2026-09-18~).** 파일 단위로 담당을 나눠 작업합니다.
 
+**모든 파일에 주인이 있습니다.** 내 파일이 아니면 고치지 말고, 담당자에게 요청하세요.
+
 | 담당 | 역할 | 담당 파일 |
 | --- | --- | --- |
 | 김세은 | 디자인 A — 브랜드/랜딩 | `css/base.css`, `css/landing.css`, `index.html` 랜딩 영역 |
-| 송지은 | 디자인 B-1 — 대시보드 | `css/app.css`, `js/dashboard.js`, `index.html` 대시보드 영역 |
-| 신지연 | 디자인 B-2 — 온보딩/모달 + 구글연동 | 온보딩 마크업, `js/google.js` |
-| 여수민 | 기능 C-1 — 온보딩 AI 로직 | `js/onboarding.js` |
-| 하주향 | 기능 C-2 — 회의 흐름 AI 로직 | `js/meetings.js`, `js/gemini.js`, `js/stt.js` |
+| 송지은 | 디자인 B-1 — 대시보드 | `css/app.css`, `js/dashboard.js`, `js/timeline.js`, `index.html` 대시보드 영역 |
+| 신지연 | 디자인 B-2 — 모달/온보딩 + 구글연동 | `js/google.js`, `js/wrapup.js`, `index.html` 온보딩·모달 영역 |
+| 여수민 | 기능 C-1 — 온보딩 AI + 백엔드 | `js/onboarding.js`, `js/research.js`, `functions/`, `*.rules`, `firebase.json` |
+| 하주향 | 기능 C-2 — 회의 흐름 AI | `js/meetings.js`, `js/gemini.js`, `js/stt.js` |
 
-**공용 파일** — `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`,
-`js/projects.js`, `js/main.js`. 고치기 전에 반드시 팀에 공유합니다.
+**공용 파일 — 고치기 전에 반드시 팀에 공유**
+
+`js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/projects.js`,
+`js/main.js`, `README.md`, `CLAUDE.md`
+
+**둘이 같이 만져야 하는 과제**는 미리 짝을 맞추세요. 화면과 프롬프트가 다른 파일에
+있기 때문입니다.
+
+- 공모전 6종 선택 — 신지연(화면) + 여수민(프롬프트). **저장하는 필드 이름을 먼저 합의**
+- 경험 정리 양식 — 신지연(`wrapup.js` 화면) + 하주향(`gemini.js` 프롬프트)
+- 화자 이름 수정 — 송지은(UI) + 하주향(전사·분석 연결)
 
 **담당 표에 안 잡히는 공유 구간 셋** (충돌이 여기서 납니다):
 
@@ -106,8 +117,43 @@ python -m http.server 8000
 
 ## git 규칙
 
-`main`에서 바로 작업해도 됩니다. 커밋은 목적 단위로 쪼개서,
-메시지는 `feat:`/`fix:`/`design:`/`docs:`/`refactor:`/`chore:` 접두사를 씁니다.
+**`main`에 직접 push하지 않습니다.** 브랜치를 파고 PR로 합칩니다.
+
+```bash
+git checkout main
+git pull                                # 항상 최신에서 시작
+git checkout -b feat/세은-base-tokens    # feat/<이름>-<작업>
+# ... 작업 ...
+git commit -m "design: base.css 토큰 정비"
+git push -u origin feat/세은-base-tokens
+```
+
+PR을 올리면 **다른 한 명이 보고 머지**합니다.
+
+- 커밋은 목적 단위로 쪼개고, 메시지는
+  `feat:`/`fix:`/`design:`/`docs:`/`refactor:`/`chore:` 접두사를 씁니다.
+- **PR은 작게, 자주.** 브랜치를 오래 묵힐수록 충돌이 커집니다.
+- 작업이 하루를 넘기면 중간에 `main`을 당겨 받으세요
+  (`git checkout main && git pull && git checkout - && git merge main`).
+
+### 충돌이 나는 자리 셋
+
+`index.html`을 셋이 나눠 쓰지만, **서로 다른 줄만 건드리면 git이 알아서 합칩니다.**
+진짜 조심할 곳은 여기입니다.
+
+1. **`index.html` 맨 아래 `<script src>` 목록** — 새 js 파일을 추가하면 여기를
+   건드립니다. 파일 추가는 팀에 먼저 공유하세요.
+2. **`js/state.js`** — 같은 이름의 전역을 두 사람이 선언하면 충돌 이전에
+   **SyntaxError로 앱 전체가 죽습니다.** 전역 추가는 반드시 공유 후.
+3. **`index.html`의 `MF_MODELS`·Gemini 호출구** — AI 로직 담당 둘이 같이 봅니다.
+
+### 개발용 Firebase 데이터
+
+**다섯 명이 같은 Firestore를 봅니다.** 각자 `localhost`로 띄워도 데이터는 하나예요.
+개발하면서 만든 테스트 회의가 서로 섞이고, 한 명이 지우면 같이 사라집니다.
+
+- 개발용으로 **각자 자기 테스트 프로젝트를 하나씩** 만들어 쓰세요.
+- **발표·데모용 프로젝트는 따로 두고 아무도 건드리지 않습니다.**
 
 ## 알아둘 상태
 
