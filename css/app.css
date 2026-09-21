@@ -236,7 +236,10 @@
 .minutes-box{background:var(--surface);border-radius:18px;width:720px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 28px 64px rgba(75,107,251,.18);animation:slideUp .25s ease;}
 .minutes-hd{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--bd);border-radius:18px 18px 0 0;}
 .minutes-body{padding:28px 32px;}
-.sb-ws{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;font-size:12px;color:var(--hint);}
+.sb-ws{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;font-size:12px;color:var(--hint);text-decoration:none;cursor:pointer;transition:all .15s;}
+.sb-ws:hover{background:var(--pk-bg);color:var(--text);}
+.sb-ws::after{content:'↗';margin-left:auto;opacity:0;transition:opacity .15s;}   /* 새 탭으로 열린다는 표시 */
+.sb-ws:hover::after{opacity:.6;}
 .sb-ws .sico{font-size:14px;}
 .sb-new{
   display:flex;align-items:center;gap:8px;padding:9px 11px;
@@ -293,7 +296,7 @@
    프로젝트 마무리 — 회고 (js/wrapup.js)
 ══════════════════════ */
 .sb-wrapup{
-  margin-top:auto;display:flex;align-items:center;gap:var(--sp-3);width:100%;
+  margin-top:var(--sp-3);display:flex;align-items:center;gap:var(--sp-3);width:100%;
   padding:var(--sp-4);border:none;border-radius:var(--r-md);cursor:pointer;
   text-align:left;font-family:inherit;color:#fff;
   background:linear-gradient(135deg,var(--pk),var(--pk-dark));box-shadow:var(--shadow-pk);
