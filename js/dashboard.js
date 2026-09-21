@@ -89,6 +89,13 @@ function acHTML(item,idx,pfx){
   const prio=item.priority||'medium';
   const calBtn=item.deadline
     ?`<button class="ico-btn" title="캘린더에 추가" onclick="openCal('${esc(item.task)}','${item.deadline}','${esc(item.assignee||'')}')">📅</button>`:'';
+  /* 여러 회의의 업무가 섞이는 화면(개요·Action Items·브리핑·마일스톤)에서는 몇 차 회의에서
+     나온 업무인지 붙인다. 회의 하나만 보는 화면(분석 결과·타임라인·N차 회의)에선 뻔해서 뺀다. */
+  const single=pfx==='up'||pfx==='md'||/^tl\d/.test(pfx);
+  const from=single?null:((iid&&findItemById(iid))||{}).meeting;
+  const roundNo=from?meetingNo(from):null;
+  const roundBdg=roundNo
+    ?`<span class="bdg b-round"${from.id?` title="${roundNo}차 회의 보기" onclick="openMeeting('${from.id}')"`:''}>🕒 ${roundNo}차 회의</span>`:'';
   return `
     <div class="ac" id="ac-${pid}">
       <div class="prio-bar prio-${prio[0]}"></div>
@@ -96,6 +103,7 @@ function acHTML(item,idx,pfx){
       <div class="ac-body">
         <div class="ac-task${st==='done'?' done':''}${iid?' ac-ed-task':''}" id="t-${pid}"${iid?` title="클릭해서 업무 내용 수정" onclick="editItemTask(event,'${iid}')"`:''}>${item.task}</div>
         <div class="ac-meta">
+          ${roundBdg}
           ${/* 담당자·마감일은 배지를 눌러 그 자리에서 고친다(js/meetings.js).
                 AI가 잘못 배정하거나 미지정으로 남긴 걸 사람이 채울 수 있어야 해서,
                 비어 있을 때도 배지를 감추지 않고 "지정" 자리표시자로 띄운다.
@@ -163,7 +171,8 @@ function persistItemStatus(itemId, st){
 }
 
 /* 사이드바 업무·브리핑 그룹 접기/펼치기 */
-const SB_GROUP_OF={actions:'work',members:'work',taskflow:'work',briefing:'brief',milestones:'brief'};
+const SB_GROUP_OF={actions:'work',members:'work',taskflow:'work',briefing:'brief',milestones:'brief',
+                   timeline:'meet',meeting:'meet'};
 function toggleSbGroup(key){
   const sub=document.getElementById('sb-sub-'+key), chev=document.getElementById('sb-chev-'+key);
   if(!sub) return;
@@ -228,6 +237,10 @@ function renderAll(){
   /* 회의 타임라인은 js/timeline.js에 있다 (담당: 디자인 B).
      아직 안 만들어졌을 수 있으므로 있을 때만 부른다. */
   if(typeof renderTimeline==='function') renderTimeline();
+  /* N차 회의 화면·사이드바 회의 목록. 타임라인 뒤에 그려야 한다 —
+     renderTimeline()이 TL_MEETINGS를 비우는데, N차 회의 화면도 거기에 'md'를 넣어 쓴다. */
+  renderMeetingDetail();
+  renderSbMeetings();
   renderMilestones();
   renderTaskFlow();
   renderBriefing();
@@ -249,8 +262,50 @@ function renderOverview(){
   document.getElementById('sb-cnt-total').textContent=all.length;
   document.getElementById('ov-metrics').innerHTML=metricsHTML(stats,'ov');
   renderWarn(all,'ov-warn','ov-warn-txt');
-  document.getElementById('ov-ac-grid').innerHTML=all.slice(0,6).map((it,i)=>acHTML(it,i,'ov')).join('');
-  document.getElementById('ov-as-summary').innerHTML=asSummaryHTML(all);
+  /* 개요는 "지금" 중심 — 회의가 쌓여도 복잡해지지 않게, 누적 기록은
+     사이드바 회의 목록과 Action Items 탭에 맡기고 여기엔 남은 일만 둔다. */
+  document.getElementById('ov-latest').innerHTML=latestMeetingHTML();
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  const pending=all.filter(i=>i.status!=='done').sort(byDeadline);
+  document.getElementById('ov-ac-grid').innerHTML=pending.length
+    ?pending.slice(0,6).map((it,i)=>acHTML(it,i,'ov')).join('')
+    :`<div style="font-size:13px;color:var(--muted);padding:12px 0;">남은 업무가 없어요 🎉</div>`;
+  document.getElementById('ov-as-summary').innerHTML=ovMembersHTML(all);
+}
+
+/** 개요 맨 위 — 가장 최근 회의 한 건 */
+function latestMeetingHTML(){
+  const m=history[0];
+  if(!m) return '';
+  const carried=m.carriedOver||[], gaps=m.gaps||[];
+  const resolved=carried.filter(c=>c.resolved).length;
+  return `
+    <div class="panel">
+      <div class="panel-hd">
+        <div class="panel-ttl">🕒 최근 회의 · ${history.length}차 <span class="ov-latest-date">${(m.date||'').slice(0,10)}</span></div>
+        ${m.id?`<span class="panel-lnk" onclick="openMeeting('${m.id}')">자세히 보기 →</span>`:''}
+      </div>
+      ${m.summary?`<div class="ov-latest-sum">${esc2(m.summary)}</div>`:''}
+      <div class="ov-latest-stats">
+        <span>🆕 새 업무 ${(m.items||[]).length}개</span>
+        ${carried.length?`<span>🔗 지난 업무 ${carried.length}건 중 ${resolved}건 마무리</span>`:''}
+        ${gaps.length?`<span>🔍 놓친 부분 ${gaps.length}개</span>`:''}
+      </div>
+    </div>`;
+}
+
+/** 개요의 담당자 현황 — 사람당 한 줄. 업무 목록은 담당자별 탭에서 본다. */
+function ovMembersHTML(items){
+  return Object.entries(groupBy(items)).map(([name,tasks])=>{
+    const done=tasks.filter(t=>t.status==='done').length;
+    return {name, left:tasks.length-done, rate:Math.round(done/tasks.length*100)};
+  }).sort((a,b)=>b.left-a.left).map(r=>`
+    <div class="ov-mem">
+      <div class="av ${avCls(r.name)}" style="width:26px;height:26px;font-size:11px;">${r.name[0]}</div>
+      <div class="ov-mem-name">${r.name}</div>
+      <div class="prog-wrap ov-mem-bar"><div class="prog-fill" style="width:${r.rate}%"></div></div>
+      <div class="ov-mem-left">${r.left?`남은 ${r.left}개`:'완료 ✓'}</div>
+    </div>`).join('');
 }
 
 /* 전체 Action Items — 회의가 쌓일수록 계속 늘어나므로 상태별로 나누고
@@ -316,8 +371,10 @@ function renderMembers(){
   const row=t=>{
     const diff=t.deadline?Math.ceil((new Date(t.deadline)-today)/86400000):null;
     const urgent=diff!==null&&diff<=3;
+    const from=t.id&&findItemById(t.id), rn=from?meetingNo(from.meeting):null;
     return `
       <div class="mini-task">
+        ${rn?`<span class="mt-round" title="${rn}차 회의에서 나온 업무">${rn}차</span>`:''}
         <div class="mt-name">${t.task}</div>
         ${t.deadline?`<span class="mt-dl${urgent?' urg':''}">${urgent?'⚠️ ':'📅 '}${t.deadline}</span>`:''}
         <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>

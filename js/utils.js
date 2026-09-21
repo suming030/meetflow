@@ -34,3 +34,10 @@ function toast(msg,type=''){
    버전으로 대체됐다. 같은 이름을 두 파일에 두면 로드 순서에 따라 동작이
    바뀌므로 이쪽 정의는 제거한다. */
 function closeCal(){ document.getElementById('cal-overlay').classList.remove('show'); }
+
+/* ──── 회의 차수 ────
+   history는 최신순([0]이 최신)이라 차수는 뒤에서부터 센다. */
+function meetingNo(m){
+  const i=history.indexOf(m);
+  return i<0?null:history.length-i;
+}

@@ -637,3 +637,22 @@
 .tl-research-cta{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);}
 .btn-sm-research{padding:var(--sp-2) var(--sp-4);font-size:var(--fs-sm);border-radius:var(--r-sm);}
 .tl-research-hint{font-size:var(--fs-sm);color:var(--hint);}
+
+/* 회의 차수 — 업무 카드의 "N차 회의" 배지, 사이드바 회의 목록, N차 회의 화면, 개요 */
+.b-round{background:var(--violet-lt);color:var(--violet);cursor:pointer;}
+.b-round:hover{filter:brightness(.95);}
+.mt-round{font-size:10px;font-weight:700;color:var(--violet);background:var(--violet-lt);border-radius:var(--r-pill);padding:1px 7px;flex-shrink:0;}
+#sb-sub-meet.open{max-height:280px;overflow-y:auto;}
+.sb-meet{display:flex;align-items:center;gap:4px;}
+.sb-meet-no{font-weight:700;}
+.sb-meet-date{margin-left:auto;font-size:11px;color:var(--hint);}
+.sb-meet-empty{padding:6px 0 6px 34px;font-size:12px;color:var(--hint);}
+.md-summary{font-size:var(--fs-md);line-height:1.85;color:var(--text);}
+.ov-latest-date{font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--muted);margin-left:6px;}
+.ov-latest-sum{font-size:var(--fs-md);line-height:1.8;color:var(--text);background:var(--pk-bg);padding:var(--sp-3) var(--sp-4);border-radius:var(--r-md);margin-bottom:var(--sp-3);}
+.ov-latest-stats{display:flex;gap:var(--sp-4);flex-wrap:wrap;font-size:12.5px;color:var(--muted);}
+.ov-mem{display:flex;align-items:center;gap:10px;padding:var(--sp-2) 0;border-bottom:1px solid var(--bd);}
+.ov-mem:last-child{border-bottom:none;}
+.ov-mem-name{font-size:var(--fs-base);font-weight:var(--fw-bold);width:64px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ov-mem-bar{flex:1;margin:0;}
+.ov-mem-left{font-size:var(--fs-sm);color:var(--muted);width:64px;text-align:right;flex-shrink:0;}

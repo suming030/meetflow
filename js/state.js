@@ -9,6 +9,7 @@ let currentUser    = null;
 let currentProject = null;
 let selectedTrack   = null;
 let lastResult     = null;     /* 가장 최근 분석 결과 — 자료 찾기(js/research.js)가 참고한다 */
+let currentMeetingId = null;   /* 대시보드 "N차 회의" 화면이 보여주는 회의 (js/timeline.js) */
 
 const TRACK_LBL  = {team:'🧑‍🤝‍🧑 팀 프로젝트', contest:'🏆 공모전', club:'🎨 동아리'};
 const TRACK_ICON = {team:'🧑‍🤝‍🧑', contest:'🏆', club:'🎨'};

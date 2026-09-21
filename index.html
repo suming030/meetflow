@@ -456,7 +456,10 @@
         </div>
       </div>
 
-      <div class="sb-item"     id="sb-timeline"  onclick="sdt('timeline')"><span class="sico">🕒</span> 회의 타임라인</div>
+      <div class="sb-group">
+        <div class="sb-item sb-parent" id="sb-timeline" onclick="sdt('timeline')"><span class="sico">🕒</span> 회의<span class="sb-chev" id="sb-chev-meet" onclick="event.stopPropagation();toggleSbGroup('meet')">▸</span></div>
+        <div class="sb-sub" id="sb-sub-meet"></div>
+      </div>
 
       <div class="sb-group">
         <div class="sb-item sb-parent" onclick="toggleSbGroup('brief')"><span class="sico">📋</span> 브리핑<span class="sb-chev" id="sb-chev-brief">▸</span></div>
@@ -493,12 +496,13 @@
           </div>
         </div>
         <div id="ov-content" style="display:none;">
+          <div id="ov-latest"></div>
           <div class="metrics" id="ov-metrics"></div>
           <div class="warn-bn" id="ov-warn" style="display:none;"><span>⚠️</span><span id="ov-warn-txt"></span></div>
           <div class="g3">
             <div class="panel">
               <div class="panel-hd">
-                <div class="panel-ttl">✅ 최근 Action Items</div>
+                <div class="panel-ttl">📌 지금 할 일</div>
                 <span class="panel-lnk" onclick="sdt('actions')">전체 보기 →</span>
               </div>
               <div class="ac-grid" id="ov-ac-grid"></div>
@@ -541,6 +545,11 @@
           <div><h2>🕒 회의 타임라인</h2><p>회의가 어떻게 이어져 왔는지 한눈에 확인하세요</p></div>
         </div>
         <div id="timeline-wrap"></div>
+      </div>
+
+      <!-- ── N차 회의 탭 (회의 하나만 — js/timeline.js의 renderMeetingDetail) ── -->
+      <div class="tab" id="tab-meeting">
+        <div id="meeting-wrap"></div>
       </div>
 
       <div class="tab" id="tab-milestones">

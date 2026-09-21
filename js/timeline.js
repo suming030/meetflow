@@ -84,7 +84,7 @@ function renderTimeline(){
           <div class="panel">
             <div class="panel-hd">
               <div class="panel-ttl">🕒 ${no}차 회의${isLast?' <span class="bdg b-person" style="margin-left:6px;">✨ 최신</span>':''}</div>
-              <div style="font-size:12px;color:var(--muted);">${dateStr?`📅 ${dateStr}`:''}${m.createdByName?` · 👤 ${m.createdByName} 분석`:''}</div>
+              <div style="font-size:12px;color:var(--muted);">${dateStr?`📅 ${dateStr}`:''}${m.createdByName?` · 👤 ${m.createdByName} 분석`:''}${m.id?` · <span class="panel-lnk" onclick="openMeeting('${m.id}')">자세히 →</span>`:''}</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               ${items.length?`
@@ -313,4 +313,83 @@ function downloadMinutesWord(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   toast('회의록을 내려받았어요. 워드로 열면 바로 편집할 수 있어요.');
+}
+
+/* ════════════════════════════════
+   N차 회의 — 회의 하나만 보는 화면
+   타임라인이 전체 흐름이라면 이건 회의 한 건의 상세다. 분석이 끝나면 여기로 온다.
+════════════════════════════════ */
+
+/** 회의 하나를 연다 — 사이드바 회의 목록, 업무의 "N차 회의" 배지, 분석 직후에 쓴다. */
+function openMeeting(id){
+  currentMeetingId=id||null;
+  if(document.getElementById('page-dash').classList.contains('active')) sdt('meeting');
+  else gp('dash',{tab:'meeting'});
+  renderMeetingDetail();
+  renderSbMeetings();
+}
+function openMeetingAt(i){
+  const m=history[i];
+  if(m) openMeeting(m.id||null);
+}
+
+/** 지금 열린 회의 — 못 찾으면(첫 진입, 다른 프로젝트로 전환) 최신 회의 */
+function currentMeeting(){
+  return (currentMeetingId&&history.find(m=>m.id===currentMeetingId))||history[0]||null;
+}
+
+/** 사이드바 "🕒 회의" 아래 목록. 최신 회의가 위 — 자주 보는 건 최근 회의라서. */
+function renderSbMeetings(){
+  const box=document.getElementById('sb-sub-meet');
+  if(!box) return;
+  const total=history.length;
+  const cur=currentTab==='meeting'?currentMeeting():null;
+  box.innerHTML=history.length?history.map((m,i)=>{
+    const d=m.date||'';
+    return `
+      <div class="sb-item sb-child sb-meet${m===cur?' on':''}" id="sb-mt-${i}" onclick="openMeetingAt(${i})">
+        <span class="sb-meet-no">${total-i}차</span>회의
+        <span class="sb-meet-date">${d?`${+d.slice(5,7)}/${+d.slice(8,10)}`:''}</span>
+      </div>`;
+  }).join(''):`<div class="sb-meet-empty">아직 회의가 없어요</div>`;
+}
+
+function renderMeetingDetail(){
+  const wrap=document.getElementById('meeting-wrap');
+  if(!wrap) return;
+  const m=currentMeeting();
+  if(!m){
+    wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">🕒</div><h3>아직 분석된 회의가 없어요</h3></div></div>`;
+    return;
+  }
+  const i=history.indexOf(m), no=history.length-i;
+  const hasPrev=i<history.length-1, hasNext=i>0;   /* 최신순이라 이전 회의가 배열 뒤쪽에 있다 */
+  const items=m.items||[];
+  TL_MEETINGS['md']={meeting:m, no};               /* 회의록 모달·자료 찾기가 여기서 찾아 쓴다 */
+
+  wrap.innerHTML=`
+    <div class="pg-hd">
+      <div>
+        <h2>🕒 ${no}차 회의${hasNext?'':' <span class="bdg b-person" style="vertical-align:middle;">✨ 최신</span>'}</h2>
+        <p>${(m.date||'').slice(0,10)}${m.createdByName?` · ${esc2(m.createdByName)} 분석`:''}</p>
+      </div>
+      <div class="pg-actions">
+        ${hasPrev?`<button class="btn-ghost" onclick="openMeetingAt(${i+1})">← ${no-1}차</button>`:''}
+        ${hasNext?`<button class="btn-ghost" onclick="openMeetingAt(${i-1})">${no+1}차 →</button>`:''}
+        <button class="btn-out" onclick="openMinutes('md')">📄 회의록 보기</button>
+      </div>
+    </div>
+    ${m.summary?`
+      <div class="panel">
+        <div class="panel-hd"><div class="panel-ttl">📝 요약</div></div>
+        <div class="md-summary">${esc2(m.summary)}</div>
+      </div>`:''}
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">🆕 이 회의에서 생긴 업무 ${items.length}개</div></div>
+      ${items.length
+        ?`<div class="ac-grid">${items.map((it,k)=>acHTML(it,k,'md')).join('')}</div>`
+        :`<div style="font-size:13px;color:var(--muted);">이 회의에서 새로 정한 업무가 없어요.</div>`}
+    </div>
+    ${carryOverHTML(m)}
+    ${researchBlockHTML(m,'md')}`;
 }

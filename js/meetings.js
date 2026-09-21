@@ -44,10 +44,14 @@ async function analyze(){
     steps.forEach(s=>{ document.getElementById(s).className='ai-step done'; });
     const applied=await applyCarriedOver(result.carriedOver);
     renderUpResult(result);
-    await saveHistory(result,text);
-    toast(applied
-      ? `Action Item ${result.items.length}개 추출, 지난 회의 업무 ${applied}건 반영! 🎉`
-      : `${result.items.length}개 Action Item 추출 완료! 🎉`,'success');
+    const saved=await saveHistory(result,text);
+    const no=saved?meetingNo(saved):null;
+    toast((no?`${no}차 회의로 저장했어요 · `:'')+(applied
+      ? `Action Item ${result.items.length}개, 지난 회의 업무 ${applied}건 반영 🎉`
+      : `Action Item ${result.items.length}개 추출 🎉`),'success');
+    /* 저장됐으면 분석 페이지를 비우고 방금 회의 화면으로 넘어간다 — 다음 회의를 바로 받을 수 있게.
+       저장에 실패했으면 결과까지 사라지면 안 되니 이 화면에 그대로 둔다. */
+    if(saved&&saved.id){ resetUploadPage(); openMeeting(saved.id); }
   }catch(e){
     clearInterval(stInt);
     showErr(e.message);
@@ -284,7 +288,7 @@ function carryOverHTML(result){
    회의는 프로젝트 하위 컬렉션에 쌓인다. "회의가 쌓일수록 선명해진다"가 이 제품의
    핵심이므로 개수 제한을 두지 않는다. */
 async function saveHistory(result,text){
-  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return; }
+  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return null; }
   /* 업무마다 고유 ID를 붙인다. 체크 상태를 저장할 때 어느 업무인지 찾는 열쇠가 된다. */
   const stamp=Date.now();
   const meeting={
@@ -307,10 +311,22 @@ async function saveHistory(result,text){
   renderAll();
   try{
     meeting.id=await window.mfDb.addMeeting(projectId, meeting);
+    return meeting;
   }catch(e){
     console.error('[MeetFlow] 회의 저장 실패', e);
     history=history.filter(m=>m!==meeting);   /* 저장 실패한 건 되돌린다 */
     renderAll();
     toast('회의를 저장하지 못했어요: '+e.message,'error');
+    return null;
   }
+}
+
+/** 분석 페이지를 처음 상태로 — 다음 회의를 받을 준비 */
+function resetUploadPage(){
+  document.getElementById('meeting-input').value='';
+  updateCC();
+  document.getElementById('result-wrap').classList.remove('show');
+  document.getElementById('up-empty').style.display='block';
+  document.getElementById('up-research').innerHTML='';
+  if(typeof setSttStatus==='function') setSttStatus('');
 }
