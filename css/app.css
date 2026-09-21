@@ -189,6 +189,9 @@
   border-right:1px solid var(--bd);padding:18px 10px;
   overflow-y:auto;display:flex;flex-direction:column;gap:2px;
 }
+/* 토글을 열어 내용이 넘치면 항목을 눌러 줄이지 말고 사이드바가 스크롤되게 —
+   flex 기본값(shrink)이면 메뉴 간격·높이가 점점 찌그러진다 */
+.sidebar > *{flex-shrink:0;}
 .sb-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;color:var(--hint);text-transform:uppercase;padding:10px 10px 4px;margin-top:6px;}
 .sb-item{
   display:flex;align-items:center;gap:10px;padding:9px 11px;
@@ -306,6 +309,9 @@ a.sb-ws:hover::after{opacity:.6;}
 .sb-wrapup-ico{font-size:24px;line-height:1;}
 .sb-wrapup b{display:block;font-size:var(--fs-md);}
 .sb-wrapup small{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px;}
+/* 스크롤바가 생겨 폭이 줄어도 설명이 두 줄로 넘어가 버튼 높이가 바뀌지 않게 */
+.sb-wrapup small,.sb-new small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-wrapup > span:last-child,.sb-new > span:last-child{min-width:0;}
 /* 새 회의 하기 — 매일 쓰는 버튼이라 사이드바에서 가장 진한 색. 마무리(연한 색)와 경쟁하지 않게 */
 .sb-new{
   display:flex;align-items:center;gap:var(--sp-3);width:100%;margin:var(--sp-2) 0 var(--sp-1);
