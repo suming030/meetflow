@@ -828,6 +828,11 @@
   const mfIsQuota = (e) => /\b429\b|quota|RESOURCE_EXHAUSTED/i.test(mfMsg(e));
   /* 분당 한도는 잠깐 기다리면 풀린다 — 모델을 바꾸기 전에 한 번 더 준다 */
   const mfIsPerMinute = (e) => /per minute|PerMinute|\bRPM\b/i.test(mfMsg(e));
+  /* 서버 과부하 — 그 모델만 잠깐 붐비는 것이라 다른 모델로 넘어가면 된다.
+     실제로 "[500] This model is currently experiencing high demand"가 났는데,
+     예전엔 한도·모델 문제로 분류되지 않아 폴백 없이 바로 실패했다. */
+  const mfIsOverloaded = (e) =>
+    /\b50[023]\b|high demand|overloaded|UNAVAILABLE/i.test(mfMsg(e));
 
   /** 오류 원문에서 사람이 읽을 한 줄만 뽑는다 (URL·JSON 잡음 제거) */
   function mfShortReason(e){
@@ -869,8 +874,8 @@
           return out;
         }catch(e){
           lastErr = e;
-          /* 한도·모델 문제가 아니면(App Check, 네트워크 등) 모델을 바꿔도 소용없다 */
-          if(!mfIsMissing(e) && !mfIsQuota(e)) throw e;
+          /* 한도·모델·과부하 문제가 아니면(App Check, 네트워크 등) 모델을 바꿔도 소용없다 */
+          if(!mfIsMissing(e) && !mfIsQuota(e) && !mfIsOverloaded(e)) throw e;
           /* 기능 단위 할당량이면 다른 모델도 같은 주머니를 쓴다 — 헛되이 더 부르지 않는다 */
           if(opts.sharedQuota && mfIsQuota(e)){
             e.mfFeature = opts.feature;
