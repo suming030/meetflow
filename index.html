@@ -444,8 +444,12 @@
     <aside class="sidebar">
       <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
       <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
+      <!-- 매일 쓰는 버튼이라 사이드바에서 가장 눈에 띄게 -->
+      <button class="sb-new" onclick="gp('upload')">
+        <span class="sb-new-ico">＋</span>
+        <span><b>새 회의 하기</b><small>녹음·파일·텍스트로 분석</small></span>
+      </button>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
-      <div class="sb-item sb-new" onclick="gp('upload')"><span class="sico">✨</span> 새 회의 하기</div>
       <div class="sb-item on" id="sb-actions" onclick="sdt('actions')"><span class="sico">✅</span> 업무<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
 
       <div class="sb-group">
@@ -458,8 +462,9 @@
       <!-- 개요·회의 브리핑·Task Flow 화면은 남아 있지만 메뉴에서는 뺐다 (2026-09-21 메뉴 간소화). -->
 
       <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
-      <a class="sb-ws" href="https://meet.google.com/" target="_blank" rel="noopener"><span class="sico">📹</span> Google Meet</a>
-      <a class="sb-ws" href="https://docs.google.com/document/" target="_blank" rel="noopener"><span class="sico">📄</span> Google Docs</a>
+      <!-- 앱 안에 기능이 있는 건 그 기능으로(js/google.js), 없는 건 새 탭으로 -->
+      <div class="sb-ws" onclick="openMeetScheduler()" title="다음 회의 일정을 잡고 Google Meet 링크를 만들어요"><span class="sico">📹</span> Meet 회의 잡기</div>
+      <div class="sb-ws" onclick="exportFromSidebar()" title="보고 있는 회의(없으면 최근 회의)를 Google Docs 회의록으로 만들어요"><span class="sico">📄</span> Docs로 회의록 내보내기</div>
       <a class="sb-ws" href="https://calendar.google.com/" target="_blank" rel="noopener"><span class="sico">📅</span> Google Calendar</a>
       <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener"><span class="sico">✨</span> Gemini AI</a>
 

@@ -224,12 +224,16 @@ function injectExportButton(){
   }
 }
 
-async function exportMeetingToDocs(){
+async function exportMeetingToDocs(target){
   if(!currentUser){ toast('먼저 구글 로그인을 해주세요.', 'error'); openLogin(); return; }
 
   /* meetings.js의 analyze()는 renderUpResult 직후 saveHistory를 호출해서
      history[0]에 방금 화면에 표시된 분석 결과를 넣어둔다 */
-  const meeting = (typeof history !== 'undefined') ? history[0] : null;
+  /* 사이드바에서는 내보낼 회의를 넘겨준다. 분석 결과 패널의 버튼은 onclick 이벤트가
+     첫 인자로 들어오므로, 회의 모양(items 배열)일 때만 그 회의를 쓴다. */
+  const meeting = (target && Array.isArray(target.items))
+    ? target
+    : ((typeof history !== 'undefined') ? history[0] : null);
   if(!meeting){
     toast('내보낼 회의 분석 결과가 없어요. 먼저 회의를 분석해주세요.', 'error');
     return;
@@ -240,7 +244,8 @@ async function exportMeetingToDocs(){
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 내보내는 중...'; }
 
   try{
-    const title = `MeetFlow 회의록 – ${formatDateKR(meeting.date)}`;
+    const no = meetingNo(meeting);
+    const title = `MeetFlow ${no ? no + '차 ' : ''}회의록 – ${formatDateKR(meeting.date)}`;
     const doc = await googleApiRequest('https://docs.googleapis.com/v1/documents', {
       method: 'POST', body: JSON.stringify({ title }),
     });
@@ -259,6 +264,12 @@ async function exportMeetingToDocs(){
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = original; }
   }
+}
+
+/** 사이드바 "Docs로 회의록 내보내기" — N차 회의 화면을 보고 있으면 그 회의, 아니면 최근 회의 */
+function exportFromSidebar(){
+  const m = (currentTab === 'meeting' && typeof currentMeeting === 'function') ? currentMeeting() : history[0];
+  return exportMeetingToDocs(m);
 }
 
 function formatDateKR(iso){

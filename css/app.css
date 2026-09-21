@@ -238,8 +238,8 @@
 .minutes-body{padding:28px 32px;}
 .sb-ws{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:8px;font-size:12px;color:var(--hint);text-decoration:none;cursor:pointer;transition:all .15s;}
 .sb-ws:hover{background:var(--pk-bg);color:var(--text);}
-.sb-ws::after{content:'↗';margin-left:auto;opacity:0;transition:opacity .15s;}   /* 새 탭으로 열린다는 표시 */
-.sb-ws:hover::after{opacity:.6;}
+a.sb-ws::after{content:'↗';margin-left:auto;opacity:0;transition:opacity .15s;}   /* 새 탭으로 열린다는 표시 — 링크에만 */
+a.sb-ws:hover::after{opacity:.6;}
 .sb-ws .sico{font-size:14px;}
 .sb-new{
   display:flex;align-items:center;gap:8px;padding:9px 11px;
@@ -297,16 +297,27 @@
 ══════════════════════ */
 .sb-wrapup{
   margin-top:var(--sp-3);display:flex;align-items:center;gap:var(--sp-3);width:100%;
-  padding:var(--sp-4);border:none;border-radius:var(--r-md);cursor:pointer;
-  text-align:left;font-family:inherit;color:#fff;
+  padding:var(--sp-4);border-radius:var(--r-md);cursor:pointer;
+  text-align:left;font-family:inherit;color:var(--pk-dark);
+  background:var(--pk-light);border:1.5px solid var(--bd-s);
+  transition:border-color .15s,background .15s;
+}
+.sb-wrapup:hover{border-color:var(--pk-mid);background:var(--pk-bg);}
+.sb-wrapup-ico{font-size:24px;line-height:1;}
+.sb-wrapup b{display:block;font-size:var(--fs-md);}
+.sb-wrapup small{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px;}
+/* 새 회의 하기 — 매일 쓰는 버튼이라 사이드바에서 가장 진한 색. 마무리(연한 색)와 경쟁하지 않게 */
+.sb-new{
+  display:flex;align-items:center;gap:var(--sp-3);width:100%;margin:var(--sp-2) 0 var(--sp-1);
+  padding:var(--sp-3) var(--sp-4);border:none;border-radius:var(--r-md);cursor:pointer;
+  text-align:left;font-family:inherit;color:#fff;flex-shrink:0;
   background:linear-gradient(135deg,var(--pk),var(--pk-dark));box-shadow:var(--shadow-pk);
   transition:transform .15s,opacity .15s;
 }
-.sb-wrapup:hover{opacity:.92;transform:translateY(-1px);}
-.sb-wrapup-ico{font-size:24px;line-height:1;}
-.sb-wrapup b{display:block;font-size:var(--fs-md);}
-.sb-wrapup small{display:block;font-size:var(--fs-xs);opacity:.85;margin-top:2px;}
-.sb-new{color:var(--pk-dark);font-weight:var(--fw-bold);}
+.sb-new:hover{opacity:.92;transform:translateY(-1px);}
+.sb-new-ico{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:var(--fw-bold);flex-shrink:0;}
+.sb-new b{display:block;font-size:var(--fs-md);}
+.sb-new small{display:block;font-size:var(--fs-xs);opacity:.85;margin-top:1px;}
 .seg{display:inline-flex;gap:2px;padding:3px;background:var(--pk-bg);border:1px solid var(--bd);border-radius:var(--r-pill);flex-shrink:0;}
 .seg-btn{padding:6px 14px;border-radius:var(--r-pill);font-size:var(--fs-sm);color:var(--muted);cursor:pointer;transition:all .15s;}
 .seg-btn:hover{color:var(--text);}
