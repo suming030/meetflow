@@ -338,9 +338,9 @@ function currentMeeting(){
   return (currentMeetingId&&history.find(m=>m.id===currentMeetingId))||history[0]||null;
 }
 
-/** 사이드바 "🕒 회의" 아래 목록. 최신 회의가 위 — 자주 보는 건 최근 회의라서. */
+/** 사이드바 "회의 정리 › 회의별" 목록. 최신 회의가 위 — 자주 보는 건 최근 회의라서. */
 function renderSbMeetings(){
-  const box=document.getElementById('sb-sub-meet');
+  const box=document.getElementById('sb-meet-list');
   if(!box) return;
   const total=history.length;
   const cur=currentTab==='meeting'?currentMeeting():null;

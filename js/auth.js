@@ -44,7 +44,10 @@ function renderAuthArea(){
 /* nav의 프로젝트 버튼은 로그인했을 때만 노출한다 (로그아웃 시 nav 우측은 비움) */
 function renderCta(){
   const navBtn=document.getElementById('nav-cta');
-  if(navBtn) navBtn.style.display = currentUser?'':'none';
+  if(!navBtn) return;
+  /* 로그인 전에도 보여서 상단바에서 바로 로그인 페이지로 갈 수 있게 한다 */
+  navBtn.style.display='';
+  navBtn.textContent=currentUser?'📁 내 프로젝트':'로그인';
 }
 /* 로그인 전이면 로그인부터, 로그인 후면 프로젝트 목록으로 */
 function navCta(){
@@ -56,19 +59,14 @@ function heroCta(){
   if(currentUser) gp('upload');
   else openLogin();
 }
-function openLogin(){ document.getElementById('login-overlay').classList.add('show'); }
-function closeLogin(){ document.getElementById('login-overlay').classList.remove('show'); }
+/* 로그인은 모달이 아니라 별도 페이지다. 로그인이 필요한 곳은 전부 이걸 부른다. */
+function openLogin(){ gp('login'); }
 /* Esc로 열려 있는 모달을 닫는다 */
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
-  closeLogin();
   if(typeof closeInvite==='function') closeInvite();
   if(typeof closeJoin==='function')   closeJoin();
 });
-function loginFromModal(){
-  closeLogin();
-  signInGoogle('upload');
-}
 function renderProjectBadge(){
   const el=document.getElementById('nav-project'); if(!el) return;
   if(currentProject){ el.style.display='inline-flex'; el.textContent='📁 '+currentProject.name; }

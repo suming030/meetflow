@@ -171,7 +171,7 @@ function persistItemStatus(itemId, st){
 }
 
 /* 사이드바 업무·브리핑 그룹 접기/펼치기 */
-const SB_GROUP_OF={timeline:'meet',meeting:'meet'};
+const SB_GROUP_OF={members:'work',taskflow:'work',timeline:'meet',briefing:'meet',meeting:'meet'};
 function toggleSbGroup(key){
   const sub=document.getElementById('sb-sub-'+key), chev=document.getElementById('sb-chev-'+key);
   if(!sub) return;
@@ -187,8 +187,6 @@ function openSbGroup(key){
 const _sdt=sdt;
 sdt=function(id,opts){
   _sdt(id,opts);
-  /* 담당자별은 업무 화면 안의 전환이라 메뉴에선 "업무"에 불을 켠다 */
-  if(id==='members') document.getElementById('sb-actions')?.classList.add('on');
   document.querySelectorAll('.sb-parent').forEach(p=>p.classList.remove('sb-parent-on'));
   const key=SB_GROUP_OF[id];
   if(!key) return;
@@ -260,7 +258,7 @@ function renderOverview(){
   const all=history.flatMap(e=>e.items);
   const stats=calcStats(all);
   document.getElementById('sb-cnt-total').style.display='';
-  document.getElementById('sb-cnt-total').textContent=all.filter(i=>i.status!=='done').length;  /* 업무 메뉴 옆 — 남은 업무 수 */
+  document.getElementById('sb-cnt-total').textContent=all.filter(i=>i.status!=='done').length;  /* 개요 메뉴 옆 — 남은 업무 수 */
   document.getElementById('ov-metrics').innerHTML=metricsHTML(stats,'ov');
   renderWarn(all,'ov-warn','ov-warn-txt');
   /* 개요는 "지금" 중심 — 회의가 쌓여도 복잡해지지 않게, 누적 기록은
@@ -599,10 +597,10 @@ function renderBriefing(){
     <div class="panel">
       <div class="panel-hd">
         <div class="panel-ttl">⚠️ 미완료 업무 (${incomplete.length}개)</div>
-        <span class="panel-lnk" onclick="sdt('actions')">전체 보기 →</span>
+        <span class="panel-lnk" onclick="sdt('members')">전체 보기 →</span>
       </div>
       <div class="ac-grid">${incomplete.slice(0,6).map((it,i)=>acHTML(it,i,'brief')).join('')}</div>
-      ${incomplete.length>6?`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);">+ ${incomplete.length-6}개 더 · <span style="color:var(--pk);cursor:pointer;font-weight:600;" onclick="sdt('actions')">전체 보기</span></div>`:''}
+      ${incomplete.length>6?`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);">+ ${incomplete.length-6}개 더 · <span style="color:var(--pk);cursor:pointer;font-weight:600;" onclick="sdt('members')">전체 보기</span></div>`:''}
     </div>`:`
     <div class="panel" style="text-align:center;padding:32px;">
       <div style="font-size:40px;margin-bottom:12px;">🎉</div>

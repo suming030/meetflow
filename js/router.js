@@ -3,12 +3,14 @@
 
 /* ──── 페이지·탭 전환 (해시 라우팅 — 브라우저 뒤로가기 지원) ──── */
 const AUTH_PAGES=['upload','dash','projects','onboard','track'];
-let currentTab='actions';   /* 대시보드 첫 화면 — 개요는 메뉴에서 뺐다 */
+let currentTab='overview';
 
 function gp(id,opts){
   opts=opts||{};
+  /* 이미 로그인했으면 로그인 페이지 대신 내 프로젝트로 */
+  if(id==='login'&&currentUser) id='projects';
   if(AUTH_PAGES.includes(id)&&!currentUser){
-    if(opts.fromPop){ gp('landing',{fromPop:true}); return; }
+    if(opts.fromPop){ gp('login',{fromPop:true}); return; }
     openLogin(); return;
   }
   if(id==='upload'||id==='dash'){
@@ -44,7 +46,7 @@ window.addEventListener('popstate',applyHash);
 
 function sdt(id,opts){
   opts=opts||{};
-  if(!document.getElementById('tab-'+id)) id='actions';
+  if(!document.getElementById('tab-'+id)) id='overview';
   document.querySelectorAll('#page-dash .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.sb-item[id^="sb-"]').forEach(s=>s.classList.remove('on'));
   document.getElementById('tab-'+id).classList.add('active');
