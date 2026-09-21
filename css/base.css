@@ -101,9 +101,6 @@ nav{
 .nav-logo-img{height:26px;width:auto;display:block;}
 .hero-logo{height:56px;width:auto;display:block;margin:0 auto var(--sp-6);}
 .logo-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xl);box-shadow:0 3px 10px rgba(124,58,237,.35);}
-.nav-links{display:flex;gap:var(--sp-7);font-size:var(--fs-md);color:var(--muted);}
-.nav-links span{cursor:pointer;transition:color .2s;font-weight:var(--fw-medium);}
-.nav-links span:hover{color:var(--pk);}
 .nav-right{display:flex;align-items:center;gap:var(--sp-2);}
 .nav-project{font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--pk-dark);background:var(--pk-light);border:1px solid var(--bd-s);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-pill);cursor:pointer;transition:all .2s;}
 .nav-project:hover{background:var(--pk);color:#fff;}
