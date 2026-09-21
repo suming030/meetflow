@@ -266,10 +266,11 @@
 /* 담당자 그룹 */
 .as-group{margin-bottom:18px;}
 .as-hd{
-  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;margin-bottom:0;cursor:pointer;
   padding:10px 14px;background:linear-gradient(135deg,var(--pk-light),#fff);
   border-radius:12px;border:1px solid var(--bd-s);
 }
+.as-body{padding-top:10px;}
 .av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
 .av0{background:linear-gradient(135deg,var(--pk),var(--pk-dark));}
 .av1{background:linear-gradient(135deg,#1D9E75,#16795A);}
@@ -285,6 +286,8 @@
 }
 .mini-task:hover{border-color:var(--pk-mid);}
 .mt-name{flex:1;font-size:13px;font-weight:500;}
+.mt-dl{font-size:11px;color:var(--muted);flex-shrink:0;}
+.mt-dl.urg{color:var(--red);font-weight:700;}
 
 /* ══════════════════════
    프로젝트 마무리 — 회고 (js/wrapup.js)
