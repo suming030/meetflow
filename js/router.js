@@ -3,7 +3,7 @@
 
 /* ──── 페이지·탭 전환 (해시 라우팅 — 브라우저 뒤로가기 지원) ──── */
 const AUTH_PAGES=['upload','dash','projects','onboard','track'];
-let currentTab='overview';
+let currentTab='actions';   /* 대시보드 첫 화면 — 개요는 메뉴에서 뺐다 */
 
 function gp(id,opts){
   opts=opts||{};
@@ -44,7 +44,7 @@ window.addEventListener('popstate',applyHash);
 
 function sdt(id,opts){
   opts=opts||{};
-  if(!document.getElementById('tab-'+id)) id='overview';
+  if(!document.getElementById('tab-'+id)) id='actions';
   document.querySelectorAll('#page-dash .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.sb-item[id^="sb-"]').forEach(s=>s.classList.remove('on'));
   document.getElementById('tab-'+id).classList.add('active');

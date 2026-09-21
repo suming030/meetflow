@@ -445,42 +445,28 @@
       <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
       <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
-      <div class="sb-item on"  id="sb-overview"  onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
+      <div class="sb-item sb-new" onclick="gp('upload')"><span class="sico">✨</span> 새 회의 하기</div>
+      <div class="sb-item on" id="sb-actions" onclick="sdt('actions')"><span class="sico">✅</span> 업무<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
 
       <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
-        <div class="sb-sub" id="sb-sub-work">
-          <div class="sb-item sb-child" id="sb-actions"   onclick="sdt('actions')"><span class="sico">✅</span> Action Items</div>
-          <div class="sb-item sb-child" id="sb-members"   onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
-          <div class="sb-item sb-child" id="sb-taskflow"  onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
-        </div>
-      </div>
-
-      <div class="sb-group">
-        <div class="sb-item sb-parent" id="sb-timeline" onclick="sdt('timeline')"><span class="sico">🕒</span> 회의<span class="sb-chev" id="sb-chev-meet" onclick="event.stopPropagation();toggleSbGroup('meet')">▸</span></div>
+        <div class="sb-item sb-parent" id="sb-timeline" onclick="sdt('timeline')"><span class="sico">🕒</span> 회의 타임라인<span class="sb-chev" id="sb-chev-meet" onclick="event.stopPropagation();toggleSbGroup('meet')">▸</span></div>
         <div class="sb-sub" id="sb-sub-meet"></div>
       </div>
 
-      <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('brief')"><span class="sico">📋</span> 브리핑<span class="sb-chev" id="sb-chev-brief">▸</span></div>
-        <div class="sb-sub" id="sb-sub-brief">
-          <div class="sb-item sb-child" id="sb-briefing"   onclick="sdt('briefing')"><span class="sico">📋</span> 회의 브리핑</div>
-          <div class="sb-item sb-child" id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
-        </div>
-      </div>
-      <div class="sb-item sb-wrapup" onclick="openWrapup()"><span class="sico">🎬</span> 프로젝트 마무리</div>
+      <div class="sb-item" id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
 
-      <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
-      <div class="sb-ws"><span class="sico">📹</span> Google Meet</div>
-      <div class="sb-ws"><span class="sico">📄</span> Google Docs</div>
-      <div class="sb-ws"><span class="sico">📅</span> Google Calendar</div>
-      <div class="sb-ws"><span class="sico">✨</span> Gemini AI</div>
+      <!-- 개요·회의 브리핑·Task Flow 화면은 남아 있지만 메뉴에서는 뺐다 (2026-09-21 메뉴 간소화).
+           프로젝트가 끝났을 때 누르는 마무리는 메뉴와 떨어뜨려 맨 아래에 크게 둔다. -->
+      <button class="sb-wrapup" onclick="openWrapup()">
+        <span class="sb-wrapup-ico">🎬</span>
+        <span><b>프로젝트 마무리</b><small>회의 전체로 회고·경험 정리</small></span>
+      </button>
     </aside>
 
     <main class="dash-main">
 
       <!-- ── 대시보드 탭 ── -->
-      <div class="tab active" id="tab-overview">
+      <div class="tab" id="tab-overview">
         <div class="pg-hd">
           <div><h2>📊 개요</h2><p>이 프로젝트의 현황과 Action Items를 한눈에 확인하세요</p></div>
           <div class="pg-actions">
@@ -519,9 +505,10 @@
       </div>
 
       <!-- ── Action Items 탭 ── -->
-      <div class="tab" id="tab-actions">
+      <div class="tab active" id="tab-actions">
         <div class="pg-hd">
-          <div><h2>✅ 전체 Action Items</h2><p>모든 분석에서 추출된 액션 아이템을 관리하세요</p></div>
+          <div><h2>✅ 업무</h2><p>모든 회의에서 나온 업무를 한곳에서 관리하세요</p></div>
+          <div class="seg"><span class="seg-btn on">전체</span><span class="seg-btn" onclick="sdt('members')">담당자별</span></div>
         </div>
         <div id="all-ac-wrap">
           <div class="panel"><div class="empty"><div class="e-ico">📋</div><h3>아직 분석된 회의가 없어요</h3></div></div>
@@ -531,7 +518,8 @@
       <!-- ── 담당자별 탭 ── -->
       <div class="tab" id="tab-members">
         <div class="pg-hd">
-          <div><h2>👥 담당자별 업무</h2><p>각 담당자별로 배정된 업무를 한눈에 확인하세요</p></div>
+          <div><h2>✅ 업무</h2><p>누가 무엇을 맡았는지 담당자별로 확인하세요</p></div>
+          <div class="seg"><span class="seg-btn" onclick="sdt('actions')">전체</span><span class="seg-btn on">담당자별</span></div>
         </div>
         <div id="members-wrap">
           <div class="panel"><div class="empty"><div class="e-ico">👥</div><h3>아직 분석된 회의가 없어요</h3></div></div>

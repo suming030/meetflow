@@ -171,8 +171,7 @@ function persistItemStatus(itemId, st){
 }
 
 /* 사이드바 업무·브리핑 그룹 접기/펼치기 */
-const SB_GROUP_OF={actions:'work',members:'work',taskflow:'work',briefing:'brief',milestones:'brief',
-                   timeline:'meet',meeting:'meet'};
+const SB_GROUP_OF={timeline:'meet',meeting:'meet'};
 function toggleSbGroup(key){
   const sub=document.getElementById('sb-sub-'+key), chev=document.getElementById('sb-chev-'+key);
   if(!sub) return;
@@ -188,6 +187,8 @@ function openSbGroup(key){
 const _sdt=sdt;
 sdt=function(id,opts){
   _sdt(id,opts);
+  /* 담당자별은 업무 화면 안의 전환이라 메뉴에선 "업무"에 불을 켠다 */
+  if(id==='members') document.getElementById('sb-actions')?.classList.add('on');
   document.querySelectorAll('.sb-parent').forEach(p=>p.classList.remove('sb-parent-on'));
   const key=SB_GROUP_OF[id];
   if(!key) return;
@@ -259,7 +260,7 @@ function renderOverview(){
   const all=history.flatMap(e=>e.items);
   const stats=calcStats(all);
   document.getElementById('sb-cnt-total').style.display='';
-  document.getElementById('sb-cnt-total').textContent=all.length;
+  document.getElementById('sb-cnt-total').textContent=all.filter(i=>i.status!=='done').length;  /* 업무 메뉴 옆 — 남은 업무 수 */
   document.getElementById('ov-metrics').innerHTML=metricsHTML(stats,'ov');
   renderWarn(all,'ov-warn','ov-warn-txt');
   /* 개요는 "지금" 중심 — 회의가 쌓여도 복잡해지지 않게, 누적 기록은
