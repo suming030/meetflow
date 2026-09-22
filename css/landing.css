@@ -33,7 +33,7 @@
   margin-bottom:var(--sp-6);
 }
 .hero h1{
-  font-size:var(--fs-3xl);
+  font-size:var(--fs-5xl);      
   font-weight:var(--fw-black);
   color:#14142B;
   line-height:1.2;
@@ -46,7 +46,7 @@
 }
 .hero p{
   font-size:var(--fs-3xl);
-  font-weight:var(--fw-black);
+  font-weight:var(--fw-bold);  
   color:#14142B;
   line-height:1.4;
   letter-spacing:-.6px;
