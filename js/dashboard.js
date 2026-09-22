@@ -537,6 +537,7 @@ function renderBriefing(){
       <div class="panel-hd"><div class="panel-ttl">💡 최근 회의 요약</div></div>
       <div style="font-size:14px;line-height:1.85;color:var(--text);background:var(--pk-bg);padding:14px 16px;border-radius:10px;">${lastSum}</div>
     </div>`:''}
+    ${/* 지금까지 정한 것·결론이 안 난 안건 (js/meetings.js — ① 수민) */ decisionBoardHTML()}
 
     <div class="g2">
       <div class="panel">

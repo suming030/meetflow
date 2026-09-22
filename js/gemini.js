@@ -102,7 +102,7 @@ function parseGeminiJson(raw){
 
 /**
  * 회의 텍스트를 분석한다 — **두 요청으로 나눠 동시에** 보낸다.
- *   A. callGeminiTasks   : 요약 + 업무 + 지난 회의 업무 판단 (짧다 → 먼저 도착)
+ *   A. callGeminiTasks   : 요약 + 업무 + 지난 회의 업무 판단 + 결정 사항·미결 안건 (짧다 → 먼저 도착)
  *   B. callGeminiMinutes : 안건별 회의록 본문 + 놓친 부분   (길다 → 뒤따라 도착)
  * 한 번에 받으면 가장 긴 회의록이 다 써질 때까지 업무도 못 보여준다. 사용자가 제일 먼저
  * 보고 싶은 "누가 뭘 언제까지"를 먼저 띄우려고 나눴다(2026-09-22). 대신 회의 텍스트를
@@ -145,9 +145,22 @@ function analysisContext(text){
  * A. 요약 + 업무 + 지난 회의 업무 판단
  * @param {string} text     이번 회의 텍스트
  * @param {Array}  pending  이전 회의의 미완료 업무 [{id,task,assignee,deadline,status,meetingDate}]
+ * @param {Object} past     지난 회의들의 {decisions:[{id,text,no}], issues:[{id,text,no,streak}]}
+ *                          — 아직 유효한 결정과 결론이 안 난 안건 (js/meetings.js의 collectPast…)
  */
-async function callGeminiTasks(text, pending=[]){
+async function callGeminiTasks(text, pending=[], past={decisions:[],issues:[]}){
   const {today, transcriptBlock}=analysisContext(text);
+  /* 결정·미결 안건도 업무처럼 지난 회의 것을 넘겨야 "바뀐 결정", "또 미뤄진 안건"을 알아챈다 */
+  const pastDecisions=(past&&past.decisions)||[], pastIssues=(past&&past.issues)||[];
+  const pastBlock =
+    (pastDecisions.length ? `\n지난 회의에서 정한 것 (아직 유효한 결정):
+"""
+${pastDecisions.map(d=>`- [${d.id}] ${d.text} (${d.no}차 회의)`).join('\n')}
+"""\n` : '') +
+    (pastIssues.length ? `\n지난 회의에서 결론이 안 난 안건:
+"""
+${pastIssues.map(q=>`- [${q.id}] ${q.text} (${q.no}차 회의${q.streak>1?`, ${q.streak}번째 결론 없음`:''})`).join('\n')}
+"""\n` : '');
   const pendingBlock = pending.length
     ? `\n지난 회의에서 아직 끝나지 않은 업무 (이번 회의에서 다뤄졌는지 판단해야 함):
 """
@@ -162,7 +175,7 @@ ${pending.map(p=>`- [${p.id}] ${p.task} (담당: ${p.assignee||'미지정'}, 마
 """
 ${text}
 """
-${pendingBlock}
+${pendingBlock}${pastBlock}
 규칙:
 - items에는 **이번 회의에서 새로 정해진 업무만** 넣으세요. 위에 이미 있는 업무는 넣지 마세요.
 - status는 항상 "todo"로 고정
@@ -179,7 +192,23 @@ carriedOver 작성 규칙 (지난 회의 미완료 업무에 대한 판단):
 - id는 위 대괄호 안의 값을 그대로 쓰세요.
 - resolved: 이번 회의에서 완료됐다고 확인되면 true, 아직 진행 중이거나 미뤄졌으면 false
 - note: 근거를 회의 내용에서 인용해 한 문장으로. 미뤄졌다면 그 이유를 쓰세요.
-- newDeadline: 마감일이 새로 정해졌으면 YYYY-MM-DD, 아니면 null${transcriptBlock}`;
+- newDeadline: 마감일이 새로 정해졌으면 YYYY-MM-DD, 아니면 null
+
+decisions 작성 규칙 (이번 회의에서 팀이 정한 것):
+- 방향·선택·일정·규칙처럼 **팀이 합의해 확정한 것**만 넣으세요. (예: "발표 주제는 캠퍼스 쓰레기 문제로", "중간발표는 10월 5일")
+- 누가 무엇을 할지는 items에 들어가니 decisions에는 넣지 마세요.
+- 제안만 나오고 합의되지 않은 것은 넣지 마세요.
+- text는 40자 이내, "~로 정함"처럼 결론이 드러나게.
+- 위 "지난 회의에서 정한 것"과 같은 내용을 다시 확인만 했다면 넣지 마세요.
+- 지난 결정을 바꾸거나 뒤집었다면 replaces에 그 결정의 id(대괄호 안 값)를, 아니면 null.
+- 위 "결론이 안 난 안건"이 이번에 결론 났다면 resolves에 그 안건의 id를, 아니면 null.
+- 최대 8개. 없으면 빈 배열.
+
+openIssues 작성 규칙 (논의했지만 결론이 안 난 안건):
+- 이번 회의에서 이야기는 했는데 결정하지 못하고 다음으로 넘긴 안건만 넣으세요. 언급조차 안 된 것은 넣지 마세요.
+- text는 30자 이내의 안건 이름. (예: "역할 분담", "발표 자료 디자인 방향")
+- 위 "결론이 안 난 안건"과 같은 안건이 이번에도 결론 없이 끝났다면 sameAs에 그 id를, 새 안건이면 null.
+- 최대 5개. 없으면 빈 배열.${transcriptBlock}`;
 
   const schema={
     type:'object',
@@ -213,6 +242,29 @@ carriedOver 작성 규칙 (지난 회의 미완료 업무에 대한 판단):
           required:['id','task','resolved','note']
         }
       },
+      decisions:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            text:    {type:'string'},
+            replaces:{type:'string', nullable:true},
+            resolves:{type:'string', nullable:true},
+          },
+          required:['text']
+        }
+      },
+      openIssues:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            text:  {type:'string'},
+            sameAs:{type:'string', nullable:true},
+          },
+          required:['text']
+        }
+      },
     },
     required:['summary','items']
   };
@@ -227,6 +279,8 @@ carriedOver 작성 규칙 (지난 회의 미완료 업무에 대한 판단):
     status:   'todo',
   }));
   parsed.carriedOver=Array.isArray(parsed.carriedOver)?parsed.carriedOver:[];
+  parsed.decisions=Array.isArray(parsed.decisions)?parsed.decisions:[];
+  parsed.openIssues=Array.isArray(parsed.openIssues)?parsed.openIssues:[];
   return parsed;
 }
 
@@ -308,7 +362,7 @@ topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분)
 }
 
 /** 예전처럼 한 번에 전부 받고 싶을 때 — A·B를 동시에 보내고 합친다 */
-async function callGemini(text, pending=[]){
-  const [a,b]=await Promise.all([callGeminiTasks(text,pending), callGeminiMinutes(text)]);
+async function callGemini(text, pending=[], past){
+  const [a,b]=await Promise.all([callGeminiTasks(text,pending,past), callGeminiMinutes(text)]);
   return {...a, gaps:b.gaps, topics:b.topics};
 }
