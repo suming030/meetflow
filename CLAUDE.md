@@ -1,37 +1,46 @@
 # MeetFlow 작업 규칙
 
 여러 회의를 이어서 프로젝트 전체 흐름을 붙잡아주는 AI 서비스입니다.
-대학생 팀(공모전·팀플·동아리)이 타겟이고, 4명이 파일을 나눠 동시에 작업합니다.
+대학생 팀(공모전·팀플·동아리)이 타겟입니다.
+
+**5인 팀입니다 (2026-09-22~).** 역할별로 파일을 나눠 작업합니다.
+**내 담당 파일이 아니면 고치지 말고 담당자에게 요청하세요.**
+
+| 역할 | 담당 파일 |
+| --- | --- |
+| ① 회의 입력·분석 (STT 포함) + 자료 찾기 — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
+| ② 첫 시작 페이지(랜딩) 전담 - **세은** | `css/landing.css`, index.html 랜딩 구역 |
+| ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) - **주향** | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
+| ④ 마일스톤 (온보딩 + 트랙별 틀) - **지은** | `js/onboarding.js`, `js/milestones.js` |
+| ⑤ 정리·내보내기 - **지연** | `js/wrapup.js` (프로젝트 마무리 화면 + AI 프롬프트), `js/google.js` (Docs 내보내기·캘린더·Meet 일정) |
+| 공용 (팀장 — **수민**) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / `js/projects.js` (프로젝트 목록·초대) |
+
+`index.html`은 한 파일이라 나눌 수 없어서, 구역마다 `<!-- 담당: … -->` 주석을 달아뒀습니다.
+CSS 로드 순서는 `base → landing → layout → app`입니다. `base.css`의 색·글꼴 토큰은 앱 전체에
+영향을 주므로 ③이 관리하고, ②가 바꾸고 싶으면 ③에게 요청합니다.
+
+**둘이 같이 만져야 하는 과제**는 미리 짝을 맞추세요.
+
+- 랜딩에서 쓰는 공통 버튼·색(`base.css`) — ②가 요청, ③이 반영
+- 온보딩 화면 모양 — ④(`onboarding.js`) + ③(스타일)
+- `MF_MODELS`·AI 호출구(index.html 맨 아래) — 공용 + ①
+- 사이드바 하단 Google Workspace 버튼(Meet 회의 잡기·Docs 내보내기) — ⑤ 기능 + ③ 모양
+- Docs로 내보내는 회의록 내용 — ⑤(`google.js`) + ①(회의 데이터 모양)
+- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④·⑤도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
 
 ## ⚠️ 반드시 지킬 것
 
-### 1. 담당 파일만 수정한다
+아래는 취향이 아니라 **코드가 실제로 그렇게 동작해서** 어기면 앱이 깨지는 것들입니다.
 
-4명이 같은 저장소에서 동시에 작업합니다. **담당이 아닌 파일은 열어보되 고치지 마세요.**
-
-| 담당 | 파일 |
-|---|---|
-| 디자인 A | `css/base.css`, `css/landing.css`, `index.html`의 랜딩 영역 |
-| 디자인 B | `css/app.css`, `js/dashboard.js`, `index.html`의 대시보드 영역 |
-| 기능 C | `js/meetings.js`, `js/gemini.js`, `js/stt.js`, `js/onboarding.js`, `js/projects.js` |
-| 기능 D | `js/google.js` |
-| 공용 | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, `index.html` |
-
-공용 파일을 고쳐야 하면 **먼저 팀에 알리고, 짧게 작업한 뒤 바로 머지**하세요.
-
-`css/base.css`는 앱 전체의 색·타이포·간격 기준입니다. 디자인 A만 수정하고,
-다른 사람은 이미 정의된 CSS 변수(`--pk`, `--muted`, `--bd` 등)를 사용하세요.
-
-### 2. ES 모듈로 바꾸지 않는다
+### 1. ES 모듈로 바꾸지 않는다
 
 `js/*.js`는 전부 **일반 스크립트**입니다 (`type="module"` 아님).
-`onclick="gp('upload')"` 형태의 인라인 핸들러가 63개 있습니다
-(`index.html` 47개 + JS 템플릿 문자열 안 16개). 모듈로 바꾸면
-전역 스코프가 사라져 **전부 깨집니다.**
+`onclick="gp('upload')"` 형태의 인라인 핸들러가 `index.html`과 JS 템플릿 문자열 곳곳에
+100개 넘게 있습니다. 모듈로 바꾸면 전역 스코프가 사라져 **전부 깨집니다.**
 
 "모던하게 모듈로 리팩터링할까요?" 같은 제안은 하지 마세요.
 
-### 3. 스크립트 로드 순서가 의존성이다
+### 2. 스크립트 로드 순서가 의존성이다
 
 `index.html` 하단의 `<script src>` 순서가 실행 순서입니다.
 상태·유틸이 먼저, `js/main.js`(init 호출)가 마지막입니다.
@@ -41,10 +50,18 @@
 **SyntaxError로 앱 전체가 죽습니다.** 새 전역이 필요하면 `js/state.js`에 넣으세요.
 같은 이름의 함수를 두 파일에 두면 나중에 로드된 쪽이 조용히 이깁니다.
 
-### 4. 모바일·반응형은 하지 않는다
+### 3. 모바일·반응형은 하지 않는다
 
 **데스크톱 전용**입니다. 미디어쿼리가 없고 일부 레이아웃이 고정폭인 것은
 의도된 상태이니 그대로 두세요. 반응형 작업을 먼저 제안하지 마세요.
+
+(`design/responsive` 브랜치에 반응형 작업이 남아 있지만 의도적으로 머지하지 않았습니다.
+오래된 main에서 갈라져 나와 이미 삭제된 클래스를 건드립니다.)
+
+### 4. `css/base.css`는 앱 전체의 기준이다
+
+색·타이포·간격·반경 토큰이 여기 있습니다. 개별 화면을 손볼 때는 값을 새로 쓰지 말고
+이미 정의된 변수(`--pk`, `--muted`, `--bd`, `--fs-md`, `--sp-4`, `--r-md` 등)를 쓰세요.
 
 ## 실행 방법
 
@@ -58,31 +75,98 @@ python -m http.server 8000
 
 > 코드를 고쳤는데 화면이 그대로면 브라우저 캐시입니다. `Ctrl+Shift+R`로 강력 새로고침하세요.
 > 파이썬 기본 서버는 캐시 헤더를 보내지 않아 js 파일이 자주 캐시됩니다.
+> (실제로 이것 때문에 수정이 반영 안 된 걸 모르고 검증한 적이 있습니다.)
 
 ## 구조
 
 - 빌드 도구 없음. HTML + CSS + 바닐라 JS
-- `index.html` 마크업 / `css/` 3개 / `js/` 기능별 분리
+- `index.html` 마크업 / `css/` 4개(`base → landing → layout → app` 순서로 로드) / `js/` 기능별 분리
+- 로그인은 별도 페이지(`#login`)이고, 로그인하면 내 프로젝트로 갑니다.
 - Firebase: Auth(구글 로그인), Firestore(데이터), AI Logic(Gemini)
 - 데이터: `projects/{id}` + `projects/{id}/meetings/{id}` 하위 컬렉션,
   `memberUids` 배열로 접근 제어, 6자리 초대 코드로 팀원 참여
-- Gemini는 `window.mfGenerateJSON`(구조화 JSON), `window.mfTranscribeAudio`(음성 전사)로 호출.
-  `index.html` 맨 아래 `<script type="module">`에서 노출합니다. API 키는 코드에 없습니다.
+- Gemini 호출구는 `index.html` 맨 아래 `<script type="module">`에서 노출합니다.
+  API 키는 코드에 없습니다.
+  - `window.mfGenerateJSON` — 구조화 JSON (회의 분석)
+  - `window.mfTranscribeAudio` — 음성 전사
+  - `window.mfGroundedSearch` — Google 검색 그라운딩 (추가 자료 찾기)
+
+  셋 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
+  한도 초과(429)·없는 모델(404)·과부하(500/503)·시간 초과(5분)가 나면 아래 후보로 내려갑니다.
+  **모델 이름을 개별 함수에 하드코딩하지 마세요.**
+
+## 회의 분석 데이터 모양
+
+회의 문서 하나가 담는 것 (`js/gemini.js`의 스키마 = `js/meetings.js`가 저장하는 모양):
+
+- `summary` — 2~3문장 요약
+- `topics` — **안건별 논의 내용**(회의록 본문). `[{title, discussion[]}]`
+- `items` — 이번 회의에서 새로 생긴 업무. `id`는 저장 시 부여
+- `carriedOver` — 지난 회의 미완료 업무에 대한 판단
+- `gaps` — AI가 짚은 놓친 부분
+
+`topics`가 없는 과거 회의가 있습니다. 회의록 화면은 그때 안내 문구로 폴백하니
+마이그레이션은 필요 없습니다.
+
+전역 `history`는 **최신 회의가 `[0]`인 최신순**입니다. "몇 차 회의"는 직접 세지 말고
+`meetingNo(m)`(`js/utils.js`)을 쓰세요.
 
 ## git 규칙
 
+**`main`에 직접 push하지 않습니다.** 브랜치를 파고 PR로 합칩니다.
+
 ```bash
 git checkout main
-git pull origin main
-git checkout -b feature/기능명
+git pull                                  # 항상 최신에서 시작
+git checkout -b feat/이름-작업             # 예: feat/수민-stt
+# ... 작업 ...
+git commit -m "feat: 녹음 업로드 경로 추가"
+git push -u origin feat/이름-작업
 ```
 
-작업 후 Commit → Push → Pull Request. **main에 직접 push 금지.**
+PR을 올리면 **다른 한 명이 보고 머지**합니다.
+
+- 커밋은 목적 단위로 쪼개고 `feat:`/`fix:`/`design:`/`docs:`/`refactor:`/`chore:` 접두사를 씁니다.
+- **PR은 작게, 자주.** 작업이 하루를 넘기면 중간에 `main`을 당겨 받으세요.
+- 머지되면 GitHub Pages(https://suming030.github.io/meetflow/)에 1~2분 뒤 반영됩니다.
+
+### 충돌이 나는 자리
+
+1. **`index.html` 맨 아래 `<script src>` 목록** — 새 js 파일을 추가하면 여기를 건드립니다. 먼저 공유.
+2. **`js/state.js`** — 같은 이름의 전역을 두 사람이 선언하면 **SyntaxError로 앱 전체가 죽습니다.** 전역 추가는 반드시 공유 후.
+3. **같은 이름의 함수**를 두 파일에 두면 나중에 로드된 쪽이 조용히 이깁니다. 새 함수 이름은 겹치지 않게.
+
+### 개발용 Firebase 데이터
+
+**다섯 명이 같은 Firestore를 봅니다.** 각자 **자기 테스트 프로젝트를 하나씩** 만들어 쓰고,
+**발표·데모용 프로젝트는 아무도 테스트에 쓰지 않습니다.**
 
 ## 알아둘 상태
 
-- AI 호출이 `401 App Check token is invalid`로 막힐 수 있습니다. 콘솔 설정 문제이니
-  코드를 고치려 하지 말고 팀에 알리세요.
-- `functions/`, `storage.rules`는 Cloud Speech-to-Text용으로 만들었으나 **현재 사용하지 않습니다.**
-  전사는 Gemini로만 합니다(짧은 회의 1~2분 기준, 화자 구분 없음).
-- 랜딩의 "준비 중" 배지가 붙은 기능은 아직 구현되지 않았습니다.
+- AI 호출이 `401 App Check token is invalid`로 막힐 수 있습니다.
+  콘솔 설정 문제이니 코드를 고치려 하지 마세요.
+- **Gemini 호출은 무료(Spark) 한도 안에서 씁니다.**
+  최신 Gemini 모델은 무료 티어에 없을 때가 있어 계속 429가 납니다. 그래서
+  `MF_MODELS`에 후보를 위→아래(성능 좋음→무료 한도 넉넉함) 순으로 두고 폴백합니다.
+  새 모델이 나오면 목록 맨 위에 추가만 하면 되고, 무료 티어에 없으면 알아서 건너뜁니다.
+  - 지금 1순위는 `gemini-3.6-flash`입니다. `gemini-3.7-flash`는 뺐습니다(2026-09-21) —
+    무료 티어에서 과부하로 110~180초씩 붙잡다 실패했고, 같은 20분 녹음을 3.6은 약 85초에 전사했습니다.
+  - **전사에는 lite 모델을 쓰지 않습니다**(`skipLite`). 20분 녹음을 넣었더니 녹음에 없는 내용을
+    지어냈습니다. 회의 분석은 lite까지 내려갑니다.
+- **Google 검색 그라운딩은 구조화 JSON 출력과 함께 쓰지 않습니다.** 같이 쓰면
+  출처 정보(`groundingChunks`)가 비어서 돌아오는 문제가 보고돼 있습니다.
+  회의 분석(JSON)과 자료 찾기(그라운딩)는 **반드시 별도 호출**로 유지하세요.
+  또 그라운딩 응답은 Google 정책상 **검색 제안과 출처를 화면에 표시해야 합니다.**
+- **STT(Cloud Speech-to-Text) 전환은 보류 중입니다 (2026-09-21).** 화자 분리를 쓰려면
+  서비스 계정 인증이 필요해 Cloud Function과 **Blaze 요금제**가 있어야 하는데, 결제 가입이
+  구글 심사에 걸려 막혀 있습니다. `functions/`(chirp_3 화자 분리)와 `storage.rules`는
+  만들어져 있고 배포만 남았습니다.
+  - 코드는 준비돼 있고 `js/stt.js`의 **`STT_CLOUD_ENABLED` 스위치가 꺼져 있습니다.** 결제 승인 후
+    `firebase deploy --only functions,storage` → 스위치를 `true`로 → **실제 10분 녹음으로 속도부터 재기**
+    (진행 막대의 Cloud 예상 시간 `estimateCloudSttSec`은 공식 문서 수치로 잡은 임시값입니다).
+  - Cloud 전사가 실패하면 Gemini로 대신합니다(15MB 이하일 때만). 함수는 전사가 끝나면 **녹음 파일을 지웁니다.**
+  - 전환 전까지는 Gemini 전사가 그대로 쓰입니다(화자 구분은 추정, 48kbps·15MB·약 40분).
+  - **회의를 조각내 전사하지 마세요.** 화자 번호가 요청 단위로 매겨져서 나눠 보내면
+    화자가 뒤섞입니다. 회의 전체를 한 번에 `batchRecognize`로 넘깁니다.
+  - `chirp_3`는 `eu` 로케이션을 씁니다. 오디오가 EU로 전송된다는 뜻이라,
+    개인정보 안내에 반영이 필요합니다.

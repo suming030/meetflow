@@ -1,11 +1,14 @@
 /* MeetFlow — 회의 분석 (2단계) — 회의 누적·이어붙이기가 여기로 들어온다
-   소유자: 기능 C */
+   담당: ① 회의 입력·분석*/
 
 function updateCC(){
-  document.getElementById('char-ct').textContent = document.getElementById('meeting-input').value.length+'자';
+  const v=document.getElementById('meeting-input').value;
+  document.getElementById('char-ct').textContent = v.length+'자';
+  /* 입력창을 다 지우면 음성 전사 출처·화자 이름 확인도 없던 일로 */
+  if(!v.trim()){ transcriptMeta=null; document.getElementById('spk-map')?.remove(); }
 }
 function loadSample(n){
-  document.getElementById('meeting-input').value=SAMPLES[n]; updateCC();
+  document.getElementById('meeting-input').value=SAMPLES[n]; transcriptMeta=null; updateCC();
   toast('샘플 텍스트가 입력됐어요!','success');
 }
 function handleDrop(e){
@@ -14,7 +17,7 @@ function handleDrop(e){
   const text=[...e.dataTransfer.items]
     .filter(i=>i.kind==='string')
     .map(i=>{ let t=''; i.getAsString(s=>t=s); return t; }).join('');
-  if(text){ document.getElementById('meeting-input').value=text; updateCC(); toast('텍스트가 붙여넣어졌어요!','success'); }
+  if(text){ document.getElementById('meeting-input').value=text; transcriptMeta=null; updateCC(); toast('텍스트가 붙여넣어졌어요!','success'); }
 }
 
 /* ──── AI 분석 ──── */
@@ -44,10 +47,14 @@ async function analyze(){
     steps.forEach(s=>{ document.getElementById(s).className='ai-step done'; });
     const applied=await applyCarriedOver(result.carriedOver);
     renderUpResult(result);
-    await saveHistory(result,text);
-    toast(applied
-      ? `Action Item ${result.items.length}개 추출, 지난 회의 업무 ${applied}건 반영! 🎉`
-      : `${result.items.length}개 Action Item 추출 완료! 🎉`,'success');
+    const saved=await saveHistory(result,text);
+    const no=saved?meetingNo(saved):null;
+    toast((no?`${no}차 회의로 저장했어요 · `:'')+(applied
+      ? `Action Item ${result.items.length}개, 지난 회의 업무 ${applied}건 반영 🎉`
+      : `Action Item ${result.items.length}개 추출 🎉`),'success');
+    /* 저장됐으면 분석 페이지를 비우고 방금 회의 화면으로 넘어간다 — 다음 회의를 바로 받을 수 있게.
+       저장에 실패했으면 결과까지 사라지면 안 되니 이 화면에 그대로 둔다. */
+    if(saved&&saved.id){ resetUploadPage(); openMeeting(saved.id); }
   }catch(e){
     clearInterval(stInt);
     showErr(e.message);
@@ -109,9 +116,187 @@ async function applyCarriedOver(carried){
   return count;
 }
 
+/* ════════════════════════════════
+   담당자·마감일 직접 수정
+
+   AI 배정은 틀릴 수 있고("화자2"만 들린 경우 등), 회의 뒤에 담당자가 바뀌기도 한다.
+   그래서 업무 카드의 담당자·마감일 배지를 그 자리에서 고칠 수 있게 한다.
+   저장 방식은 상태 변경(persistItemStatus)과 같다 — history를 고치고 회의 문서를 갱신.
+════════════════════════════════ */
+
+/** itemId로 그 업무가 속한 회의와 업무 객체를 찾는다. */
+function findItemById(itemId){
+  const meeting=history.find(m=>(m.items||[]).some(it=>it.id===itemId));
+  if(!meeting) return null;
+  return {meeting, item:meeting.items.find(it=>it.id===itemId)};
+}
+
+/** 업무의 담당자/마감일을 history와 Firestore 양쪽에 반영한다. */
+function persistItemField(itemId, patch){
+  const found=findItemById(itemId);
+  if(!found){ renderAll(); return; }
+  const {meeting,item}=found;
+
+  let changed=false;
+  Object.keys(patch).forEach(k=>{ if(item[k]!==patch[k]){ item[k]=patch[k]; changed=true; } });
+
+  /* 같은 업무가 개요·Action Items·담당자별·타임라인에 동시에 그려져 있어서
+     한 군데만 고치면 나머지가 어긋난다. 편집이 끝나면 항상 전체를 다시 그린다. */
+  renderAll();
+  if(!changed) return;
+
+  /* 아직 저장 전인 회의는 저장될 때 함께 기록되므로 여기서는 건너뛴다 */
+  if(!meeting.id || !currentProject) return;
+  window.mfDb.updateMeeting(currentProject.id, meeting.id, {items:meeting.items})
+    .catch(e=>{
+      console.error('[MeetFlow] 업무 수정 저장 실패', e);
+      toast('수정한 내용을 저장하지 못했어요.','error');
+    });
+}
+
+/** 이미 쓰인 담당자 이름을 자동완성으로 제안한다 — 같은 사람을 다르게 적는 걸 줄인다.
+    이름에 따옴표가 섞여도 안전하도록 innerHTML 대신 DOM으로 만든다. */
+function ensureAssigneeList(){
+  let dl=document.getElementById('ac-assignees');
+  if(!dl){ dl=document.createElement('datalist'); dl.id='ac-assignees'; document.body.appendChild(dl); }
+  const names=[...new Set(history.flatMap(m=>(m.items||[]).flatMap(assigneesOf)))];
+  dl.innerHTML='';
+  names.forEach(n=>{ const o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+  return dl;
+}
+
+/** 배지를 그 자리에서 입력창으로 바꾼다. Enter·포커스 아웃이면 저장, Esc면 취소.
+    cssExtra로 배지용(작은 알약)과 업무 제목용(넓은 칸) 모양을 구분한다. */
+function openInlineEdit(span, type, value, placeholder, onSave, cssExtra){
+  if(span.dataset.editing==='1') return;
+  span.dataset.editing='1';
+
+  const inp=document.createElement('input');
+  inp.type=type;
+  inp.value=value||'';
+  if(placeholder) inp.placeholder=placeholder;
+  inp.style.cssText='font-family:inherit;border:1.5px solid var(--pk);outline:none;'+
+                    'background:#fff;color:var(--text);'+
+                    (cssExtra || 'font-size:11px;padding:3px 8px;border-radius:20px;'+
+                                 (type==='date'?'width:132px;':'width:96px;'));
+  if(type==='text'&&!cssExtra){ ensureAssigneeList(); inp.setAttribute('list','ac-assignees'); }
+
+  span.replaceWith(inp);
+  inp.focus();
+  if(type==='text') inp.select();
+
+  let done=false;
+  const finish=save=>{
+    if(done) return;            /* Enter로 저장하면 blur가 또 불려서 두 번 실행된다 */
+    done=true;
+    if(save) onSave(inp.value); else renderAll();
+  };
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'){ e.preventDefault(); finish(true); }
+    else if(e.key==='Escape'){ e.preventDefault(); finish(false); }
+  };
+  inp.onblur=()=>finish(true);
+}
+
+/** 담당자 배지 클릭 — 비어 있으면 새로 채우고, 있으면 고친다. */
+function editItemAssignee(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  openAssigneePicker(ev.currentTarget, assigneesOf(found.item), names=>{
+    /* 여러 명은 "지은, 수민"으로 저장한다. 아무도 안 고르면 '미지정' — 코드 전반이 담당자 없음으로 취급한다 */
+    persistItemField(itemId,{assignee:names.length?names.join(', '):'미지정'});
+  });
+}
+
+/** 담당자 고르기 — 지난 회의에 나온 이름을 버튼으로 보여주고 여러 명을 고르게 한다.
+    목록에 없는 사람은 아래 칸에 입력해 추가한다. 바깥을 누르거나 Esc면 저장하지 않고 닫는다. */
+function openAssigneePicker(anchor, current, onSave){
+  closeAssigneePicker();
+  const all=[...new Set([...current, ...history.flatMap(m=>(m.items||[]).flatMap(assigneesOf))])];
+  const picked=new Set(current);
+  const box=document.createElement('div');
+  box.id='asg-pick';
+  const r=anchor.getBoundingClientRect();
+  box.style.cssText=`position:fixed;left:${Math.max(8,Math.min(r.left,innerWidth-300))}px;top:${Math.min(r.bottom+6,innerHeight-260)}px;`+
+    'z-index:1200;width:284px;padding:14px;background:var(--surface);border:1px solid var(--bd-s);'+
+    'border-radius:var(--r-md);box-shadow:var(--shadow-pk);';
+  const inpCss='flex:1;min-width:0;padding:6px 10px;border:1.5px solid var(--bd-s);border-radius:var(--r-sm);'+
+    'font-family:inherit;font-size:var(--fs-base);background:var(--surface);color:var(--text);';
+  const render=()=>{
+    box.innerHTML=`
+      <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px;">담당자 <span style="font-weight:400;color:var(--hint);">여러 명 고를 수 있어요</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        ${all.length?all.map((n,i)=>`<button type="button" data-i="${i}" class="bdg ${picked.has(n)?'b-person':'b-nodl'}"
+            style="cursor:pointer;border:none;font-family:inherit;">${picked.has(n)?'✓ ':''}${esc2(n)}</button>`).join('')
+          :'<span style="font-size:var(--fs-sm);color:var(--hint);">아직 나온 이름이 없어요. 아래에 입력하세요.</span>'}
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input id="asg-new" maxlength="20" placeholder="이름 추가" style="${inpCss}">
+        <button type="button" class="btn-ghost" id="asg-add">추가</button>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button type="button" class="btn-ghost" id="asg-cancel">취소</button>
+        <button type="button" class="btn-pk btn-pk-sm" id="asg-save">저장</button>
+      </div>`;
+    box.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
+      const n=all[+b.dataset.i]; picked.has(n)?picked.delete(n):picked.add(n); render();
+    });
+    const add=()=>{
+      const n=box.querySelector('#asg-new').value.replace(/[,，、:\n]/g,'').trim().slice(0,20);
+      if(!n) return;
+      if(!all.includes(n)) all.push(n);
+      picked.add(n); render(); box.querySelector('#asg-new').focus();
+    };
+    box.querySelector('#asg-add').onclick=add;
+    box.querySelector('#asg-new').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } };
+    box.querySelector('#asg-cancel').onclick=closeAssigneePicker;
+    box.querySelector('#asg-save').onclick=()=>{
+      closeAssigneePicker();
+      onSave(all.filter(n=>picked.has(n)));   /* 목록 순서대로 */
+    };
+  };
+  render();
+  document.body.appendChild(box);
+  /* 방금 누른 클릭이 곧바로 '바깥 클릭'으로 잡히지 않도록 다음 틱에 건다 */
+  setTimeout(()=>document.addEventListener('mousedown', pickerOutside), 0);
+  document.addEventListener('keydown', pickerEsc);
+}
+function closeAssigneePicker(){
+  document.getElementById('asg-pick')?.remove();
+  document.removeEventListener('mousedown', pickerOutside);
+  document.removeEventListener('keydown', pickerEsc);
+}
+function pickerOutside(e){ const b=document.getElementById('asg-pick'); if(b&&!b.contains(e.target)) closeAssigneePicker(); }
+function pickerEsc(e){ if(e.key==='Escape') closeAssigneePicker(); }
+
+/** 마감일 배지 클릭 — 날짜 선택기로 고친다. 비우면 '마감일 미정'으로 돌아간다. */
+function editItemDeadline(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  openInlineEdit(ev.currentTarget,'date',found.item.deadline||'','',v=>{
+    persistItemField(itemId,{deadline:v||null});
+  });
+}
+
+/** 업무 제목 클릭 — AI가 25자로 줄이면서 뜻이 달라지는 경우가 있어 직접 고칠 수 있게 한다.
+    제목 없는 업무는 목록에서 빈 줄로만 보이므로, 비우면 저장하지 않고 원래대로 되돌린다. */
+function editItemTask(ev, itemId){
+  ev.stopPropagation();
+  const found=findItemById(itemId);
+  if(!found) return;
+  const before=found.item.task;
+  openInlineEdit(ev.currentTarget,'text',before,'업무 내용',v=>{
+    persistItemField(itemId,{task:v.trim()||before});
+  },'font-size:13.5px;font-weight:500;padding:5px 10px;border-radius:8px;width:100%;');
+}
+
 /* ──── 업로드 결과 렌더링 ──── */
 function renderUpResult(result){
   const items=result.items;
+  lastResult=result;                                  /* 자료 찾기(js/research.js)가 참고한다 */
+  document.getElementById('up-research').innerHTML=''; /* 지난 회의의 검색 결과를 남기지 않는다 */
   document.getElementById('result-wrap').classList.add('show');
   document.getElementById('up-empty').style.display='none';
 
@@ -165,7 +350,7 @@ function carryOverHTML(result){
    회의는 프로젝트 하위 컬렉션에 쌓인다. "회의가 쌓일수록 선명해진다"가 이 제품의
    핵심이므로 개수 제한을 두지 않는다. */
 async function saveHistory(result,text){
-  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return; }
+  if(!currentProject){ toast('프로젝트를 먼저 선택해주세요.','error'); return null; }
   /* 업무마다 고유 ID를 붙인다. 체크 상태를 저장할 때 어느 업무인지 찾는 열쇠가 된다. */
   const stamp=Date.now();
   const meeting={
@@ -176,6 +361,9 @@ async function saveHistory(result,text){
        분석 당시의 판단을 회의 문서에 함께 남겨야 한다. */
     carriedOver:result.carriedOver||[],
     gaps:result.gaps||[],
+    /* 안건별 논의 내용 — 회의 타임라인의 회의록 본문이 된다.
+       이 필드가 없는 과거 회의는 회의록에서 요약+업무 표로 자동 폴백한다. */
+    topics:result.topics||[],
     date:new Date().toISOString(),
     createdBy:currentUser?currentUser.uid:null,
     createdByName:currentUser?(currentUser.displayName||currentUser.email||''):''
@@ -185,10 +373,22 @@ async function saveHistory(result,text){
   renderAll();
   try{
     meeting.id=await window.mfDb.addMeeting(projectId, meeting);
+    return meeting;
   }catch(e){
     console.error('[MeetFlow] 회의 저장 실패', e);
     history=history.filter(m=>m!==meeting);   /* 저장 실패한 건 되돌린다 */
     renderAll();
     toast('회의를 저장하지 못했어요: '+e.message,'error');
+    return null;
   }
+}
+
+/** 분석 페이지를 처음 상태로 — 다음 회의를 받을 준비 */
+function resetUploadPage(){
+  document.getElementById('meeting-input').value='';
+  updateCC();
+  document.getElementById('result-wrap').classList.remove('show');
+  document.getElementById('up-empty').style.display='block';
+  document.getElementById('up-research').innerHTML='';
+  if(typeof setSttStatus==='function') setSttStatus('');
 }

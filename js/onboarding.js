@@ -1,5 +1,5 @@
 /* MeetFlow — 1단계 트랙별 온보딩 (문서 입력 → 마일스톤 생성)
-   소유자: 기능 C / 화면은 디자인 B */
+   담당: ④ 마일스톤 (화면 모양은 ③ 디자인과 협의)*/
 
 /* ──── 1단계: 트랙별 온보딩 ──── */
 function skipOnboarding(){
@@ -195,6 +195,10 @@ async function runOnboarding(){
       };
     }
     persistCurrentProject({onboardStatus:'done', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}});
+    /* 탭 전환(sdt)은 클래스만 바꾸고 다시 그리지 않는다. 여기서 마일스톤을 새로 그려두지 않으면
+       대시보드로 갔을 때 "아직 온보딩을 완료하지 않았어요" 화면이 그대로 남는다.
+       (skipOnboarding()은 원래부터 renderMilestones()를 부르고 있었다) */
+    renderMilestones();
     renderOnboardResult();
     toast('온보딩이 완료됐어요! 🎉','success');
   }catch(e){

@@ -1,5 +1,5 @@
 /* MeetFlow — 페이지·탭 전환 (해시 라우팅)
-   소유자: 공용 */
+   담당: 공용(팀장)*/
 
 /* ──── 페이지·탭 전환 (해시 라우팅 — 브라우저 뒤로가기 지원) ──── */
 const AUTH_PAGES=['upload','dash','projects','onboard','track'];
@@ -7,8 +7,10 @@ let currentTab='overview';
 
 function gp(id,opts){
   opts=opts||{};
+  /* 이미 로그인했으면 로그인 페이지 대신 내 프로젝트로 */
+  if(id==='login'&&currentUser) id='projects';
   if(AUTH_PAGES.includes(id)&&!currentUser){
-    if(opts.fromPop){ gp('landing',{fromPop:true}); return; }
+    if(opts.fromPop){ gp('login',{fromPop:true}); return; }
     openLogin(); return;
   }
   if(id==='upload'||id==='dash'){

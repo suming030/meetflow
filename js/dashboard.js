@@ -1,11 +1,11 @@
-/* MeetFlow — 대시보드 렌더링 (개요/Action Items/담당자별/마일스톤/Task Flow/브리핑)
-   소유자: 디자인 B */
+/* MeetFlow — 대시보드 렌더링 (개요/Action Items/담당자별/Task Flow/브리핑)
+   담당: ③ 디자인 — 세부 디테일. 마일스톤 화면은 js/milestones.js(④)로 옮겼다. */
 
 /* ──── 통계 ──── */
 function calcStats(items){
   return {
     total:  items.length,
-    persons:new Set(items.filter(i=>i.assignee&&i.assignee!=='미지정').map(i=>i.assignee)).size,
+    persons:new Set(items.flatMap(assigneesOf)).size,
     dlCt:   items.filter(i=>i.deadline).length,
     done:   items.filter(i=>i.status==='done').length,
     rate:   items.length?Math.round(items.filter(i=>i.status==='done').length/items.length*100):0,
@@ -46,9 +46,9 @@ function asSummaryHTML(items){
         <div style="font-size:11px;color:var(--muted);">업무 ${tasks.length}개</div>
       </div>
       ${tasks.map(t=>`
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);">
-          <div style="flex:1;font-size:12px;">${t.task}</div>
-          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">📅 ${t.deadline}</span>`:''}
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap;">
+          <div style="flex:1;min-width:100px;font-size:12px;">${t.task}</div>
+          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;flex-shrink:0;">📅 ${t.deadline}</span>`:''}
         </div>`).join('')}
     </div>`).join('');
 }
@@ -89,15 +89,35 @@ function acHTML(item,idx,pfx){
   const prio=item.priority||'medium';
   const calBtn=item.deadline
     ?`<button class="ico-btn" title="캘린더에 추가" onclick="openCal('${esc(item.task)}','${item.deadline}','${esc(item.assignee||'')}')">📅</button>`:'';
+  /* 여러 회의의 업무가 섞이는 화면(개요·Action Items·브리핑·마일스톤)에서는 몇 차 회의에서
+     나온 업무인지 붙인다. 회의 하나만 보는 화면(분석 결과·타임라인·N차 회의)에선 뻔해서 뺀다. */
+  const single=pfx==='up'||pfx==='md'||/^tl\d/.test(pfx);
+  const from=single?null:((iid&&findItemById(iid))||{}).meeting;
+  const roundNo=from?meetingNo(from):null;
+  const roundBdg=roundNo
+    ?`<span class="bdg b-round"${from.id?` title="${roundNo}차 회의 보기" onclick="openMeeting('${from.id}')"`:''}>🕒 ${roundNo}차 회의</span>`:'';
   return `
     <div class="ac" id="ac-${pid}">
       <div class="prio-bar prio-${prio[0]}"></div>
       <div class="ac-chk${st==='done'?' ck':''}" id="ck-${pid}" onclick="toggleCk('${pid}','${iid}')">${st==='done'?'✓':''}</div>
       <div class="ac-body">
-        <div class="ac-task${st==='done'?' done':''}" id="t-${pid}">${item.task}</div>
+        <div class="ac-task${st==='done'?' done':''}${iid?' ac-ed-task':''}" id="t-${pid}"${iid?` title="클릭해서 업무 내용 수정" onclick="editItemTask(event,'${iid}')"`:''}>${item.task}</div>
         <div class="ac-meta">
-          ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
-          ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}
+          ${roundBdg}
+          ${/* 담당자·마감일은 배지를 눌러 그 자리에서 고친다(js/meetings.js).
+                AI가 잘못 배정하거나 미지정으로 남긴 걸 사람이 채울 수 있어야 해서,
+                비어 있을 때도 배지를 감추지 않고 "지정" 자리표시자로 띄운다.
+                id가 없는 업무(저장 전)는 찾을 수 없으므로 편집을 걸지 않는다. */''}
+          ${iid?`
+            ${item.assignee&&item.assignee!=='미지정'
+              ?`<span class="bdg b-person ac-ed" title="클릭해서 담당자 변경" onclick="editItemAssignee(event,'${iid}')">👤 ${item.assignee}</span>`
+              :`<span class="bdg b-nodl ac-ed" title="클릭해서 담당자 지정" onclick="editItemAssignee(event,'${iid}')">👤 담당자 지정</span>`}
+            ${item.deadline
+              ?`<span class="bdg b-dl ac-ed" title="클릭해서 마감일 변경" onclick="editItemDeadline(event,'${iid}')">📅 ${item.deadline}</span>`
+              :`<span class="bdg b-nodl ac-ed" title="클릭해서 마감일 지정" onclick="editItemDeadline(event,'${iid}')">📅 마감일 지정</span>`}`
+          :`
+            ${item.assignee&&item.assignee!=='미지정'?`<span class="bdg b-person">👤 ${item.assignee}</span>`:''}
+            ${item.deadline?`<span class="bdg b-dl">📅 ${item.deadline}</span>`:`<span class="bdg b-nodl">마감일 미정</span>`}`}
           <span class="st-bdg ${ST.cls[st]}" id="st-${pid}" data-st="${st}" onclick="cycleSt('${pid}','${iid}')">${ST.ico[st]} ${ST.lbl[st]}</span>
         </div>
       </div>
@@ -165,7 +185,7 @@ function toggleSidebar(){
 })();
 
 /* 사이드바 업무·브리핑 그룹 접기/펼치기 */
-const SB_GROUP_OF={actions:'work',members:'work',taskflow:'work',briefing:'brief',milestones:'brief'};
+const SB_GROUP_OF={members:'work',taskflow:'work',timeline:'meet',briefing:'meet',meeting:'meet'};
 function toggleSbGroup(key){
   const sub=document.getElementById('sb-sub-'+key), chev=document.getElementById('sb-chev-'+key);
   if(!sub) return;
@@ -230,6 +250,10 @@ function renderAll(){
   /* 회의 타임라인은 js/timeline.js에 있다 (담당: 디자인 B).
      아직 안 만들어졌을 수 있으므로 있을 때만 부른다. */
   if(typeof renderTimeline==='function') renderTimeline();
+  /* N차 회의 화면·사이드바 회의 목록. 타임라인 뒤에 그려야 한다 —
+     renderTimeline()이 TL_MEETINGS를 비우는데, N차 회의 화면도 거기에 'md'를 넣어 쓴다. */
+  renderMeetingDetail();
+  renderSbMeetings();
   renderMilestones();
   renderTaskFlow();
   renderBriefing();
@@ -248,44 +272,173 @@ function renderOverview(){
   const all=history.flatMap(e=>e.items);
   const stats=calcStats(all);
   document.getElementById('sb-cnt-total').style.display='';
-  document.getElementById('sb-cnt-total').textContent=all.length;
+  document.getElementById('sb-cnt-total').textContent=all.filter(i=>i.status!=='done').length;  /* 개요 메뉴 옆 — 남은 업무 수 */
   document.getElementById('ov-metrics').innerHTML=metricsHTML(stats,'ov');
   renderWarn(all,'ov-warn','ov-warn-txt');
-  document.getElementById('ov-ac-grid').innerHTML=all.slice(0,6).map((it,i)=>acHTML(it,i,'ov')).join('');
-  document.getElementById('ov-as-summary').innerHTML=asSummaryHTML(all);
+  /* 개요는 "지금" 중심 — 회의가 쌓여도 복잡해지지 않게, 누적 기록은
+     사이드바 회의 목록과 Action Items 탭에 맡기고 여기엔 남은 일만 둔다. */
+  document.getElementById('ov-latest').innerHTML=latestMeetingHTML();
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  const pending=all.filter(i=>i.status!=='done').sort(byDeadline);
+  document.getElementById('ov-ac-grid').innerHTML=pending.length
+    ?pending.slice(0,6).map((it,i)=>acHTML(it,i,'ov')).join('')
+    :`<div style="font-size:13px;color:var(--muted);padding:12px 0;">남은 업무가 없어요 🎉</div>`;
+  document.getElementById('ov-as-summary').innerHTML=ovMembersHTML(all);
 }
 
-/* 전체 Action Items */
+/** 개요 맨 위 — 가장 최근 회의 한 건 */
+function latestMeetingHTML(){
+  const m=history[0];
+  if(!m) return '';
+  const carried=m.carriedOver||[], gaps=m.gaps||[];
+  const resolved=carried.filter(c=>c.resolved).length;
+  return `
+    <div class="panel">
+      <div class="panel-hd">
+        <div class="panel-ttl">🕒 최근 회의 · ${history.length}차 <span class="ov-latest-date">${(m.date||'').slice(0,10)}</span></div>
+        ${m.id?`<span class="panel-lnk" onclick="openMeeting('${m.id}')">자세히 보기 →</span>`:''}
+      </div>
+      ${m.summary?`<div class="ov-latest-sum">${esc2(m.summary)}</div>`:''}
+      <div class="ov-latest-stats">
+        <span>🆕 새 업무 ${(m.items||[]).length}개</span>
+        ${carried.length?`<span>🔗 지난 업무 ${carried.length}건 중 ${resolved}건 마무리</span>`:''}
+        ${gaps.length?`<span>🔍 놓친 부분 ${gaps.length}개</span>`:''}
+      </div>
+    </div>`;
+}
+
+/** 개요의 담당자 현황 — 사람당 한 줄. 업무 목록은 담당자별 탭에서 본다. */
+function ovMembersHTML(items){
+  return Object.entries(groupBy(items)).map(([name,tasks])=>{
+    const done=tasks.filter(t=>t.status==='done').length;
+    return {name, left:tasks.length-done, rate:Math.round(done/tasks.length*100)};
+  }).sort((a,b)=>b.left-a.left).map(r=>`
+    <div class="ov-mem">
+      <div class="av ${avCls(r.name)}" style="width:26px;height:26px;font-size:11px;">${r.name[0]}</div>
+      <div class="ov-mem-name">${r.name}</div>
+      <div class="prog-wrap ov-mem-bar"><div class="prog-fill" style="width:${r.rate}%"></div></div>
+      <div class="ov-mem-left">${r.left?`남은 ${r.left}개`:'완료 ✓'}</div>
+    </div>`).join('');
+}
+
+/* 전체 Action Items — 회의가 쌓일수록 계속 늘어나므로 상태별로 나누고
+   완료는 접어서, 지금 봐야 할 업무(진행중·미시작)가 먼저 눈에 들어오게 한다. */
 function renderAllActions(){
   const wrap=document.getElementById('all-ac-wrap');
   if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">📋</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
   const all=history.flatMap(e=>e.items);
-  wrap.innerHTML=`<div class="panel"><div class="ac-grid">${all.map((it,i)=>acHTML(it,i,'all')).join('')}</div></div>`;
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  const doing=all.filter(i=>i.status==='doing').sort(byDeadline);
+  const todo=all.filter(i=>(i.status||'todo')==='todo').sort(byDeadline);
+  const done=all.filter(i=>i.status==='done').sort(byDeadline);
+
+  const section=(label,items,pfx,first)=>items.length?`
+    <div class="m-lbl" style="margin:${first?'0':'18px'} 0 10px;">${label} ${items.length}개</div>
+    <div class="ac-grid">${items.map((it,i)=>acHTML(it,i,'all-'+pfx)).join('')}</div>`:'';
+
+  const pending=doing.length||todo.length;
+
+  wrap.innerHTML=`
+    <div class="panel">
+      ${pending?`
+        ${section('🔄 진행중',doing,'doing',true)}
+        ${section('⬜ 미시작',todo,'todo',!doing.length)}
+      `:`
+        <div style="text-align:center;padding:20px 0 4px;">
+          <div style="font-size:40px;margin-bottom:12px;">🎉</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px;">진행중·미시작 업무가 없어요!</div>
+          <div style="font-size:13px;color:var(--muted);">다음 회의를 분석해보세요.</div>
+        </div>`}
+      ${done.length?`
+        <div class="tl-toggle-chip" style="margin-top:${pending?'18px':'20px'};" onclick="toggleAllDone()">✅ 완료 ${done.length}개 <span class="tl-chev" id="all-done-chev">▸</span></div>
+        <div id="all-done-wrap" style="display:none;margin-top:10px;">
+          <div class="ac-grid">${done.map((it,i)=>acHTML(it,i,'all-done')).join('')}</div>
+        </div>`:''}
+    </div>`;
+}
+/** 전체 Action Items의 완료 목록을 접었다 펼친다. */
+function toggleAllDone(){
+  const box=document.getElementById('all-done-wrap'), chev=document.getElementById('all-done-chev');
+  if(!box) return;
+  const show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
 }
 
-/* 담당자별 */
+/* 담당자별 — 카드는 기본 접힌 요약만 보여주고, 누르면 업무 리스트를 펼친다.
+   회의가 쌓일수록 업무가 계속 늘어나므로 펼친 상태로 다 쏟아내면 스크롤만 길어진다. */
 function renderMembers(){
   const wrap=document.getElementById('members-wrap');
   if(!history.length){ wrap.innerHTML=`<div class="panel"><div class="empty"><div class="e-ico">👥</div><h3>아직 분석된 회의가 없어요</h3></div></div>`; return; }
   const all=history.flatMap(e=>e.items);
   const g=groupBy(all);
-  wrap.innerHTML=Object.entries(g).map(([name,tasks])=>`
+  const today=new Date(); today.setHours(0,0,0,0);
+  const byDeadline=(a,b)=>{ if(!a.deadline) return 1; if(!b.deadline) return -1; return new Date(a.deadline)-new Date(b.deadline); };
+  /* 내 카드를 맨 위로, 나머지는 배정된 업무가 많은 순으로 */
+  const myName=(currentUser&&currentUser.displayName||'').trim();
+  const entries=Object.entries(g).sort((a,b)=>{
+    const aMe=myName&&a[0]===myName, bMe=myName&&b[0]===myName;
+    if(aMe!==bMe) return aMe?-1:1;
+    return b[1].length-a[1].length;
+  });
+  const row=t=>{
+    const diff=t.deadline?Math.ceil((new Date(t.deadline)-today)/86400000):null;
+    const urgent=diff!==null&&diff<=3;
+    const from=t.id&&findItemById(t.id), rn=from?meetingNo(from.meeting):null;
+    return `
+      <div class="mini-task">
+        ${rn?`<span class="mt-round" title="${rn}차 회의에서 나온 업무">${rn}차</span>`:''}
+        <div class="mt-name">${t.task}</div>
+        ${t.deadline?`<span class="mt-dl${urgent?' urg':''}">${urgent?'⚠️ ':'📅 '}${t.deadline}</span>`:''}
+        <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>
+      </div>`;
+  };
+
+  wrap.innerHTML=entries.map(([name,tasks],mi)=>{
+    const doing=tasks.filter(t=>t.status==='doing').sort(byDeadline);
+    const todo=tasks.filter(t=>(t.status||'todo')==='todo').sort(byDeadline);
+    const done=tasks.filter(t=>t.status==='done').sort(byDeadline);
+    const rate=tasks.length?Math.round(done.length/tasks.length*100):0;
+    return `
     <div class="as-group">
-      <div class="as-hd">
+      <div class="as-hd" onclick="toggleMemberCard(${mi})">
         <div class="av ${avCls(name)}">${name[0]}</div>
-        <div><div class="as-name">${name}</div><div class="as-ct">업무 ${tasks.length}개 · 완료 ${tasks.filter(t=>t.status==='done').length}개</div></div>
-        <div style="margin-left:auto;">
-          <div class="prog-wrap" style="width:80px;"><div class="prog-fill" style="width:${tasks.length?tasks.filter(t=>t.status==='done').length/tasks.length*100:0}%"></div></div>
+        <div style="flex:1;min-width:0;">
+          <div class="as-name">${name}</div>
+          <div class="as-ct">진행중 ${doing.length} · 미시작 ${todo.length} · 완료 ${done.length}</div>
         </div>
+        <div style="width:80px;flex-shrink:0;">
+          <div class="prog-wrap"><div class="prog-fill" style="width:${rate}%"></div></div>
+          <div style="font-size:11px;color:var(--muted);text-align:right;margin-top:3px;">${rate}%</div>
+        </div>
+        <span class="tl-chev" id="as-chev-${mi}">▸</span>
       </div>
-      ${tasks.map((t,i)=>`
-        <div class="mini-task">
-          <span class="prio-bar prio-${(t.priority||'m')[0]}" style="height:30px;margin-right:2px;"></span>
-          <div class="mt-name">${t.task}</div>
-          ${t.deadline?`<span class="bdg b-dl" style="font-size:10px;">${t.deadline}</span>`:''}
-          <span class="st-bdg ${ST.cls[t.status||'todo']}" style="font-size:10px;">${ST.ico[t.status||'todo']} ${ST.lbl[t.status||'todo']}</span>
-        </div>`).join('')}
-    </div>`).join('');
+      <div class="as-body" id="as-body-${mi}" style="display:none;">
+        ${doing.map(row).join('')}
+        ${todo.map(row).join('')}
+        ${done.length?`
+          <div class="tl-toggle-chip" style="margin-top:6px;" onclick="event.stopPropagation();toggleMemberDone(${mi})">✅ 완료 ${done.length}개 <span class="tl-chev" id="as-done-chev-${mi}">▸</span></div>
+          <div id="as-done-${mi}" style="display:none;margin-top:8px;">${done.map(row).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** 담당자 카드를 접었다 펼친다. */
+function toggleMemberCard(i){
+  const body=document.getElementById('as-body-'+i), chev=document.getElementById('as-chev-'+i);
+  if(!body) return;
+  const show=body.style.display==='none';
+  body.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
+}
+/** 완료된 업무 목록을 접었다 펼친다. */
+function toggleMemberDone(i){
+  const box=document.getElementById('as-done-'+i), chev=document.getElementById('as-done-chev-'+i);
+  if(!box) return;
+  const show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  if(chev) chev.textContent=show?'▾':'▸';
 }
 
 /* Task Flow */
@@ -326,7 +479,7 @@ function renderTaskFlow(){
         return `<div class="flow-node ${nc}">
           <div class="fn-name">${item.task}</div>
           <div class="fn-meta">
-            ${item.assignee&&item.assignee!=='미지정'?`<div class="fn-av ${avCls(item.assignee)}">${item.assignee[0]}</div>`:''}
+            ${assigneesOf(item).map(n=>`<div class="fn-av ${avCls(n)}" title="${esc2(n)}">${n[0]}</div>`).join('')}
             <span class="fn-dl">${item.deadline||'미정'}</span>
             <span class="fn-st ${item.status||'todo'}">${ST.lbl[item.status||'todo']}</span>
           </div>
@@ -458,10 +611,10 @@ function renderBriefing(){
     <div class="panel">
       <div class="panel-hd">
         <div class="panel-ttl">⚠️ 미완료 업무 (${incomplete.length}개)</div>
-        <span class="panel-lnk" onclick="sdt('actions')">전체 보기 →</span>
+        <span class="panel-lnk" onclick="sdt('members')">전체 보기 →</span>
       </div>
       <div class="ac-grid">${incomplete.slice(0,6).map((it,i)=>acHTML(it,i,'brief')).join('')}</div>
-      ${incomplete.length>6?`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);">+ ${incomplete.length-6}개 더 · <span style="color:var(--pk);cursor:pointer;font-weight:600;" onclick="sdt('actions')">전체 보기</span></div>`:''}
+      ${incomplete.length>6?`<div style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);">+ ${incomplete.length-6}개 더 · <span style="color:var(--pk);cursor:pointer;font-weight:600;" onclick="sdt('members')">전체 보기</span></div>`:''}
     </div>`:`
     <div class="panel" style="text-align:center;padding:32px;">
       <div style="font-size:40px;margin-bottom:12px;">🎉</div>
@@ -499,162 +652,4 @@ function renderBriefing(){
         </div>
       </div>
     </div>`;
-}
-
-/* 마일스톤 (1단계 온보딩 결과) */
-function renderMilestones(){
-  const wrap=document.getElementById('milestones-wrap');
-  if(!wrap||!currentProject) return;
-  if(currentProject.onboardStatus!=='done'||!currentProject.onboarding){
-    wrap.innerHTML=`
-      <div class="panel">
-        <div class="empty">
-          <div class="e-ico">🧭</div>
-          <h3>아직 온보딩을 완료하지 않았어요</h3>
-          <p>AI가 마일스톤과 다음 회의 아젠다를 준비하려면 온보딩을 먼저 진행해주세요.</p>
-          <button class="btn-pk" style="margin-top:18px;" onclick="gp('onboard')">✨ 온보딩 시작하기</button>
-        </div>
-      </div>`;
-    return;
-  }
-  wrap.innerHTML=milestonesHTML(currentProject);
-}
-function milestonesHTML(project){
-  const t=project.track, r=project.onboarding.result;
-  return t==='club' ? milestonesClubHTML(r) : milestonesLinearHTML(t,r);
-}
-function agendaPanelHTML(r){
-  const agenda=r.firstMeetingAgenda||[];
-  if(!agenda.length) return '';
-  return `
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">📋 1차 회의 아젠다</div></div>
-      <ol style="padding-left:20px;font-size:13px;line-height:2;color:var(--text);">
-        ${agenda.map(a=>`<li>${a}</li>`).join('')}
-      </ol>
-    </div>`;
-}
-function milestonesLinearHTML(t,r){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const ms=(r.milestones||[])
-    .map(m=>({...m,_diff:m.dueDate?Math.ceil((new Date(m.dueDate)-today)/86400000):null}))
-    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
-
-  const msHTML=ms.length?`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">🧭 마일스톤</div></div>
-      <div class="dl-grid">
-        ${ms.map(m=>`
-          <div class="dl-card">
-            ${m._diff!=null?ddayHTML(m._diff):'<span class="dl-dday dd-ok">미정</span>'}
-            <div class="dl-task">${m.title}</div>
-            <div class="dl-who">${m.deliverable||m.rubricCategory||''}</div>
-          </div>`).join('')}
-      </div>
-    </div>`:'';
-
-  const rubricHTML=(r.rubric&&r.rubric.length)?`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">📊 평가 배점</div></div>
-      ${r.rubric.map(it=>`
-        <div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
-            <span style="font-weight:600;">${it.category}</span><span>${it.weight}%</span>
-          </div>
-          <div class="prog-wrap"><div class="prog-fill" style="width:${it.weight}%"></div></div>
-        </div>`).join('')}
-    </div>`:'';
-
-  let sideHTML='';
-  if(t==='team'&&r.roles&&r.roles.length){
-    sideHTML=`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">👥 역할 분배</div></div>
-      ${r.roles.map(role=>`
-        <div class="mini-task">
-          <div class="av ${avCls(role.assignee||role.role)}" style="width:28px;height:28px;font-size:11px;">${(role.assignee||role.role||'?')[0]}</div>
-          <div class="mt-name">${role.role}${role.assignee?` — ${role.assignee}`:''}</div>
-        </div>`).join('')}
-    </div>`;
-  } else if(t==='contest'&&r.checklist&&r.checklist.length){
-    const items=r.checklist.map(c=>({task:c.item,assignee:null,deadline:null,status:c.met?'done':'todo',priority:'medium'}));
-    sideHTML=`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">✅ 심사기준 충족 체크리스트</div></div>
-      <div class="ac-grid">${items.map((it,i)=>acHTML(it,i,'ms-check')).join('')}</div>
-    </div>`;
-  }
-
-  const insightsHTML=(t==='contest'&&r.insights&&r.insights.length)?`
-    <div class="ai-rec">
-      <div class="ai-rec-hd">
-        <div class="ai-rec-ico">💡</div>
-        <div><div class="ai-rec-title">수상작 인사이트</div><div class="ai-rec-sub">이전 수상작 분석 기반</div></div>
-      </div>
-      ${r.insights.map(i=>`<div class="rec-item"><span class="rec-ico">✨</span><div class="rec-body"><div class="rec-desc">${i}</div></div></div>`).join('')}
-    </div>`:'';
-
-  return msHTML+`<div class="g2">${rubricHTML}${sideHTML}</div>`+insightsHTML+agendaPanelHTML(r);
-}
-function milestonesClubHTML(r){
-  const rm=r.recurringMeeting||{};
-  const wdNames=['일','월','화','수','목','금','토'];
-  const wd=wdNames[rm.dayOfWeek??2];
-  let nextHTML='';
-  if(rm.startDate){
-    const start=new Date(rm.startDate);
-    const today=new Date(); today.setHours(0,0,0,0);
-    const dow=Number(rm.dayOfWeek);
-    let next=new Date(Math.max(start.getTime(),today.getTime()));
-    while(next.getDay()!==dow) next.setDate(next.getDate()+1);
-    const diff=Math.ceil((next-today)/86400000);
-    const weeksCount=rm.weeksCount||15;
-    const weekNo=Math.min(weeksCount, Math.max(1, Math.floor((next-start)/(7*86400000))+1));
-    nextHTML=`
-      <div class="sum-banner">
-        <div class="sum-ico">🗓️</div>
-        <div>
-          <div class="sum-lbl">다음 정기모임</div>
-          <div class="sum-txt">매주 ${wd}요일 · ${next.toISOString().split('T')[0]} (${diff===0?'오늘':diff+'일 후'}) — ${weekNo}/${weeksCount}회차</div>
-        </div>
-      </div>
-      <div class="m-card" style="margin-bottom:16px;">
-        <div class="m-lbl">이번 학기 진행률</div>
-        <div class="m-val" style="color:var(--pk);">${weekNo}/${weeksCount}주</div>
-        <div class="prog-wrap"><div class="prog-fill" style="width:${Math.min(100,weekNo/weeksCount*100)}%"></div></div>
-      </div>`;
-  }
-
-  const evs=(r.eventMilestones||[]).map(e=>({title:e.title,date:e.prepStartDate||e.eventDate,note:e.notes}));
-  const goals=(r.goalMilestones||[]).map(g=>({title:g.title,date:g.targetDate,note:g.notes}));
-  const today=new Date(); today.setHours(0,0,0,0);
-  const all=[...evs,...goals]
-    .map(x=>({...x,_diff:x.date?Math.ceil((new Date(x.date)-today)/86400000):null}))
-    .sort((a,b)=>{ if(a._diff==null) return 1; if(b._diff==null) return -1; return a._diff-b._diff; });
-
-  const evHTML=all.length?`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">🎪 행사·목표 마일스톤</div></div>
-      <div class="dl-grid">
-        ${all.map(x=>`
-          <div class="dl-card">
-            ${x._diff!=null?ddayHTML(x._diff):'<span class="dl-dday dd-ok">미정</span>'}
-            <div class="dl-task">${x.title}</div>
-            <div class="dl-who">${x.note||''}</div>
-          </div>`).join('')}
-      </div>
-    </div>`:'';
-
-  const budget=r.budgetChecklist||[];
-  const budgetHTML=budget.length?`
-    <div class="panel">
-      <div class="panel-hd"><div class="panel-ttl">💰 예산 체크리스트</div></div>
-      ${budget.map(b=>`
-        <div class="mini-task">
-          <div class="mt-name">${b.item}</div>
-          <span class="bdg b-dl">${b.estimatedCost?b.estimatedCost+'원':'미정'}</span>
-        </div>`).join('')}
-    </div>`:'';
-
-  return nextHTML+evHTML+budgetHTML+agendaPanelHTML(r);
 }
