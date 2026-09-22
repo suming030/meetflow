@@ -281,6 +281,27 @@ function formatDateKR(iso){
    제목/소제목엔 헤딩 스타일, 목록엔 글머리 기호를 적용하는 Docs batchUpdate 요청을 만든다.
    js/timeline.js의 minutesDocHTML(회의록 보기 모달)과 같은 내용을 담아서,
    Docs로 내보냈을 때 앱 안에서 보는 것보다 내용이 빈약해지지 않게 한다. */
+/* AI가 쓴 문장을 개조식(-임/-함/-됨/-음)으로 최대한 다듬는다.
+   완벽한 한국어 문법 처리기는 아니고, 흔한 문장 종결형만 규칙 기반으로 바꾼다 —
+   맞지 않는 드문 종결형은 그대로 둔다. */
+function toGaejoshik(text){
+  if(!text) return text;
+  const s = text.trim().replace(/[.!]+$/, '');
+  const rules = [
+    [/했습니다$|했어요$|했다$/, '함'],
+    [/하겠습니다$|하겠어요$|하겠다$/, '할 예정'],
+    [/한다$|합니다$|해요$|하다$/, '함'],
+    [/됐습니다$|됐어요$|됐다$|되었다$/, '됨'],
+    [/된다$|됩니다$|돼요$/, '됨'],
+    [/있습니다$|있어요$|있다$/, '있음'],
+    [/없습니다$|없어요$|없다$/, '없음'],
+    [/입니다$|이에요$|예요$|이다$/, '임'],
+    [/다$/, '음'],
+  ];
+  for(const [re, rep] of rules){ if(re.test(s)) return s.replace(re, rep); }
+  return s;
+}
+
 function buildDocsRequests(meeting){
   const items    = meeting.items || [];
   const topics   = meeting.topics || [];
@@ -290,32 +311,36 @@ function buildDocsRequests(meeting){
   const still    = carried.filter(c => !c.resolved);
 
   const lines = [];
-  /* style: HEADING_1/2/3 또는 null(본문). bullet: 글머리 기호 적용 여부 */
-  const add = (text, style, bullet) => lines.push({ text, style: style || null, bullet: !!bullet });
+  /* style: HEADING_1/2 또는 null(본문). bullet: 글머리 기호, bold: 굵게.
+     HEADING_3는 쓰지 않는다 — Docs 개요(목차)에 안건마다 다 잡혀서 항목이 너무 많아지므로,
+     소제목은 굵게만 표시해 개요에는 큰 섹션(HEADING_2) 5개만 남긴다. */
+  const add = (text, style, bullet, bold) => lines.push({ text, style: style || null, bullet: !!bullet, bold: !!bold });
 
-  add('MeetFlow 회의록', 'HEADING_1');
-  add(`생성일: ${formatDateKR(meeting.date)}`, null);
+  const projectName = (currentProject && currentProject.name) || '프로젝트';
+  const no = meetingNo(meeting);
+  add(no ? `${projectName} ${no}차 회의록` : `${projectName} 회의록`, 'HEADING_1');
+  add(`회의일: ${formatDateKR(meeting.date)}`, null);
   add('', null);
 
-  add('📝 핵심 안건 요약', 'HEADING_2');
-  add(meeting.summary || '(요약 없음)', null);
+  add('핵심 안건 요약', 'HEADING_2');
+  add(meeting.summary ? toGaejoshik(meeting.summary) : '(요약 없음)', null);
   add('', null);
 
   /* 안건별 논의 내용 — 요약만으로는 안 보이는 회의 본문 */
-  add('🗣️ 안건별 논의 내용', 'HEADING_2');
+  add('안건별 논의 내용', 'HEADING_2');
   if(topics.length){
     topics.forEach((t, i) => {
-      add(`${i + 1}. ${t.title}`, 'HEADING_3');
+      add(`${i + 1}. ${t.title}`, null, false, true);
       const discussion = t.discussion || [];
-      if(discussion.length) discussion.forEach(d => add(d, null, true));
-      else add('(기록된 논의 내용이 없어요)', null);
+      if(discussion.length) discussion.forEach(d => add(toGaejoshik(d), null, true));
+      else add('(기록된 논의 내용 없음)', null);
     });
   } else {
-    add('이 회의는 안건별 논의 내용이 저장되기 전에 분석됐어요.', null);
+    add('안건별 논의 내용이 저장되기 전에 분석된 회의임', null);
   }
   add('', null);
 
-  add(`✅ 이번 회의에서 새로 생긴 업무 (${items.length}개)`, 'HEADING_2');
+  add(`새로 생긴 업무 (${items.length}개)`, 'HEADING_2');
   if(items.length){
     items.forEach(it => {
       const parts = [];
@@ -326,21 +351,21 @@ function buildDocsRequests(meeting){
       add(parts.join(' '), null, true);
     });
   } else {
-    add('(추출된 Action Item이 없어요)', null);
+    add('(추출된 Action Item 없음)', null);
   }
 
   /* 지난 회의에서 이어진 업무 — 마무리된 것과 아직 진행 중인 것을 나눠 보여준다 */
   if(carried.length){
     add('', null);
-    add('🔗 지난 회의에서 이어진 업무', 'HEADING_2');
+    add('진행중인 업무', 'HEADING_2');
     if(done.length){
-      add('이번 회의에서 마무리됨', 'HEADING_3');
-      done.forEach(c => add(c.task + (c.note ? ` — ${c.note}` : ''), null, true));
+      add('이번 회의에서 마무리됨', null, false, true);
+      done.forEach(c => add(c.task + (c.note ? ` — ${toGaejoshik(c.note)}` : ''), null, true));
     }
     if(still.length){
-      add('아직 진행 중', 'HEADING_3');
+      add('아직 진행 중', null, false, true);
       still.forEach(c => add(
-        c.task + (c.note ? ` — ${c.note}` : '') + (c.newDeadline ? ` (새 마감일 ${c.newDeadline})` : ''),
+        c.task + (c.note ? ` — ${toGaejoshik(c.note)}` : '') + (c.newDeadline ? ` (새 마감일 ${c.newDeadline})` : ''),
         null, true));
     }
   }
@@ -348,8 +373,8 @@ function buildDocsRequests(meeting){
   /* AI가 짚은 놓친 부분 */
   if(gaps.length){
     add('', null);
-    add('🔍 AI가 짚은 놓친 부분', 'HEADING_2');
-    gaps.forEach(g => add(g, null, true));
+    add('AI가 짚은 놓친 부분', 'HEADING_2');
+    gaps.forEach(g => add(toGaejoshik(g), null, true));
   }
 
   /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
@@ -360,7 +385,7 @@ function buildDocsRequests(meeting){
     const seg = l.text + '\n';
     cursor += seg.length;
     fullText += seg;
-    return { start, end: start + l.text.length, style: l.style, bullet: l.bullet };
+    return { start, end: start + l.text.length, style: l.style, bullet: l.bullet, bold: l.bold };
   });
 
   const requests = [{ insertText: { location: { index: 1 }, text: fullText } }];
@@ -372,6 +397,15 @@ function buildDocsRequests(meeting){
           range: { startIndex: r.start, endIndex: r.end },
           paragraphStyle: { namedStyleType: r.style },
           fields: 'namedStyleType',
+        },
+      });
+    }
+    if(r.bold && r.end > r.start){
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: r.start, endIndex: r.end },
+          textStyle: { bold: true },
+          fields: 'bold',
         },
       });
     }
