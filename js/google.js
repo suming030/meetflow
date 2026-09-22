@@ -302,6 +302,18 @@ function toGaejoshik(text){
   return s;
 }
 
+/* summary처럼 문장이 여러 개 이어진 텍스트를 문장 단위로 쪼갠다.
+   toGaejoshik()은 문자열 끝에서만 종결형을 찾기 때문에, 안 쪼개고 그대로 넘기면
+   마지막 문장만 개조식으로 바뀌고 앞 문장들은 "~다."가 그대로 남는다. */
+function splitSentences(text){
+  if(!text) return [];
+  return text.split(/(?<=[다요])\.\s*/).map(s => s.trim()).filter(Boolean);
+}
+/** 문장이 여러 개 이어진 텍스트를 문장 단위로 쪼개 각각 개조식으로 바꾼다 */
+function gaejoshikLines(text){
+  return splitSentences(text).map(toGaejoshik);
+}
+
 function buildDocsRequests(meeting){
   const items    = meeting.items || [];
   const topics   = meeting.topics || [];
@@ -323,16 +335,19 @@ function buildDocsRequests(meeting){
   add('', null);
 
   add('핵심 안건 요약', 'HEADING_2');
-  add(meeting.summary ? toGaejoshik(meeting.summary) : '(요약 없음)', null);
+  const summaryLines = meeting.summary ? gaejoshikLines(meeting.summary) : [];
+  if(summaryLines.length) summaryLines.forEach(s => add(s, null, true));
+  else add('(요약 없음)', null);
   add('', null);
 
   /* 안건별 논의 내용 — 요약만으로는 안 보이는 회의 본문 */
   add('안건별 논의 내용', 'HEADING_2');
   if(topics.length){
     topics.forEach((t, i) => {
+      if(i > 0) add('', null);
       add(`${i + 1}. ${t.title}`, null, false, true);
       const discussion = t.discussion || [];
-      if(discussion.length) discussion.forEach(d => add(toGaejoshik(d), null, true));
+      if(discussion.length) discussion.forEach(d => gaejoshikLines(d).forEach(s => add(s, null, true)));
       else add('(기록된 논의 내용 없음)', null);
     });
   } else {
@@ -347,7 +362,7 @@ function buildDocsRequests(meeting){
       if(it.assignee && it.assignee !== '미지정') parts.push(`[${it.assignee}]`);
       parts.push(it.task || '');
       if(it.deadline) parts.push(`(마감 ${it.deadline})`);
-      if(it.priority) parts.push(`· 우선순위 ${PRIO_KR[it.priority] || it.priority}`);
+      if(it.priority && PRIO_KR[it.priority]) parts.push(`· 우선순위 ${PRIO_KR[it.priority]}`);
       add(parts.join(' '), null, true);
     });
   } else {
@@ -374,7 +389,7 @@ function buildDocsRequests(meeting){
   if(gaps.length){
     add('', null);
     add('AI가 짚은 놓친 부분', 'HEADING_2');
-    gaps.forEach(g => add(toGaejoshik(g), null, true));
+    gaps.forEach(g => gaejoshikLines(g).forEach(s => add(s, null, true)));
   }
 
   /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
