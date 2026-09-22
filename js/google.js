@@ -344,6 +344,7 @@ function buildDocsRequests(meeting){
   add('안건별 논의 내용', 'HEADING_2');
   if(topics.length){
     topics.forEach((t, i) => {
+      if(i > 0) add('', null);
       add(`${i + 1}. ${t.title}`, null, false, true);
       const discussion = t.discussion || [];
       if(discussion.length) discussion.forEach(d => gaejoshikLines(d).forEach(s => add(s, null, true)));
@@ -361,7 +362,7 @@ function buildDocsRequests(meeting){
       if(it.assignee && it.assignee !== '미지정') parts.push(`[${it.assignee}]`);
       parts.push(it.task || '');
       if(it.deadline) parts.push(`(마감 ${it.deadline})`);
-      if(it.priority) parts.push(`· 우선순위 ${PRIO_KR[it.priority] || it.priority}`);
+      if(it.priority && PRIO_KR[it.priority]) parts.push(`· 우선순위 ${PRIO_KR[it.priority]}`);
       add(parts.join(' '), null, true);
     });
   } else {
