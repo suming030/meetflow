@@ -98,7 +98,7 @@ let WRAPUP_PEOPLE = [];
 
 /** 이번 프로젝트에서 업무를 맡은 적 있는 사람 목록 */
 function wrapupPeople(){
-  WRAPUP_PEOPLE = [...new Set(history.flatMap(m=>(m.items||[]).map(i=>i.assignee)))]
+  WRAPUP_PEOPLE = [...new Set(history.flatMap(m=>(m.items||[]).flatMap(assigneesOf)))]
     .filter(n=>n&&n!=='미지정');
   return WRAPUP_PEOPLE;
 }
@@ -222,7 +222,7 @@ function renderMemberIntro(who){
   setWrapupActions(`<button class="btn-ghost" onclick="backToWrapup()">← 뒤로</button>`);
 
   /* 근거가 얼마나 있는지 먼저 보여준다. 적으면 결과도 얇을 수밖에 없다. */
-  const myTasks=history.flatMap(m=>(m.items||[]).filter(i=>i.assignee===who));
+  const myTasks=history.flatMap(m=>(m.items||[]).filter(i=>assigneesOf(i).includes(who)));
   const done=myTasks.filter(i=>i.status==='done').length;
 
   document.getElementById('wrapup-body').innerHTML=`
@@ -450,10 +450,13 @@ async function callProjectWrapup(project, meets){
   const byPerson={};
   chrono.forEach((m,i)=>{
     (m.items||[]).forEach(it=>{
-      const who=(it.assignee&&it.assignee!=='미지정')?it.assignee:null;
-      if(!who) return;
-      (byPerson[who]=byPerson[who]||[]).push(
-        `- ${it.task} (${i+1}차 회의, ${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''})`);
+      /* 여럿이 함께 맡은 업무는 각 사람에게 넣되, 혼자 한 일처럼 쓰지 않도록 함께한 사람을 밝힌다 */
+      const people=assigneesOf(it);
+      people.forEach(who=>{
+        const others=people.filter(p=>p!==who);
+        (byPerson[who]=byPerson[who]||[]).push(
+          `- ${it.task} (${i+1}차 회의, ${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''}${others.length?`, 함께: ${others.join(', ')}`:''})`);
+      });
     });
   });
   const names=Object.keys(byPerson);
@@ -548,8 +551,10 @@ async function callMemberWrapup(project, meets, who){
   const myTasks=[];
   chrono.forEach((m,i)=>{
     (m.items||[]).forEach(it=>{
-      if(it.assignee===who)
-        myTasks.push(`- [${i+1}차] ${it.task} (${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''})`);
+      const people=assigneesOf(it);
+      if(!people.includes(who)) return;
+      const others=people.filter(p=>p!==who);
+      myTasks.push(`- [${i+1}차] ${it.task} (${ST.lbl[it.status||'todo']}${it.deadline?`, 마감 ${it.deadline}`:''}${others.length?`, 함께: ${others.join(', ')}`:''})`);
     });
   });
 

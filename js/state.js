@@ -9,7 +9,10 @@ let currentUser    = null;
 let currentProject = null;
 let selectedTrack   = null;
 let lastResult     = null;     /* 가장 최근 분석 결과 — 자료 찾기(js/research.js)가 참고한다 */
-let currentMeetingId = null;   /* 대시보드 "N차 회의" 화면이 보여주는 회의 (js/timeline.js) */
+let currentMeetingId = null;
+/* 입력창 글의 출처 — {fromAudio: 음성 전사에서 왔는지, named: 화자 이름을 사람이 확인했는지}.
+   js/stt.js가 쓰고 js/gemini.js(회의 분석 지시문)가 읽는다. 입력창을 비우면 null. */
+let transcriptMeta = null;   /* 대시보드 "N차 회의" 화면이 보여주는 회의 (js/timeline.js) */
 
 const TRACK_LBL  = {team:'🧑‍🤝‍🧑 팀 프로젝트', contest:'🏆 공모전', club:'🎨 동아리'};
 const TRACK_ICON = {team:'🧑‍🤝‍🧑', contest:'🏆', club:'🎨'};
