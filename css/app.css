@@ -178,7 +178,6 @@
 .prio-m{background:var(--amber);}
 .prio-l{background:var(--green);}
 
-
 /* 회의 타임라인 — 업무·분석 결과·회의록 토글 칩 */
 .tl-toggle-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;background:var(--pk-bg);color:var(--pk-dark);font-size:12px;font-weight:700;cursor:pointer;user-select:none;transition:background .15s;}
 .tl-toggle-chip:hover{background:var(--pk-light);}
@@ -391,6 +390,8 @@
 .m-inp{width:100%;padding:11px 14px;border:1.5px solid var(--bd-s);border-radius:10px;font-size:14px;font-family:monospace;background:var(--pk-bg);color:var(--text);margin-bottom:18px;transition:border-color .2s;}
 .m-inp:focus{outline:none;border-color:var(--pk);}
 .m-btns{display:flex;gap:10px;justify-content:flex-end;}
+.btn-danger{padding:12px 26px;background:var(--red);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-danger:hover{opacity:.88;transform:translateY(-1px);}
 
 /* 초대 코드 — 토스트로 흘려보내면 안 되는 정보라 크게 보여주고 복사할 수 있게 한다 */
 .invite-code{

@@ -134,12 +134,26 @@ function renderProjectsGallery(){
       </div>
     </div>`;
 }
-async function deleteProject(id,evt){
+let _pendingDeleteId=null;
+function deleteProject(id,evt){
   if(evt) evt.stopPropagation();
   const p=loadProjects().find(x=>x.id===id);
   if(!p) return;
   if(p.ownerUid!==currentUser.uid){ toast('프로젝트를 만든 사람만 삭제할 수 있어요.','error'); return; }
-  if(!confirm(`"${p.name}" 프로젝트를 삭제할까요?\n회의 이력과 온보딩 결과가 모두 삭제되고 되돌릴 수 없어요.`)) return;
+  _pendingDeleteId=id;
+  document.getElementById('delete-project-name').textContent=p.name;
+  document.getElementById('delete-project-overlay').classList.add('show');
+}
+function closeDeleteProject(){
+  document.getElementById('delete-project-overlay').classList.remove('show');
+  _pendingDeleteId=null;
+}
+async function confirmDeleteProject(){
+  const id=_pendingDeleteId;
+  closeDeleteProject();
+  if(!id) return;
+  const p=loadProjects().find(x=>x.id===id);
+  if(!p) return;
 
   projectsCache=projectsCache.filter(x=>x.id!==id);
   if(currentProject&&currentProject.id===id){

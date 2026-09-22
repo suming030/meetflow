@@ -12,10 +12,42 @@
   width:230px;flex-shrink:0;background:var(--surface);
   border-right:1px solid var(--bd);padding:18px 10px;
   overflow-y:auto;display:flex;flex-direction:column;gap:2px;
+  transition:width .18s ease;
 }
 /* 토글을 열어 내용이 넘치면 항목을 눌러 줄이지 말고 사이드바가 스크롤되게 —
    flex 기본값(shrink)이면 메뉴 간격·높이가 점점 찌그러진다 */
 .sidebar > *{flex-shrink:0;}
+
+/* "프로젝트 목록" 이동과 분리된 접기/펼치기 토글 */
+.sb-top{display:flex;align-items:center;gap:4px;}
+.sb-top .sb-back{flex:1;min-width:0;}
+.sb-collapse-btn{
+  flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--bd);border-radius:8px;background:var(--surface);color:var(--muted);
+  cursor:pointer;font-size:13px;transition:all .15s;
+}
+.sb-collapse-btn:hover{background:var(--pk-bg);color:var(--pk-dark);border-color:var(--pk-light);}
+
+/* 접힌 상태 — 아이콘만 남기고 텍스트 숨김(아이콘은 자체 font-size가 있어 그대로 보임) */
+.sidebar.collapsed{width:60px;padding:18px 8px;}
+.sidebar.collapsed .sb-lbl,
+.sidebar.collapsed .sb-cnt,
+.sidebar.collapsed .sb-chev,
+.sidebar.collapsed .sb-sub,
+.sidebar.collapsed .sb-new b,
+.sidebar.collapsed .sb-new small,
+.sidebar.collapsed .sb-wrapup b,
+.sidebar.collapsed .sb-wrapup small{display:none;}
+.sidebar.collapsed .sb-item,
+.sidebar.collapsed .sb-ws{font-size:0;justify-content:center;gap:0;padding:9px 0;}
+.sidebar.collapsed .sb-new,
+.sidebar.collapsed .sb-wrapup{justify-content:center;gap:0;padding:9px 0;}
+.sidebar.collapsed a.sb-ws::after{display:none;}
+.sidebar.collapsed .sb-top{flex-direction:column-reverse;gap:8px;}
+.sidebar.collapsed .sb-top .sb-back{width:100%;}
+.sidebar.collapsed .sb-collapse-btn{align-self:center;}
+.sidebar.collapsed .sb-lbl + .sb-ws{border-top:1px solid var(--bd);margin-top:8px;padding-top:17px;}
+
 .sb-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;color:var(--hint);text-transform:uppercase;padding:10px 10px 4px;margin-top:6px;}
 .sb-item{
   display:flex;align-items:center;gap:10px;padding:9px 11px;

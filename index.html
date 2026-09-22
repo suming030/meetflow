@@ -491,41 +491,46 @@
 
     <!-- 사이드바 -->
     <!-- 담당: ③ 디자인 — 세부 디테일 (사이드바) -->
-    <aside class="sidebar">
-      <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
-      <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-top">
+        <div class="sb-item sb-back" onclick="gp('projects')" title="프로젝트 목록"><span class="sico">📁</span> 프로젝트 목록</div>
+        <button class="sb-collapse-btn" id="sb-collapse-btn" onclick="toggleSidebar()" title="사이드바 접기/펼치기">
+          <span id="sb-collapse-ico">‹</span>
+        </button>
+      </div>
+      <div class="sb-item" onclick="showInviteCode()" title="팀원 초대 코드"><span class="sico">🔑</span> 팀원 초대 코드</div>
       <!-- 매일 쓰는 버튼이라 사이드바에서 가장 눈에 띄게 -->
-      <button class="sb-new" onclick="gp('upload')">
+      <button class="sb-new" onclick="gp('upload')" title="새 회의 하기">
         <span class="sb-new-ico">＋</span>
         <span><b>새 회의 하기</b><small>녹음·파일·텍스트로 분석</small></span>
       </button>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
-      <div class="sb-item on" id="sb-overview" onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
+      <div class="sb-item on" id="sb-overview" onclick="sdt('overview')" title="개요"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
 
       <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')" title="업무"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
         <div class="sb-sub" id="sb-sub-work">
-          <div class="sb-item sb-child" id="sb-members"  onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
-          <div class="sb-item sb-child" id="sb-taskflow" onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
+          <div class="sb-item sb-child" id="sb-members"  onclick="sdt('members')" title="담당자별"><span class="sico">👥</span> 담당자별</div>
+          <div class="sb-item sb-child" id="sb-taskflow" onclick="sdt('taskflow')" title="Task Flow"><span class="sico">🔗</span> Task Flow</div>
         </div>
       </div>
 
       <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('meet')"><span class="sico">🕒</span> 회의 정리<span class="sb-chev" id="sb-chev-meet">▸</span></div>
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('meet')" title="회의 정리"><span class="sico">🕒</span> 회의 정리<span class="sb-chev" id="sb-chev-meet">▸</span></div>
         <div class="sb-sub" id="sb-sub-meet">
-          <div class="sb-item sb-child" id="sb-timeline" onclick="sdt('timeline')"><span class="sico">🕒</span> 회의 타임라인</div>
-          <div class="sb-item sb-child" id="sb-briefing" onclick="sdt('briefing')"><span class="sico">📋</span> 회의 브리핑</div>
+          <div class="sb-item sb-child" id="sb-timeline" onclick="sdt('timeline')" title="회의 타임라인"><span class="sico">🕒</span> 회의 타임라인</div>
+          <div class="sb-item sb-child" id="sb-briefing" onclick="sdt('briefing')" title="회의 브리핑"><span class="sico">📋</span> 회의 브리핑</div>
           <div class="sb-meet-lbl">회의별</div>
           <div id="sb-meet-list"></div>   <!-- 최신 회의가 위 (js/timeline.js의 renderSbMeetings) -->
         </div>
       </div>
 
-      <div class="sb-item" id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
+      <div class="sb-item" id="sb-milestones" onclick="sdt('milestones')" title="마일스톤"><span class="sico">🧭</span> 마일스톤</div>
 
       <!-- 전체 Action Items 화면은 남아 있지만 메뉴에서는 뺐다 — 담당자별·Task Flow로 충분하다. -->
 
       <!-- 프로젝트가 끝났을 때 누르는 마무리 — 메뉴 바로 아래 크게 -->
-      <button class="sb-wrapup" onclick="openWrapup()">
+      <button class="sb-wrapup" onclick="openWrapup()" title="프로젝트 마무리">
         <span class="sb-wrapup-ico">🎬</span>
         <span><b>프로젝트 마무리</b><small>회의 전체로 회고·경험 정리</small></span>
       </button>
@@ -534,8 +539,8 @@
       <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
       <div class="sb-ws" onclick="openMeetScheduler()" title="다음 회의 일정을 잡고 Google Meet 링크를 만들어요"><span class="sico">📹</span> Meet 회의 잡기</div>
       <div class="sb-ws" onclick="exportFromSidebar()" title="보고 있는 회의(없으면 최근 회의)를 Google Docs 회의록으로 만들어요"><span class="sico">📄</span> Docs로 회의록 내보내기</div>
-      <a class="sb-ws" href="https://calendar.google.com/" target="_blank" rel="noopener"><span class="sico">📅</span> Google Calendar</a>
-      <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener"><span class="sico">✨</span> Gemini AI</a>
+      <a class="sb-ws" href="https://calendar.google.com/" target="_blank" rel="noopener" title="Google Calendar"><span class="sico">📅</span> Google Calendar</a>
+      <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener" title="Gemini AI"><span class="sico">✨</span> Gemini AI</a>
     </aside>
 
     <!-- 담당: ③ 디자인 — 세부 디테일 (대시보드 안쪽 — 마일스톤 탭만 ④) -->
@@ -723,6 +728,18 @@
       <span style="font-size:20px;">📅</span> Google 캘린더에 추가
     </a>
     <button class="btn-ghost" style="width:100%;margin-top:6px;" onclick="closeCal()">닫기</button>
+  </div>
+</div>
+
+<!-- ── 프로젝트 삭제 확인 모달 ── -->
+<div class="overlay" id="delete-project-overlay" onclick="if(event.target.id==='delete-project-overlay')closeDeleteProject()">
+  <div class="modal-box">
+    <div class="m-ttl">🗑️ 프로젝트를 삭제할까요?</div>
+    <div class="m-desc"><b id="delete-project-name"></b> 프로젝트를 삭제하면<br>회의 이력과 온보딩 결과가 모두 사라지고 되돌릴 수 없어요.</div>
+    <div class="m-btns">
+      <button class="btn-ghost" onclick="closeDeleteProject()">취소</button>
+      <button class="btn-danger" onclick="confirmDeleteProject()">삭제할게요</button>
+    </div>
   </div>
 </div>
 
