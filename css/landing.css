@@ -41,15 +41,12 @@
   margin-bottom:var(--sp-5);
 }
 .hero h1 em{
-  background:linear-gradient(90deg,var(--pk),var(--pk-mid));
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  background-clip:text;
+  color:var(--pk);
   font-style:normal;
 }
 .hero p{
   font-size:var(--fs-3xl);
-  font-weight:var(--fw-black);
+  font-weight:var(--fw-bold);
   color:#14142B;
   line-height:1.4;
   letter-spacing:-.6px;
