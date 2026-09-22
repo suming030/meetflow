@@ -298,6 +298,8 @@
         <input type="file" id="audio-file" accept="audio/*" style="display:none" onchange="handleAudioUpload(event)">
       </div>
       <div class="stt-status" id="stt-status"></div>
+      <!-- 전사 진행 막대 — js/stt.js의 startSttProgress가 움직인다 -->
+      <div class="prog-wrap" id="stt-prog" hidden><div class="prog-fill" id="stt-prog-fill" style="width:0%"></div></div>
     </div>
 
     <div class="up-panel">

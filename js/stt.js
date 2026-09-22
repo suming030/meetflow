@@ -49,7 +49,8 @@ async function startRecording(){
     const type=recorder&&recorder.mimeType||mime||'audio/webm';
     const blob=new Blob(recChunks,{type});
     recChunks=[];
-    if(blob.size>2000) processAudio(blob, extFromMime(type));
+    /* 녹음 길이는 이미 알고 있으니 진행 막대 예상 시간에 쓴다 */
+    if(blob.size>2000) processAudio(blob, extFromMime(type), (Date.now()-recStartMs)/1000);
     else toast('녹음이 너무 짧아요.','error');
   };
   recorder.start(1000);            /* 1초마다 데이터를 흘려 메모리 급증을 막는다 */
@@ -92,7 +93,7 @@ function setSttBusy(on){
    Gemini에 오디오를 그대로 보내 전사한다. Cloud Speech-to-Text(화자 분리)는
    Blaze 요금제와 백엔드가 필요한데, 녹음이 1~2분 수준이라 쓰지 않기로 했다.
    대신 요청 크기 상한(약 20MB, base64 팽창 포함)에 걸리지 않게 길이를 제한한다. */
-async function processAudio(blob, ext){
+async function processAudio(blob, ext, durSec){
   const mb=blob.size/1024/1024;
   if(mb>GEMINI_MAX_MB){
     setSttStatus('');
@@ -100,19 +101,70 @@ async function processAudio(blob, ext){
     return;
   }
   setSttBusy(true);
-  setSttStatus('🗣️ 음성을 텍스트로 옮기는 중이에요...');
+  /* 녹음 길이 — 내장 녹음은 넘겨받고, 파일은 메타데이터에서 읽고, 그것도 안 되면
+     48kbps 기준으로 크기에서 어림한다 */
+  const dur=durSec || await audioDurationSec(blob) || blob.size/6000;
+  const stopProgress=startSttProgress(dur);
   try{
     const text=await transcribeViaGemini(blob);
     appendTranscript(text);
+    stopProgress(true);
     setSttStatus('✅ 전사가 끝났어요 — 아래 텍스트를 확인하고 수정하세요.');
     toast('전사가 완료됐어요! 🎉','success');
   }catch(e){
     console.error('[MeetFlow] 전사 실패', e);
+    stopProgress(false);
     setSttStatus('');
     toast('전사에 실패했어요: '+(e.message||e),'error');
   }finally{
     setSttBusy(false);
   }
+}
+
+/* ── 전사 진행 막대 ──
+   Gemini 전사는 끝날 때 결과를 한 번에 줘서 진짜 진행률을 알 수 없다. 그래서 녹음 길이로
+   예상 시간을 잡고 막대를 채운다. 실측(2026-09-21, gemini-3.6-flash): 15초 녹음 ≈ 19초,
+   20분 녹음 ≈ 85~95초 → 예상 = 15초 + 녹음 1분당 4초.
+   예상 시간 동안 90%까지 차고, 넘기면 98%까지만 천천히 다가가다가 끝나면 100%. */
+function estimateSttSec(durSec){ return Math.round(15 + (durSec/60)*4); }
+function fmtMinSec(sec){
+  const s=Math.max(0,Math.round(sec));
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+/** 막대를 움직이기 시작하고, 멈추는 함수를 돌려준다 — stop(true)면 100%로 채우고 사라진다 */
+function startSttProgress(durSec){
+  const wrap=document.getElementById('stt-prog'), fill=document.getElementById('stt-prog-fill');
+  const est=estimateSttSec(durSec||0), t0=Date.now();
+  if(wrap) wrap.hidden=false;
+  if(fill) fill.style.width='0%';
+  const tick=()=>{
+    const e=(Date.now()-t0)/1000;
+    const p=e<est ? 90*e/est : 90+8*(1-Math.exp(-(e-est)/est));
+    if(fill) fill.style.width=p.toFixed(1)+'%';
+    setSttStatus(e<est
+      ? `🗣️ 음성을 텍스트로 옮기는 중이에요 · ${fmtMinSec(e)} / 약 ${fmtMinSec(est)}`
+      : `🗣️ 예상보다 오래 걸리고 있어요 · ${fmtMinSec(e)} — AI 서버가 붐빌 수 있어요. 조금만 더 기다려 주세요.`);
+  };
+  tick();
+  const timer=setInterval(tick,500);
+  return ok=>{
+    clearInterval(timer);
+    if(fill) fill.style.width=ok?'100%':'0%';
+    setTimeout(()=>{ if(wrap) wrap.hidden=true; if(fill) fill.style.width='0%'; }, ok?900:0);
+  };
+}
+/** 오디오 파일 길이(초). 못 읽으면 null — MediaRecorder가 만든 webm은 길이가 비어 있기도 하다 */
+function audioDurationSec(blob){
+  return new Promise(resolve=>{
+    const url=URL.createObjectURL(blob), a=new Audio();
+    let settled=false;
+    const done=v=>{ if(settled) return; settled=true; URL.revokeObjectURL(url); resolve(v); };
+    a.preload='metadata';
+    a.onloadedmetadata=()=>done(isFinite(a.duration)&&a.duration>0?a.duration:null);
+    a.onerror=()=>done(null);
+    setTimeout(()=>done(null),3000);
+    a.src=url;
+  });
 }
 
 async function transcribeViaGemini(blob){
