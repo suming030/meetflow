@@ -2,10 +2,13 @@
    담당: ① 회의 입력·분석*/
 
 function updateCC(){
-  document.getElementById('char-ct').textContent = document.getElementById('meeting-input').value.length+'자';
+  const v=document.getElementById('meeting-input').value;
+  document.getElementById('char-ct').textContent = v.length+'자';
+  /* 입력창을 다 지우면 음성 전사 출처·화자 이름 확인도 없던 일로 */
+  if(!v.trim()){ transcriptMeta=null; document.getElementById('spk-map')?.remove(); }
 }
 function loadSample(n){
-  document.getElementById('meeting-input').value=SAMPLES[n]; updateCC();
+  document.getElementById('meeting-input').value=SAMPLES[n]; transcriptMeta=null; updateCC();
   toast('샘플 텍스트가 입력됐어요!','success');
 }
 function handleDrop(e){
@@ -14,7 +17,7 @@ function handleDrop(e){
   const text=[...e.dataTransfer.items]
     .filter(i=>i.kind==='string')
     .map(i=>{ let t=''; i.getAsString(s=>t=s); return t; }).join('');
-  if(text){ document.getElementById('meeting-input').value=text; updateCC(); toast('텍스트가 붙여넣어졌어요!','success'); }
+  if(text){ document.getElementById('meeting-input').value=text; transcriptMeta=null; updateCC(); toast('텍스트가 붙여넣어졌어요!','success'); }
 }
 
 /* ──── AI 분석 ──── */

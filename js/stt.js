@@ -266,6 +266,83 @@ function appendTranscript(text){
   const prev=ta.value.trim();
   ta.value=(prev?prev+'\n\n':'')+text.trim();
   updateCC();
+  transcriptMeta={fromAudio:true, named:!!(transcriptMeta&&transcriptMeta.named)};
+  renderSpeakerMapper();
+}
+
+/* ════════════════════════════════
+   화자 → 이름 연결
+   전사본의 "화자1:" 같은 라벨을 실제 이름으로 바꾼다. 사람이 확인한 이름이면 분석이
+   "제가 할게요" 같은 말을 한 사람을 담당자로 연결할 수 있다(js/gemini.js의 지시문).
+   STT(화자 분리)가 들어오면 라벨이 정확해져서 이 연결이 더 쓸모 있어진다.
+════════════════════════════════ */
+const SPEAKER_LINE = /^(화자\s*(\d+))\s*:\s*(.*)$/gm;
+
+/** 입력창에서 화자 라벨을 찾아 {label, no, sample(첫 발화)} 목록으로 — 처음 나온 순서대로 */
+function findSpeakers(text){
+  const seen=new Map();
+  for(const m of (text||'').matchAll(SPEAKER_LINE)){
+    if(!seen.has(m[2])) seen.set(m[2], {label:'화자'+m[2], no:m[2], sample:m[3].trim()});
+  }
+  return [...seen.values()];
+}
+
+/** 이름 후보 — 이 프로젝트의 지난 회의에서 업무를 맡았던 사람들 */
+function knownPeople(){
+  const names=(typeof history!=='undefined'?history:[]).flatMap(m=>(m.items||[]).map(i=>i.assignee));
+  return [...new Set(names)].filter(n=>n&&n!=='미지정');
+}
+
+/** 전사가 끝나면 "말한 사람을 알려주세요" 칸을 띄운다. 라벨이 없으면 숨긴다. */
+function renderSpeakerMapper(){
+  const text=document.getElementById('meeting-input').value;
+  const speakers=findSpeakers(text);
+  let box=document.getElementById('spk-map');
+  if(!speakers.length){ if(box) box.remove(); return; }
+  if(!box){
+    box=document.createElement('div');
+    box.id='spk-map';
+    box.style.cssText='margin-top:var(--sp-4);padding:var(--sp-4);background:var(--pk-bg);border:1px solid var(--bd-s);border-radius:var(--r-md);';
+    const anchor=document.getElementById('stt-prog')||document.getElementById('stt-status');
+    anchor.insertAdjacentElement('afterend', box);
+  }
+  const people=knownPeople();
+  box.innerHTML=`
+    <div style="font-weight:var(--fw-bold);font-size:var(--fs-md);margin-bottom:4px;">🗣️ 말한 사람을 알려주세요</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:var(--sp-3);line-height:1.6;">
+      이름을 넣으면 "제가 할게요"라고 말한 사람을 그 업무의 담당자로 연결해요. 모르면 비워두세요.
+    </div>
+    <datalist id="spk-people">${people.map(p=>`<option value="${esc2(p)}">`).join('')}</datalist>
+    ${speakers.map(s=>`
+      <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2);">
+        <span style="width:48px;flex-shrink:0;font-weight:var(--fw-bold);font-size:var(--fs-base);">${esc2(s.label)}</span>
+        <input class="spk-name" data-no="${esc2(s.no)}" list="spk-people" maxlength="20" placeholder="이름"
+          style="width:110px;flex-shrink:0;padding:6px 10px;border:1.5px solid var(--bd-s);border-radius:var(--r-sm);font-family:inherit;font-size:var(--fs-base);background:var(--surface);color:var(--text);">
+        <span style="flex:1;min-width:0;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          title="${esc2(s.sample)}">"${esc2(s.sample.slice(0,60))}"</span>
+      </div>`).join('')}
+    <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3);">
+      <button class="btn-pk btn-pk-sm" onclick="applySpeakerNames()">이름 바꾸기</button>
+      <button class="btn-ghost" onclick="document.getElementById('spk-map').remove()">나중에</button>
+    </div>`;
+}
+
+/** 입력한 이름으로 "화자N:"을 바꾼다. 줄 맨 앞의 라벨만 바꾸고, 화자1과 화자10은 헷갈리지 않는다. */
+function applySpeakerNames(){
+  const ta=document.getElementById('meeting-input');
+  let text=ta.value, count=0;
+  document.querySelectorAll('#spk-map .spk-name').forEach(inp=>{
+    const name=inp.value.replace(/[:\n\r]/g,'').trim().slice(0,20);
+    if(!name) return;
+    const re=new RegExp('^화자\\s*'+inp.dataset.no+'\\s*:','gm');
+    text=text.replace(re, ()=>{ count++; return name+':'; });
+  });
+  if(!count){ toast('바꿀 이름을 하나 이상 넣어주세요.','error'); return; }
+  ta.value=text;
+  updateCC();
+  transcriptMeta={fromAudio:true, named:true};
+  document.getElementById('spk-map')?.remove();
+  toast('이름을 바꿨어요 — 분석할 때 말한 사람을 담당자로 연결해요.','success');
 }
 
 /* ── 음성 파일 업로드 ── */
