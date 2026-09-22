@@ -1,5 +1,5 @@
 /* MeetFlow — 대시보드 렌더링 (개요/Action Items/담당자별/Task Flow/브리핑)
-   담당: ③ 디자인 B (세부 디테일). 마일스톤 화면은 js/milestones.js(④)로 옮겼다. */
+   담당: ③ 디자인 — 세부 디테일. 마일스톤 화면은 js/milestones.js(④)로 옮겼다. */
 
 /* ──── 통계 ──── */
 function calcStats(items){
