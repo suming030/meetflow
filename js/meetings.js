@@ -42,7 +42,14 @@ async function analyze(){
 
   try{
     const pending=collectPendingItems();
-    const result=await callGemini(text, pending);
+    /* 두 요청을 동시에 보낸다(js/gemini.js). 업무(A)가 먼저 오면 바로 보여주고 저장하고,
+       긴 회의록 본문(B)은 도착하는 대로 그 회의에 채워 넣는다. */
+    const projectId=currentProject&&currentProject.id;   /* B가 오기 전에 프로젝트를 바꿔도 제자리에 저장되게 */
+    const tasksP=callGeminiTasks(text, pending);
+    const minutesP=callGeminiMinutes(text);
+    minutesP.catch(()=>{});   /* A가 먼저 실패해 아무도 기다리지 않아도 '처리 안 된 오류'로 남지 않게 */
+    const result=await tasksP;
+    result.topics=[]; result.gaps=[];
     clearInterval(stInt);
     steps.forEach(s=>{ document.getElementById(s).className='ai-step done'; });
     const applied=await applyCarriedOver(result.carriedOver);
@@ -55,6 +62,7 @@ async function analyze(){
     /* 저장됐으면 분석 페이지를 비우고 방금 회의 화면으로 넘어간다 — 다음 회의를 바로 받을 수 있게.
        저장에 실패했으면 결과까지 사라지면 안 되니 이 화면에 그대로 둔다. */
     if(saved&&saved.id){ resetUploadPage(); openMeeting(saved.id); }
+    fillMinutesLater(minutesP, saved, result, projectId);   /* 기다리지 않는다 — 뒤에서 채운다 */
   }catch(e){
     clearInterval(stInt);
     showErr(e.message);
@@ -62,6 +70,24 @@ async function analyze(){
   }finally{
     setLoading(false);
     setTimeout(()=>document.getElementById('ai-proc').classList.remove('show'),400);
+  }
+}
+
+/** 회의록 본문(B)이 도착하면 방금 저장한 회의에 채워 넣는다.
+    실패해도 업무(A)는 이미 저장돼 있으니 알리기만 한다. (알림 문구는 임시 — ③이 다듬는다) */
+async function fillMinutesLater(minutesP, meeting, result, projectId){
+  try{
+    const m=await minutesP;
+    result.topics=m.topics; result.gaps=m.gaps;   /* 저장 실패로 분석 화면에 남은 경우의 자료 찾기용 */
+    if(meeting){
+      meeting.topics=m.topics; meeting.gaps=m.gaps;
+      if(meeting.id&&projectId) await window.mfDb.updateMeeting(projectId, meeting.id, {topics:m.topics, gaps:m.gaps});
+      renderAll();
+    }
+    toast('회의록 본문까지 정리됐어요.','success');
+  }catch(e){
+    console.error('[MeetFlow] 회의록 본문 만들기 실패', e);
+    toast('회의록 본문은 만들지 못했어요. 업무는 저장됐어요.','error');
   }
 }
 
