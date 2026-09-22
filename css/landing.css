@@ -46,7 +46,7 @@
 }
 .hero p{
   font-size:var(--fs-3xl);
-  font-weight:var(--fw-bold);
+  font-weight:var(--fw-black);
   color:#14142B;
   line-height:1.4;
   letter-spacing:-.6px;
