@@ -281,6 +281,27 @@ function formatDateKR(iso){
    제목/소제목엔 헤딩 스타일, 목록엔 글머리 기호를 적용하는 Docs batchUpdate 요청을 만든다.
    js/timeline.js의 minutesDocHTML(회의록 보기 모달)과 같은 내용을 담아서,
    Docs로 내보냈을 때 앱 안에서 보는 것보다 내용이 빈약해지지 않게 한다. */
+/* AI가 쓴 문장을 개조식(-임/-함/-됨/-음)으로 최대한 다듬는다.
+   완벽한 한국어 문법 처리기는 아니고, 흔한 문장 종결형만 규칙 기반으로 바꾼다 —
+   맞지 않는 드문 종결형은 그대로 둔다. */
+function toGaejoshik(text){
+  if(!text) return text;
+  const s = text.trim().replace(/[.!]+$/, '');
+  const rules = [
+    [/했습니다$|했어요$|했다$/, '함'],
+    [/하겠습니다$|하겠어요$|하겠다$/, '할 예정'],
+    [/한다$|합니다$|해요$|하다$/, '함'],
+    [/됐습니다$|됐어요$|됐다$|되었다$/, '됨'],
+    [/된다$|됩니다$|돼요$/, '됨'],
+    [/있습니다$|있어요$|있다$/, '있음'],
+    [/없습니다$|없어요$|없다$/, '없음'],
+    [/입니다$|이에요$|예요$|이다$/, '임'],
+    [/다$/, '음'],
+  ];
+  for(const [re, rep] of rules){ if(re.test(s)) return s.replace(re, rep); }
+  return s;
+}
+
 function buildDocsRequests(meeting){
   const items    = meeting.items || [];
   const topics   = meeting.topics || [];
@@ -302,7 +323,7 @@ function buildDocsRequests(meeting){
   add('', null);
 
   add('핵심 안건 요약', 'HEADING_2');
-  add(meeting.summary || '(요약 없음)', null);
+  add(meeting.summary ? toGaejoshik(meeting.summary) : '(요약 없음)', null);
   add('', null);
 
   /* 안건별 논의 내용 — 요약만으로는 안 보이는 회의 본문 */
@@ -311,7 +332,7 @@ function buildDocsRequests(meeting){
     topics.forEach((t, i) => {
       add(`${i + 1}. ${t.title}`, null, false, true);
       const discussion = t.discussion || [];
-      if(discussion.length) discussion.forEach(d => add(d, null, true));
+      if(discussion.length) discussion.forEach(d => add(toGaejoshik(d), null, true));
       else add('(기록된 논의 내용 없음)', null);
     });
   } else {
@@ -336,15 +357,15 @@ function buildDocsRequests(meeting){
   /* 지난 회의에서 이어진 업무 — 마무리된 것과 아직 진행 중인 것을 나눠 보여준다 */
   if(carried.length){
     add('', null);
-    add('이어진 업무', 'HEADING_2');
+    add('진행중인 업무', 'HEADING_2');
     if(done.length){
       add('이번 회의에서 마무리됨', null, false, true);
-      done.forEach(c => add(c.task + (c.note ? ` — ${c.note}` : ''), null, true));
+      done.forEach(c => add(c.task + (c.note ? ` — ${toGaejoshik(c.note)}` : ''), null, true));
     }
     if(still.length){
       add('아직 진행 중', null, false, true);
       still.forEach(c => add(
-        c.task + (c.note ? ` — ${c.note}` : '') + (c.newDeadline ? ` (새 마감일 ${c.newDeadline})` : ''),
+        c.task + (c.note ? ` — ${toGaejoshik(c.note)}` : '') + (c.newDeadline ? ` (새 마감일 ${c.newDeadline})` : ''),
         null, true));
     }
   }
@@ -353,7 +374,7 @@ function buildDocsRequests(meeting){
   if(gaps.length){
     add('', null);
     add('AI가 짚은 놓친 부분', 'HEADING_2');
-    gaps.forEach(g => add(g, null, true));
+    gaps.forEach(g => add(toGaejoshik(g), null, true));
   }
 
   /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
