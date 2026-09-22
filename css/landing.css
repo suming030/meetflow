@@ -28,6 +28,8 @@
   margin-bottom:var(--sp-6);
 }
 .hero-logo{
+  width:220px;
+  height:auto;
   margin-bottom:var(--sp-6);
 }
 .hero h1{
