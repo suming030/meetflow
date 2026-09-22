@@ -78,7 +78,7 @@ async function analyze(){
 async function fillMinutesLater(minutesP, meeting, result, projectId){
   try{
     const m=await minutesP;
-    result.topics=m.topics; result.gaps=m.gaps;   /* 저장 실패로 분석 화면에 남은 경우의 자료 찾기용 */
+    result.topics=m.topics; result.gaps=m.gaps;
     if(meeting){
       meeting.topics=m.topics; meeting.gaps=m.gaps;
       if(meeting.id&&projectId) await window.mfDb.updateMeeting(projectId, meeting.id, {topics:m.topics, gaps:m.gaps});
@@ -321,8 +321,6 @@ function editItemTask(ev, itemId){
 /* ──── 업로드 결과 렌더링 ──── */
 function renderUpResult(result){
   const items=result.items;
-  lastResult=result;                                  /* 자료 찾기(js/research.js)가 참고한다 */
-  document.getElementById('up-research').innerHTML=''; /* 지난 회의의 검색 결과를 남기지 않는다 */
   document.getElementById('result-wrap').classList.add('show');
   document.getElementById('up-empty').style.display='none';
 
@@ -415,6 +413,5 @@ function resetUploadPage(){
   updateCC();
   document.getElementById('result-wrap').classList.remove('show');
   document.getElementById('up-empty').style.display='block';
-  document.getElementById('up-research').innerHTML='';
   if(typeof setSttStatus==='function') setSttStatus('');
 }

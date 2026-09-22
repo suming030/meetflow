@@ -8,7 +8,7 @@
 
 | 역할 | 담당 파일 |
 | --- | --- |
-| ① 회의 입력·분석 (STT 포함) + 자료 찾기 — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
+| ① 회의 입력·분석 (STT 포함) — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `functions/`, `storage.rules` |
 | ② 첫 시작 페이지(랜딩) 전담 - **세은** | `css/landing.css`, index.html 랜딩 구역 |
 | ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) - **주향** | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
 | ④ 마일스톤 (온보딩 + 트랙별 틀) - **지은** | `js/onboarding.js`, `js/milestones.js` |
@@ -89,9 +89,8 @@ python -m http.server 8000
   API 키는 코드에 없습니다.
   - `window.mfGenerateJSON` — 구조화 JSON (회의 분석)
   - `window.mfTranscribeAudio` — 음성 전사
-  - `window.mfGroundedSearch` — Google 검색 그라운딩 (추가 자료 찾기)
 
-  셋 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
+  둘 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
   한도 초과(429)·없는 모델(404)·과부하(500/503)·시간 초과(5분)가 나면 아래 후보로 내려갑니다.
   **모델 이름을 개별 함수에 하드코딩하지 마세요.**
 
@@ -153,10 +152,9 @@ PR을 올리면 **다른 한 명이 보고 머지**합니다.
     무료 티어에서 과부하로 110~180초씩 붙잡다 실패했고, 같은 20분 녹음을 3.6은 약 85초에 전사했습니다.
   - **전사에는 lite 모델을 쓰지 않습니다**(`skipLite`). 20분 녹음을 넣었더니 녹음에 없는 내용을
     지어냈습니다. 회의 분석은 lite까지 내려갑니다.
-- **Google 검색 그라운딩은 구조화 JSON 출력과 함께 쓰지 않습니다.** 같이 쓰면
-  출처 정보(`groundingChunks`)가 비어서 돌아오는 문제가 보고돼 있습니다.
-  회의 분석(JSON)과 자료 찾기(그라운딩)는 **반드시 별도 호출**로 유지하세요.
-  또 그라운딩 응답은 Google 정책상 **검색 제안과 출처를 화면에 표시해야 합니다.**
+- **자료 찾기(Google 검색 그라운딩)는 뺐습니다 (2026-09-22, 팀 결정).** 다시 넣는다면
+  구조화 JSON 출력과 **반드시 별도 호출**로 해야 합니다(같이 쓰면 출처가 비어서 옵니다).
+  예전 코드는 git 기록의 `js/research.js`에 있습니다.
 - **STT(Cloud Speech-to-Text) 전환은 보류 중입니다 (2026-09-21).** 화자 분리를 쓰려면
   서비스 계정 인증이 필요해 Cloud Function과 **Blaze 요금제**가 있어야 하는데, 결제 가입이
   구글 심사에 걸려 막혀 있습니다. `functions/`(chirp_3 화자 분리)와 `storage.rules`는

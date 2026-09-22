@@ -1,6 +1,6 @@
 /* MeetFlow — Gemini 공통 호출·JSON 파싱 + 회의 분석 프롬프트
    담당: ① 회의 입력·분석. 프로젝트 마무리 프롬프트는 js/wrapup.js(⑤)로 옮겼다.
-   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩 ④·회고 ⑤·자료 찾기)도 쓰는 공용 도구다. */
+   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩 ④·회고 ⑤)도 쓰는 공용 도구다. */
 
 /* AI 호출 실패를 화면에 보여줄 안내로 바꾼다. 원인마다 사용자가 할 일이 달라서
    (기다리기 / 콘솔 설정 고치기 / 그냥 재시도) 구분해준다. */
@@ -24,15 +24,6 @@ function classifyAiError(msg,feature){
      'billing'이라는 단어만 보고 결제 문제로 단정하면 안 된다 — 무료 한도 소진일 뿐이다.
      여기까지 왔다면 index.html의 모델 폴백이 후보 모델을 전부 시도한 뒤다. */
   if(/quota|RESOURCE_EXHAUSTED|\b429\b/i.test(msg)){
-    /* 자료 찾기는 Google 검색 그라운딩이라 회의 분석과 할당량 주머니가 다르다.
-       그래서 "회의 분석은 되는데 자료 찾기만 안 되는" 상황이 정상적으로 생긴다. */
-    if(feature==='search') return {
-      title:'웹 검색 할당량을 다 썼어요',
-      desc:'자료 찾기는 Google 검색 그라운딩을 쓰는데, 회의 분석·온보딩과는 ' +
-           '별도의 무료 한도를 씁니다. 그래서 다른 AI 기능은 그대로 되는데 자료 찾기만 막혀요. ' +
-           '모델을 바꿔도 같은 한도라 소용없고, 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요.',
-      retry:true, wait:true
-    };
     return {
       title:'오늘 쓸 수 있는 AI 사용량을 다 썼어요',
       desc:'무료 한도로 쓸 수 있는 모델을 차례로 다 시도했는데 모두 한도에 걸렸어요. ' +
