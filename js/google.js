@@ -277,31 +277,80 @@ function formatDateKR(iso){
   catch(_){ return iso || ''; }
 }
 
-/* summary + action items를 하나의 텍스트로 합치고, 제목/소제목엔 헤딩 스타일,
-   Action Items 목록엔 글머리 기호를 적용하는 Docs batchUpdate 요청을 만든다. */
+/* summary·안건별 논의·업무·이어진 업무·놓친 부분을 하나의 텍스트로 합치고,
+   제목/소제목엔 헤딩 스타일, 목록엔 글머리 기호를 적용하는 Docs batchUpdate 요청을 만든다.
+   js/timeline.js의 minutesDocHTML(회의록 보기 모달)과 같은 내용을 담아서,
+   Docs로 내보냈을 때 앱 안에서 보는 것보다 내용이 빈약해지지 않게 한다. */
 function buildDocsRequests(meeting){
-  const items = meeting.items || [];
+  const items    = meeting.items || [];
+  const topics   = meeting.topics || [];
+  const carried  = meeting.carriedOver || [];
+  const gaps     = meeting.gaps || [];
+  const done     = carried.filter(c => c.resolved);
+  const still    = carried.filter(c => !c.resolved);
+
   const lines = [];
-  const add = (text, style) => lines.push({ text, style });
+  /* style: HEADING_1/2/3 또는 null(본문). bullet: 글머리 기호 적용 여부 */
+  const add = (text, style, bullet) => lines.push({ text, style: style || null, bullet: !!bullet });
 
   add('MeetFlow 회의록', 'HEADING_1');
   add(`생성일: ${formatDateKR(meeting.date)}`, null);
   add('', null);
-  add('핵심 안건 요약', 'HEADING_2');
+
+  add('📝 핵심 안건 요약', 'HEADING_2');
   add(meeting.summary || '(요약 없음)', null);
   add('', null);
-  add(`Action Items (${items.length}개)`, 'HEADING_2');
 
-  const itemStartLine = lines.length;
-  items.forEach(it => {
-    const parts = [];
-    if(it.assignee && it.assignee !== '미지정') parts.push(`[${it.assignee}]`);
-    parts.push(it.task || '');
-    if(it.deadline) parts.push(`(마감 ${it.deadline})`);
-    if(it.priority) parts.push(`· 우선순위 ${PRIO_KR[it.priority] || it.priority}`);
-    add(parts.join(' '), null);
-  });
-  if(!items.length) add('(추출된 Action Item이 없어요)', null);
+  /* 안건별 논의 내용 — 요약만으로는 안 보이는 회의 본문 */
+  add('🗣️ 안건별 논의 내용', 'HEADING_2');
+  if(topics.length){
+    topics.forEach((t, i) => {
+      add(`${i + 1}. ${t.title}`, 'HEADING_3');
+      const discussion = t.discussion || [];
+      if(discussion.length) discussion.forEach(d => add(d, null, true));
+      else add('(기록된 논의 내용이 없어요)', null);
+    });
+  } else {
+    add('이 회의는 안건별 논의 내용이 저장되기 전에 분석됐어요.', null);
+  }
+  add('', null);
+
+  add(`✅ 이번 회의에서 새로 생긴 업무 (${items.length}개)`, 'HEADING_2');
+  if(items.length){
+    items.forEach(it => {
+      const parts = [];
+      if(it.assignee && it.assignee !== '미지정') parts.push(`[${it.assignee}]`);
+      parts.push(it.task || '');
+      if(it.deadline) parts.push(`(마감 ${it.deadline})`);
+      if(it.priority) parts.push(`· 우선순위 ${PRIO_KR[it.priority] || it.priority}`);
+      add(parts.join(' '), null, true);
+    });
+  } else {
+    add('(추출된 Action Item이 없어요)', null);
+  }
+
+  /* 지난 회의에서 이어진 업무 — 마무리된 것과 아직 진행 중인 것을 나눠 보여준다 */
+  if(carried.length){
+    add('', null);
+    add('🔗 지난 회의에서 이어진 업무', 'HEADING_2');
+    if(done.length){
+      add('이번 회의에서 마무리됨', 'HEADING_3');
+      done.forEach(c => add(c.task + (c.note ? ` — ${c.note}` : ''), null, true));
+    }
+    if(still.length){
+      add('아직 진행 중', 'HEADING_3');
+      still.forEach(c => add(
+        c.task + (c.note ? ` — ${c.note}` : '') + (c.newDeadline ? ` (새 마감일 ${c.newDeadline})` : ''),
+        null, true));
+    }
+  }
+
+  /* AI가 짚은 놓친 부분 */
+  if(gaps.length){
+    add('', null);
+    add('🔍 AI가 짚은 놓친 부분', 'HEADING_2');
+    gaps.forEach(g => add(g, null, true));
+  }
 
   /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
      Docs 문서 본문은 index 1부터 시작한다. */
@@ -311,7 +360,7 @@ function buildDocsRequests(meeting){
     const seg = l.text + '\n';
     cursor += seg.length;
     fullText += seg;
-    return { start, end: start + l.text.length, style: l.style };
+    return { start, end: start + l.text.length, style: l.style, bullet: l.bullet };
   });
 
   const requests = [{ insertText: { location: { index: 1 }, text: fullText } }];
@@ -328,13 +377,20 @@ function buildDocsRequests(meeting){
     }
   });
 
-  if(items.length){
-    requests.push({
-      createParagraphBullets: {
-        range: { startIndex: ranges[itemStartLine].start, endIndex: ranges[ranges.length - 1].end },
-        bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
-      },
-    });
+  /* 글머리 기호는 연속된 구간별로 한 번씩만 요청한다(안건마다·업무 목록마다 따로 끊기도록) */
+  let runStart = -1;
+  for(let i = 0; i <= ranges.length; i++){
+    const bulleted = i < ranges.length && ranges[i].bullet;
+    if(bulleted && runStart === -1) runStart = i;
+    if(!bulleted && runStart !== -1){
+      requests.push({
+        createParagraphBullets: {
+          range: { startIndex: ranges[runStart].start, endIndex: ranges[i - 1].end },
+          bulletPreset: 'BULLET_DISC_CIRCLE_SQUARE',
+        },
+      });
+      runStart = -1;
+    }
   }
 
   return requests;
