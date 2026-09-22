@@ -3,10 +3,27 @@
 여러 회의를 이어서 프로젝트 전체 흐름을 붙잡아주는 AI 서비스입니다.
 대학생 팀(공모전·팀플·동아리)이 타겟입니다.
 
-**1인 프로젝트입니다.** 원래 여러 명이 파일을 나눠 작업했지만 지금은 혼자 전부 맡습니다.
-담당 파일 구분과 PR 절차는 없으니, 어느 파일이든 바로 고치면 됩니다.
-(2026-09-18~21에 잠깐 5인 체제로 담당표·PR 규칙을 두었다가 다시 1인으로 돌아왔습니다.
-git 히스토리에 그 흔적이 있어도 지금 규칙은 이 파일이 기준입니다.)
+**5인 팀입니다 (2026-09-21~).** 역할별로 파일을 나눠 작업합니다.
+**내 담당 파일이 아니면 고치지 말고 담당자에게 요청하세요.**
+
+| 역할 | 담당 파일 |
+| --- | --- |
+| ① 회의 입력·분석 (STT 포함) | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `functions/`, `storage.rules` |
+| ② 디자인 A — 뼈대·단순화 | `css/base.css`, `css/landing.css`, `css/layout.css`, index.html 상단바·랜딩·로그인·트랙 선택·사이드바 |
+| ③ 디자인 B — 세부 디테일 | `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 대시보드 안쪽 |
+| ④ 마일스톤 + 정리 양식 | `js/onboarding.js`, `js/milestones.js`, `js/wrapup.js` (회고 화면 + AI 프롬프트) |
+| ⑤ 구글 연동 + 내 공간 | `js/google.js`, `js/research.js`, `js/projects.js` |
+| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` |
+
+`index.html`은 한 파일이라 나눌 수 없어서, 구역마다 `<!-- 담당: … -->` 주석을 달아뒀습니다.
+CSS 로드 순서는 `base → landing → layout → app`이라 ③(app.css)이 ②(layout.css) 위에 덮어쓸 수 있습니다.
+
+**둘이 같이 만져야 하는 과제**는 미리 짝을 맞추세요.
+
+- 온보딩 화면 모양 — ④(`onboarding.js`) + ③(스타일)
+- 프로젝트 목록 — ⑤(`projects.js` 기능) + ②(모양)
+- `MF_MODELS`·AI 호출구(index.html 맨 아래) — 공용 + ①
+- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④·⑤도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
 
 ## ⚠️ 반드시 지킬 것
 
@@ -89,11 +106,33 @@ python -m http.server 8000
 
 ## git 규칙
 
-`main`에서 바로 작업해도 됩니다. 커밋은 목적 단위로 쪼개서,
-메시지는 `feat:`/`fix:`/`design:`/`docs:`/`refactor:`/`chore:` 접두사를 씁니다.
+**`main`에 직접 push하지 않습니다.** 브랜치를 파고 PR로 합칩니다.
 
-**발표·데모용 프로젝트는 테스트에 쓰지 마세요.** Firestore가 하나라 개발 중 만든
-테스트 회의가 그대로 섞입니다. 테스트는 별도 프로젝트를 만들어서 하세요.
+```bash
+git checkout main
+git pull                                  # 항상 최신에서 시작
+git checkout -b feat/이름-작업             # 예: feat/수민-stt
+# ... 작업 ...
+git commit -m "feat: 녹음 업로드 경로 추가"
+git push -u origin feat/이름-작업
+```
+
+PR을 올리면 **다른 한 명이 보고 머지**합니다.
+
+- 커밋은 목적 단위로 쪼개고 `feat:`/`fix:`/`design:`/`docs:`/`refactor:`/`chore:` 접두사를 씁니다.
+- **PR은 작게, 자주.** 작업이 하루를 넘기면 중간에 `main`을 당겨 받으세요.
+- 머지되면 GitHub Pages(https://suming030.github.io/meetflow/)에 1~2분 뒤 반영됩니다.
+
+### 충돌이 나는 자리
+
+1. **`index.html` 맨 아래 `<script src>` 목록** — 새 js 파일을 추가하면 여기를 건드립니다. 먼저 공유.
+2. **`js/state.js`** — 같은 이름의 전역을 두 사람이 선언하면 **SyntaxError로 앱 전체가 죽습니다.** 전역 추가는 반드시 공유 후.
+3. **같은 이름의 함수**를 두 파일에 두면 나중에 로드된 쪽이 조용히 이깁니다. 새 함수 이름은 겹치지 않게.
+
+### 개발용 Firebase 데이터
+
+**다섯 명이 같은 Firestore를 봅니다.** 각자 **자기 테스트 프로젝트를 하나씩** 만들어 쓰고,
+**발표·데모용 프로젝트는 아무도 테스트에 쓰지 않습니다.**
 
 ## 알아둘 상태
 

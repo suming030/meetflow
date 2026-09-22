@@ -1,5 +1,5 @@
 /* MeetFlow — 공용 유틸 (토스트 / D-day / 캘린더 모달)
-   소유자: 공용 */
+   담당: 공용(팀장)*/
 
 /* ──── 유틸 ──── */
 function ddayHTML(diff){

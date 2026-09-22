@@ -1,5 +1,5 @@
 /* MeetFlow — 페이지·탭 전환 (해시 라우팅)
-   소유자: 공용 */
+   담당: 공용(팀장)*/
 
 /* ──── 페이지·탭 전환 (해시 라우팅 — 브라우저 뒤로가기 지원) ──── */
 const AUTH_PAGES=['upload','dash','projects','onboard','track'];

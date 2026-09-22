@@ -21,11 +21,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
 <!-- ══ NAV ══ -->
+<!-- 담당: ② 디자인 A (상단바) -->
 <nav>
   <div class="nav-logo" onclick="gp('landing')">
     <img src="assets/logo-horizontal.png" alt="MeetFlow" class="nav-logo-img">
@@ -43,6 +45,7 @@
 <!-- ════════════════════════════════
      LANDING
 ════════════════════════════════ -->
+<!-- 담당: ② 디자인 A (랜딩) -->
 <div class="page active" id="page-landing">
 
   <!-- HERO -->
@@ -171,6 +174,7 @@
 <!-- ════════════════════════════════
      TRACK SELECT (0단계 — 프로젝트 생성)
 ════════════════════════════════ -->
+<!-- 담당: ② 디자인 A (트랙 선택 — 프로젝트 만들기) -->
 <div class="page" id="page-track">
   <div class="up-wrap" style="max-width:800px;">
     <button class="btn-ghost" style="margin-bottom:14px;" onclick="gp('projects')">← 프로젝트 목록</button>
@@ -231,6 +235,7 @@
 <!-- ════════════════════════════════
      ONBOARDING (1단계 — 트랙별 온보딩)
 ════════════════════════════════ -->
+<!-- 담당: ④ 마일스톤 + 정리 양식 (온보딩 입력 → 마일스톤 생성) -->
 <div class="page" id="page-onboard">
   <div class="up-wrap" style="max-width:820px;">
     <button class="btn-ghost" style="margin-bottom:14px;" onclick="gp('projects')">← 프로젝트 목록</button>
@@ -273,6 +278,7 @@
 <!-- ════════════════════════════════
      UPLOAD PAGE
 ════════════════════════════════ -->
+<!-- 담당: ① 회의 입력·분석 (녹음·파일·텍스트 → 분석) -->
 <div class="page" id="page-upload">
   <div class="up-wrap">
     <div class="up-hd">
@@ -420,6 +426,7 @@
 <!-- ════════════════════════════════
      PROJECTS HOME (프로젝트 목록)
 ════════════════════════════════ -->
+<!-- 담당: 화면 ② 디자인 A / 기능 ⑤ 구글 연동 + 내 공간 (js/projects.js) -->
 <div class="page" id="page-projects">
   <div class="up-wrap" style="max-width:900px;">
     <div class="up-hd">
@@ -437,6 +444,7 @@
   <div class="dash-layout">
 
     <!-- 사이드바 -->
+    <!-- 담당: ② 디자인 A (사이드바) -->
     <aside class="sidebar">
       <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
       <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
@@ -484,6 +492,7 @@
       <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener"><span class="sico">✨</span> Gemini AI</a>
     </aside>
 
+    <!-- 담당: ③ 디자인 B (대시보드 안쪽 — 마일스톤 탭만 ④) -->
     <main class="dash-main">
 
       <!-- ── 대시보드 탭 ── -->
@@ -559,6 +568,7 @@
         <div id="meeting-wrap"></div>
       </div>
 
+      <!-- 담당: ④ 마일스톤 + 정리 양식 (js/milestones.js가 그림) -->
       <div class="tab" id="tab-milestones">
         <div class="pg-hd">
           <div><h2>🧭 마일스톤</h2><p>AI가 설계한 마일스톤과 다음 회의 아젠다를 확인하세요</p></div>
@@ -595,6 +605,7 @@
 
 <!-- ── 로그인 모달 ── -->
 <!-- ════ 로그인 (별도 페이지) — 로그인하면 내 프로젝트로 간다 (js/auth.js) ════ -->
+<!-- 담당: ② 디자인 A (로그인) -->
 <div class="page" id="page-login">
   <div class="login-page">
   <div class="login-box">
@@ -620,6 +631,7 @@
 </div>
 
 <!-- ── 초대 코드 모달 ── -->
+<!-- 담당: ⑤ 구글 연동 + 내 공간 (초대·참여 모달, js/projects.js) -->
 <div class="overlay" id="invite-overlay" onclick="if(event.target.id==='invite-overlay')closeInvite()">
   <div class="login-box">
     <div class="login-top">
@@ -655,6 +667,7 @@
 </div>
 
 <!-- ── 캘린더 모달 ── -->
+<!-- 담당: ⑤ 구글 연동 + 내 공간 (캘린더 모달, js/google.js) -->
 <div class="overlay" id="cal-overlay" onclick="if(event.target.id==='cal-overlay')closeCal()">
   <div class="cal-box">
     <div class="m-ttl" style="margin-bottom:16px;">📅 캘린더에 추가</div>
@@ -673,6 +686,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
+<!-- 담당: 공용(팀장) — 새 js 파일을 추가할 땐 팀에 먼저 공유 -->
 <!-- 앱 스크립트 — 순서 중요: 상태·유틸이 먼저, main.js가 마지막 -->
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
@@ -684,6 +698,7 @@
 <script src="js/stt.js"></script>
 <script src="js/meetings.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/milestones.js"></script>
 <script src="js/timeline.js"></script>
 <script src="js/research.js"></script>
 <script src="js/wrapup.js"></script>
@@ -691,6 +706,7 @@
 <script src="js/main.js"></script>
 
 <!-- ── Firebase Auth (Google 로그인) ── -->
+<!-- 담당: 공용(팀장) — Firebase·AI 호출구. MF_MODELS는 ① 회의 입력·분석과 협의 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }

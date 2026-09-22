@@ -1,5 +1,5 @@
 /* MeetFlow — 로그인·로그아웃, 로그인 모달, 상단 CTA
-   소유자: 공용 */
+   담당: 공용(팀장)*/
 
 /* ──── 인증 (Firebase Auth) ──── */
 async function handleAuthChange(user){

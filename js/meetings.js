@@ -1,5 +1,5 @@
 /* MeetFlow — 회의 분석 (2단계) — 회의 누적·이어붙이기가 여기로 들어온다
-   소유자: 기능 C */
+   담당: ① 회의 입력·분석*/
 
 function updateCC(){
   document.getElementById('char-ct').textContent = document.getElementById('meeting-input').value.length+'자';
