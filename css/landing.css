@@ -119,6 +119,65 @@
   background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-xl);padding:var(--sp-6);
   transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;
 }
+/* 기능 설명 — 클로바노트 스타일 지그재그 레이아웃 */
+.feat-row{
+  display:flex;align-items:center;gap:var(--sp-10);
+  padding:var(--sp-11) 0;
+}
+.feat-row.reverse{flex-direction:row-reverse;}
+.feat-row-text{flex:1;min-width:0;}
+.feat-row-label{
+  font-size:15px;font-weight:var(--fw-semibold);color:var(--pk);
+  margin-bottom:var(--sp-2);
+}
+.feat-row-headline{
+  font-size:34px;font-weight:var(--fw-black);line-height:1.35;
+  letter-spacing:-.6px;margin-bottom:var(--sp-5);
+}
+.feat-row-desc{
+  font-size:16px;line-height:1.9;color:var(--muted);
+}
+.feat-row-visual{
+  flex:1;min-width:0;
+  background:var(--pk-bg);border-radius:var(--r-2xl);
+  padding:var(--sp-8);min-height:320px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+@media (max-width:860px){
+  .feat-row, .feat-row.reverse{flex-direction:column;}
+}
+
+/* PLAN / ARCHIVE 비주얼 — 미니 카드 */
+.frv-card{
+  width:100%;max-width:340px;background:var(--surface);
+  border-radius:var(--r-lg);padding:var(--sp-5);
+}
+.frv-card-hd{font-size:13px;font-weight:var(--fw-bold);margin-bottom:var(--sp-4);}
+.frv-ms-item{
+  display:flex;align-items:center;gap:var(--sp-2);
+  font-size:13px;color:var(--muted);padding:var(--sp-2) 0;
+}
+.frv-ms-item.on{color:var(--text);font-weight:var(--fw-semibold);}
+.frv-ms-dot{width:8px;height:8px;border-radius:50%;background:var(--bd-s);flex-shrink:0;}
+.frv-ms-item.on .frv-ms-dot{background:var(--pk);}
+.frv-arch-row{font-size:13px;color:var(--muted);padding:var(--sp-2) 0;border-bottom:1px solid var(--bd);}
+.frv-arch-row:last-child{border-bottom:none;}
+.frv-arch-row b{color:var(--text);font-weight:var(--fw-semibold);}
+
+/* FLOW 비주얼 — 채팅 로그 + 떠 있는 위젯 */
+.frv-notes{width:100%;max-width:360px;}
+.fr-note{background:var(--surface);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);}
+.fr-note-hd{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);font-size:13px;font-weight:var(--fw-semibold);}
+.fr-note-avatar{width:22px;height:22px;border-radius:50%;background:var(--pk-mid);flex-shrink:0;}
+.fr-note-body{font-size:13px;line-height:1.7;color:var(--text);}
+.fr-note-hl{background:var(--pk-light);padding:1px 3px;border-radius:3px;}
+.fr-float{
+  position:absolute;left:var(--sp-6);bottom:var(--sp-6);
+  background:#14142B;border-radius:var(--r-lg);padding:var(--sp-3) var(--sp-4);
+  color:#fff;box-shadow:0 20px 40px rgba(20,20,43,.25);
+  min-width:180px;
+}
 /* 아직 구현되지 않은 기능 표시 */
 .feat-soon{
   position:absolute;top:var(--sp-4);right:var(--sp-4);
