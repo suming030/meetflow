@@ -8,12 +8,12 @@
 
 | 역할 | 담당 파일 |
 | --- | --- |
-| ① 회의 입력·분석 (STT 포함) + 자료 찾기 | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
+| ① 회의 입력·분석 (STT 포함) + 자료 찾기 — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
 | ② 첫 시작 페이지(랜딩) 전담 | `css/landing.css`, index.html 랜딩 구역 |
 | ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
 | ④ 마일스톤 (온보딩 + 트랙별 틀) | `js/onboarding.js`, `js/milestones.js` |
 | ⑤ 정리·내보내기 | `js/wrapup.js` (프로젝트 마무리 화면 + AI 프롬프트), `js/google.js` (Docs 내보내기·캘린더·Meet 일정) |
-| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / `js/projects.js` (프로젝트 목록·초대) |
+| 공용 (팀장 — **수민**) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / `js/projects.js` (프로젝트 목록·초대) |
 
 `index.html`은 한 파일이라 나눌 수 없어서, 구역마다 `<!-- 담당: … -->` 주석을 달아뒀습니다.
 CSS 로드 순서는 `base → landing → layout → app`입니다. `base.css`의 색·글꼴 토큰은 앱 전체에
