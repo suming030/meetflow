@@ -1,7 +1,6 @@
 /* MeetFlow — 화면 뼈대: 대시보드 틀·사이드바·상단 프로젝트 드롭다운·로그인·트랙 선택
-   담당: ② 디자인 A (뼈대·단순화)
-   원래 css/app.css에 섞여 있었다. 로드 순서는 base → landing → layout → app 이라서
-   대시보드 안쪽 세부(app.css, ③ 디자인 B)가 필요하면 뼈대 위에 덮어쓸 수 있다. */
+   담당: ③ 디자인 — 세부 디테일 (app.css와 같은 담당)
+   원래 css/app.css에 섞여 있었다. 로드 순서는 base → landing → layout → app 이다. */
 
 /* ══════════════════════
    DASHBOARD

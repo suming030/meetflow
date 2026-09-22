@@ -3,27 +3,28 @@
 여러 회의를 이어서 프로젝트 전체 흐름을 붙잡아주는 AI 서비스입니다.
 대학생 팀(공모전·팀플·동아리)이 타겟입니다.
 
-**5인 팀입니다 (2026-09-21~).** 역할별로 파일을 나눠 작업합니다.
+**5인 팀입니다 (2026-09-22~).** 역할별로 파일을 나눠 작업합니다.
 **내 담당 파일이 아니면 고치지 말고 담당자에게 요청하세요.**
 
 | 역할 | 담당 파일 |
 | --- | --- |
 | ① 회의 입력·분석 (STT 포함) | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `functions/`, `storage.rules` |
-| ② 디자인 A — 뼈대·단순화 | `css/base.css`, `css/landing.css`, `css/layout.css`, index.html 상단바·랜딩·로그인·트랙 선택·사이드바 |
-| ③ 디자인 B — 세부 디테일 | `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 대시보드 안쪽 |
+| ② 첫 시작 페이지(랜딩) 전담 | `css/landing.css`, index.html 랜딩 구역 |
+| ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
 | ④ 마일스톤 + 정리 양식 | `js/onboarding.js`, `js/milestones.js`, `js/wrapup.js` (회고 화면 + AI 프롬프트) |
-| ⑤ 구글 연동 + 내 공간 | `js/google.js`, `js/research.js`, `js/projects.js` |
-| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` |
+| ⑤ 미정 | — |
+| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / ⑤가 정해질 때까지 `js/google.js`, `js/research.js`, `js/projects.js` |
 
 `index.html`은 한 파일이라 나눌 수 없어서, 구역마다 `<!-- 담당: … -->` 주석을 달아뒀습니다.
-CSS 로드 순서는 `base → landing → layout → app`이라 ③(app.css)이 ②(layout.css) 위에 덮어쓸 수 있습니다.
+CSS 로드 순서는 `base → landing → layout → app`입니다. `base.css`의 색·글꼴 토큰은 앱 전체에
+영향을 주므로 ③이 관리하고, ②가 바꾸고 싶으면 ③에게 요청합니다.
 
 **둘이 같이 만져야 하는 과제**는 미리 짝을 맞추세요.
 
+- 랜딩에서 쓰는 공통 버튼·색(`base.css`) — ②가 요청, ③이 반영
 - 온보딩 화면 모양 — ④(`onboarding.js`) + ③(스타일)
-- 프로젝트 목록 — ⑤(`projects.js` 기능) + ②(모양)
 - `MF_MODELS`·AI 호출구(index.html 맨 아래) — 공용 + ①
-- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④·⑤도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
+- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
 
 ## ⚠️ 반드시 지킬 것
 
