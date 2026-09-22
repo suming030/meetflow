@@ -5,7 +5,7 @@
 function calcStats(items){
   return {
     total:  items.length,
-    persons:new Set(items.filter(i=>i.assignee&&i.assignee!=='미지정').map(i=>i.assignee)).size,
+    persons:new Set(items.flatMap(assigneesOf)).size,
     dlCt:   items.filter(i=>i.deadline).length,
     done:   items.filter(i=>i.status==='done').length,
     rate:   items.length?Math.round(items.filter(i=>i.status==='done').length/items.length*100):0,
@@ -465,7 +465,7 @@ function renderTaskFlow(){
         return `<div class="flow-node ${nc}">
           <div class="fn-name">${item.task}</div>
           <div class="fn-meta">
-            ${item.assignee&&item.assignee!=='미지정'?`<div class="fn-av ${avCls(item.assignee)}">${item.assignee[0]}</div>`:''}
+            ${assigneesOf(item).map(n=>`<div class="fn-av ${avCls(n)}" title="${esc2(n)}">${n[0]}</div>`).join('')}
             <span class="fn-dl">${item.deadline||'미정'}</span>
             <span class="fn-st ${item.status||'todo'}">${ST.lbl[item.status||'todo']}</span>
           </div>

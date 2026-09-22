@@ -159,8 +159,7 @@ function persistItemField(itemId, patch){
 function ensureAssigneeList(){
   let dl=document.getElementById('ac-assignees');
   if(!dl){ dl=document.createElement('datalist'); dl.id='ac-assignees'; document.body.appendChild(dl); }
-  const names=[...new Set(history.flatMap(m=>(m.items||[]).map(i=>i.assignee)))]
-    .filter(n=>n&&n!=='미지정');
+  const names=[...new Set(history.flatMap(m=>(m.items||[]).flatMap(assigneesOf)))];
   dl.innerHTML='';
   names.forEach(n=>{ const o=document.createElement('option'); o.value=n; dl.appendChild(o); });
   return dl;
@@ -204,12 +203,72 @@ function editItemAssignee(ev, itemId){
   ev.stopPropagation();
   const found=findItemById(itemId);
   if(!found) return;
-  const cur=(found.item.assignee&&found.item.assignee!=='미지정')?found.item.assignee:'';
-  openInlineEdit(ev.currentTarget,'text',cur,'담당자 이름',v=>{
-    /* 비우면 다시 미지정으로 — 코드 전반이 '미지정'을 담당자 없음으로 취급한다 */
-    persistItemField(itemId,{assignee:v.trim()||'미지정'});
+  openAssigneePicker(ev.currentTarget, assigneesOf(found.item), names=>{
+    /* 여러 명은 "지은, 수민"으로 저장한다. 아무도 안 고르면 '미지정' — 코드 전반이 담당자 없음으로 취급한다 */
+    persistItemField(itemId,{assignee:names.length?names.join(', '):'미지정'});
   });
 }
+
+/** 담당자 고르기 — 지난 회의에 나온 이름을 버튼으로 보여주고 여러 명을 고르게 한다.
+    목록에 없는 사람은 아래 칸에 입력해 추가한다. 바깥을 누르거나 Esc면 저장하지 않고 닫는다. */
+function openAssigneePicker(anchor, current, onSave){
+  closeAssigneePicker();
+  const all=[...new Set([...current, ...history.flatMap(m=>(m.items||[]).flatMap(assigneesOf))])];
+  const picked=new Set(current);
+  const box=document.createElement('div');
+  box.id='asg-pick';
+  const r=anchor.getBoundingClientRect();
+  box.style.cssText=`position:fixed;left:${Math.max(8,Math.min(r.left,innerWidth-300))}px;top:${Math.min(r.bottom+6,innerHeight-260)}px;`+
+    'z-index:1200;width:284px;padding:14px;background:var(--surface);border:1px solid var(--bd-s);'+
+    'border-radius:var(--r-md);box-shadow:var(--shadow-pk);';
+  const inpCss='flex:1;min-width:0;padding:6px 10px;border:1.5px solid var(--bd-s);border-radius:var(--r-sm);'+
+    'font-family:inherit;font-size:var(--fs-base);background:var(--surface);color:var(--text);';
+  const render=()=>{
+    box.innerHTML=`
+      <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px;">담당자 <span style="font-weight:400;color:var(--hint);">여러 명 고를 수 있어요</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        ${all.length?all.map((n,i)=>`<button type="button" data-i="${i}" class="bdg ${picked.has(n)?'b-person':'b-nodl'}"
+            style="cursor:pointer;border:none;font-family:inherit;">${picked.has(n)?'✓ ':''}${esc2(n)}</button>`).join('')
+          :'<span style="font-size:var(--fs-sm);color:var(--hint);">아직 나온 이름이 없어요. 아래에 입력하세요.</span>'}
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input id="asg-new" maxlength="20" placeholder="이름 추가" style="${inpCss}">
+        <button type="button" class="btn-ghost" id="asg-add">추가</button>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button type="button" class="btn-ghost" id="asg-cancel">취소</button>
+        <button type="button" class="btn-pk btn-pk-sm" id="asg-save">저장</button>
+      </div>`;
+    box.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
+      const n=all[+b.dataset.i]; picked.has(n)?picked.delete(n):picked.add(n); render();
+    });
+    const add=()=>{
+      const n=box.querySelector('#asg-new').value.replace(/[,，、:\n]/g,'').trim().slice(0,20);
+      if(!n) return;
+      if(!all.includes(n)) all.push(n);
+      picked.add(n); render(); box.querySelector('#asg-new').focus();
+    };
+    box.querySelector('#asg-add').onclick=add;
+    box.querySelector('#asg-new').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } };
+    box.querySelector('#asg-cancel').onclick=closeAssigneePicker;
+    box.querySelector('#asg-save').onclick=()=>{
+      closeAssigneePicker();
+      onSave(all.filter(n=>picked.has(n)));   /* 목록 순서대로 */
+    };
+  };
+  render();
+  document.body.appendChild(box);
+  /* 방금 누른 클릭이 곧바로 '바깥 클릭'으로 잡히지 않도록 다음 틱에 건다 */
+  setTimeout(()=>document.addEventListener('mousedown', pickerOutside), 0);
+  document.addEventListener('keydown', pickerEsc);
+}
+function closeAssigneePicker(){
+  document.getElementById('asg-pick')?.remove();
+  document.removeEventListener('mousedown', pickerOutside);
+  document.removeEventListener('keydown', pickerEsc);
+}
+function pickerOutside(e){ const b=document.getElementById('asg-pick'); if(b&&!b.contains(e.target)) closeAssigneePicker(); }
+function pickerEsc(e){ if(e.key==='Escape') closeAssigneePicker(); }
 
 /** 마감일 배지 클릭 — 날짜 선택기로 고친다. 비우면 '마감일 미정'으로 돌아간다. */
 function editItemDeadline(ev, itemId){

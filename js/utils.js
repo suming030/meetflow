@@ -9,9 +9,20 @@ function ddayHTML(diff){
   if(diff<=7) return `<span class="dl-dday dd-soon">D-${diff}</span>`;
   return       `<span class="dl-dday dd-ok">D-${diff}</span>`;
 }
+/* ──── 담당자 ────
+   한 업무를 여러 명이 맡을 수 있다. 저장은 예전 모양 그대로 문자열 하나("지은, 수민")로 하고,
+   사람 단위로 셀 때는 이 함수로 나눈다. 담당자가 없으면 빈 배열 — '미지정'은 사람이 아니다. */
+function assigneesOf(item){
+  const s=(item&&item.assignee)||'';
+  return [...new Set(s.split(/\s*[,，、]\s*/).map(x=>x.trim()).filter(x=>x&&x!=='미지정'))];
+}
+/** 사람별로 묶는다. 여러 명이 맡은 업무는 각 사람에게 모두 들어간다. */
 function groupBy(items){
   const g={};
-  items.forEach(it=>{ const n=it.assignee||'미지정'; if(!g[n]) g[n]=[]; g[n].push(it); });
+  items.forEach(it=>{
+    const who=assigneesOf(it);
+    (who.length?who:['미지정']).forEach(n=>{ if(!g[n]) g[n]=[]; g[n].push(it); });
+  });
   return g;
 }
 function esc(s){ return encodeURIComponent(s||''); }

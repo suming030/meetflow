@@ -289,8 +289,8 @@ function findSpeakers(text){
 
 /** 이름 후보 — 이 프로젝트의 지난 회의에서 업무를 맡았던 사람들 */
 function knownPeople(){
-  const names=(typeof history!=='undefined'?history:[]).flatMap(m=>(m.items||[]).map(i=>i.assignee));
-  return [...new Set(names)].filter(n=>n&&n!=='미지정');
+  const names=(typeof history!=='undefined'?history:[]).flatMap(m=>(m.items||[]).flatMap(assigneesOf));
+  return [...new Set(names)];
 }
 
 /** 전사가 끝나면 "말한 사람을 알려주세요" 칸을 띄운다. 라벨이 없으면 숨긴다. */
