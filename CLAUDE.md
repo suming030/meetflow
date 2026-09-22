@@ -8,12 +8,12 @@
 
 | 역할 | 담당 파일 |
 | --- | --- |
-| ① 회의 입력·분석 (STT 포함) | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `functions/`, `storage.rules` |
+| ① 회의 입력·분석 (STT 포함) + 자료 찾기 | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
 | ② 첫 시작 페이지(랜딩) 전담 | `css/landing.css`, index.html 랜딩 구역 |
 | ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
-| ④ 마일스톤 + 정리 양식 | `js/onboarding.js`, `js/milestones.js`, `js/wrapup.js` (회고 화면 + AI 프롬프트) |
-| ⑤ 미정 | — |
-| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / ⑤가 정해질 때까지 `js/google.js`, `js/research.js`, `js/projects.js` |
+| ④ 마일스톤 (온보딩 + 트랙별 틀) | `js/onboarding.js`, `js/milestones.js` |
+| ⑤ 정리·내보내기 | `js/wrapup.js` (프로젝트 마무리 화면 + AI 프롬프트), `js/google.js` (Docs 내보내기·캘린더·Meet 일정) |
+| 공용 (팀장) | `js/state.js`, `js/utils.js`, `js/auth.js`, `js/router.js`, `js/main.js`, index.html 맨 아래 Firebase·AI 호출구, `README.md`, `CLAUDE.md` / `js/projects.js` (프로젝트 목록·초대) |
 
 `index.html`은 한 파일이라 나눌 수 없어서, 구역마다 `<!-- 담당: … -->` 주석을 달아뒀습니다.
 CSS 로드 순서는 `base → landing → layout → app`입니다. `base.css`의 색·글꼴 토큰은 앱 전체에
@@ -24,7 +24,9 @@ CSS 로드 순서는 `base → landing → layout → app`입니다. `base.css`�
 - 랜딩에서 쓰는 공통 버튼·색(`base.css`) — ②가 요청, ③이 반영
 - 온보딩 화면 모양 — ④(`onboarding.js`) + ③(스타일)
 - `MF_MODELS`·AI 호출구(index.html 맨 아래) — 공용 + ①
-- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
+- 사이드바 하단 Google Workspace 버튼(Meet 회의 잡기·Docs 내보내기) — ⑤ 기능 + ③ 모양
+- Docs로 내보내는 회의록 내용 — ⑤(`google.js`) + ①(회의 데이터 모양)
+- `geminiRequest`·`aiErrorInfo`(`gemini.js`)는 ④·⑤도 쓰는 공용 도구입니다. 시그니처를 바꾸려면 먼저 공유하세요.
 
 ## ⚠️ 반드시 지킬 것
 

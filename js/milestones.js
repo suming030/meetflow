@@ -1,5 +1,5 @@
 /* MeetFlow — 마일스톤 화면 (온보딩 결과: 트랙별 마일스톤·아젠다)
-   담당: ④ 마일스톤 + 정리 양식
+   담당: ④ 마일스톤
    원래 js/dashboard.js 안에 있었는데, 마일스톤 담당이 대시보드 파일을 건드리지 않도록
    따로 떼어냈다. renderAll()(dashboard.js)과 onboarding.js가 renderMilestones()를 부른다. */
 

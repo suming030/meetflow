@@ -1,6 +1,6 @@
 /* MeetFlow — Gemini 공통 호출·JSON 파싱 + 회의 분석 프롬프트
-   담당: ① 회의 입력·분석. 프로젝트 마무리 프롬프트는 js/wrapup.js(④)로 옮겼다.
-   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩·회고·자료 찾기)도 쓰는 공용 도구다. */
+   담당: ① 회의 입력·분석. 프로젝트 마무리 프롬프트는 js/wrapup.js(⑤)로 옮겼다.
+   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩 ④·회고 ⑤·자료 찾기)도 쓰는 공용 도구다. */
 
 /* AI 호출 실패를 화면에 보여줄 안내로 바꾼다. 원인마다 사용자가 할 일이 달라서
    (기다리기 / 콘솔 설정 고치기 / 그냥 재시도) 구분해준다. */
