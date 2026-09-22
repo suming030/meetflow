@@ -2,18 +2,23 @@
    담당: ① 회의 입력·분석*/
 
 /* ════════════════════════════════
-   녹음 + STT (2단계 — 음성 입력)
+   녹음 + 전사 (음성 입력)
 
-   녹음한 오디오를 Gemini에 그대로 보내 텍스트로 옮긴다.
+   전사 경로가 둘이다.
+   - Gemini 전사 (지금 기본): 오디오를 Gemini에 그대로 보낸다. 화자 구분이 추정이라 부정확하고,
+     요청 크기 상한(약 20MB) 때문에 약 40분까지만 된다.
+   - Cloud Speech-to-Text (화자 분리): 녹음을 Storage에 올리고 Cloud Function(functions/)이
+     batchRecognize로 통째로 전사한다. Blaze 요금제가 필요해 결제 승인을 기다리는 중이다.
+     승인 후 `firebase deploy --only functions,storage` 하고 STT_CLOUD_ENABLED를 true로 켠다.
+     Cloud 전사가 실패하면 Gemini로 대신한다(파일이 작을 때만).
 
-   Cloud Speech-to-Text(화자 분리)를 쓰지 않는 이유:
-   화자 분리는 서비스 계정 인증이 필요해 브라우저에서 직접 호출할 수 없고,
-   Cloud Function + Blaze 요금제가 있어야 한다. 녹음이 1~2분 수준이라
-   그만한 비용을 들일 이유가 없어 Gemini 전사만 쓰기로 했다.
-   (백엔드 코드는 functions/ 에 남아 있으나 현재 사용하지 않는다)
+   전사는 오래 걸릴 수 있어서(1시간 회의 ≈ Gemini 약 4분, Cloud는 실측 전) 다른 화면으로
+   가도 뒤에서 계속되고, 끝나면 알림을 띄운다.
 ════════════════════════════════ */
-const AUDIO_BPS     = 48000;  /* 48kbps opus — 전사 정확도를 위해 여유 있게 */
-const GEMINI_MAX_MB = 15;     /* Gemini 요청 상한 약 20MB, base64 팽창을 감안한 값 */
+const AUDIO_BPS         = 48000;  /* 48kbps opus — 전사 정확도를 위해 여유 있게 */
+const GEMINI_MAX_MB     = 15;     /* Gemini 요청 상한 약 20MB, base64 팽창을 감안한 값 */
+const CLOUD_MAX_MB      = 500;    /* storage.rules의 업로드 상한과 같은 값 */
+const STT_CLOUD_ENABLED = false;  /* 결제·배포 전까지 false — 켜면 Cloud Speech-to-Text로 전사 */
 
 let mediaStream=null, recorder=null, recTick=null;
 let recStartMs=0, recChunks=[], sttBusy=false;
@@ -89,36 +94,82 @@ function setSttBusy(on){
   if(ub) ub.disabled=on;
 }
 
-/* ── 오디오 한 개를 전사해서 입력창에 채운다 ──
-   Gemini에 오디오를 그대로 보내 전사한다. Cloud Speech-to-Text(화자 분리)는
-   Blaze 요금제와 백엔드가 필요한데, 녹음이 1~2분 수준이라 쓰지 않기로 했다.
-   대신 요청 크기 상한(약 20MB, base64 팽창 포함)에 걸리지 않게 길이를 제한한다. */
+/* ── 오디오 한 개를 전사해서 입력창에 채운다 ── */
 async function processAudio(blob, ext, durSec){
   const mb=blob.size/1024/1024;
-  if(mb>GEMINI_MAX_MB){
+  const maxMb=STT_CLOUD_ENABLED?CLOUD_MAX_MB:GEMINI_MAX_MB;
+  if(mb>maxMb){
     setSttStatus('');
-    toast(`녹음이 너무 길어요 (${mb.toFixed(1)}MB). 회의를 나눠서 녹음해 주세요.`,'error');
+    toast(STT_CLOUD_ENABLED
+      ? `녹음 파일이 너무 커요 (${mb.toFixed(0)}MB). ${CLOUD_MAX_MB}MB까지 올릴 수 있어요.`
+      : `녹음이 너무 길어요 (${mb.toFixed(1)}MB). 지금은 약 40분까지 옮길 수 있어요. 나눠서 녹음하거나 텍스트로 붙여넣어 주세요.`,'error');
     return;
   }
   setSttBusy(true);
+  window.addEventListener('beforeunload', warnSttLeave);
   /* 녹음 길이 — 내장 녹음은 넘겨받고, 파일은 메타데이터에서 읽고, 그것도 안 되면
      48kbps 기준으로 크기에서 어림한다 */
   const dur=durSec || await audioDurationSec(blob) || blob.size/6000;
-  const stopProgress=startSttProgress(dur);
+  const speakers=selectedSpeakers();
   try{
-    const text=await transcribeViaGemini(blob);
+    let text, note='';
+    if(STT_CLOUD_ENABLED){
+      try{
+        text=await transcribeViaCloud(blob, ext, dur, speakers);
+      }catch(e){
+        console.error('[MeetFlow] Cloud 전사 실패 — Gemini로 대신', e);
+        if(mb>GEMINI_MAX_MB) throw new Error('화자 구분 전사에 실패했고, 파일이 커서 대신 옮길 수도 없어요. 잠시 후 다시 시도해 주세요.');
+        note=' (화자 구분 전사에 실패해 일반 전사로 대신했어요)';
+        text=await withSttProgress(dur, estimateSttSec(dur), ()=>transcribeViaGemini(blob, speakers));
+      }
+    }else{
+      text=await withSttProgress(dur, estimateSttSec(dur), ()=>transcribeViaGemini(blob, speakers));
+    }
     appendTranscript(text);
-    stopProgress(true);
-    setSttStatus('✅ 전사가 끝났어요 — 아래 텍스트를 확인하고 수정하세요.');
-    toast('전사가 완료됐어요! 🎉','success');
+    setSttStatus('✅ 전사가 끝났어요'+note+' — 아래 텍스트를 확인하고 수정하세요.');
+    notifySttDone(true);
   }catch(e){
     console.error('[MeetFlow] 전사 실패', e);
-    stopProgress(false);
     setSttStatus('');
-    toast('전사에 실패했어요: '+(e.message||e),'error');
+    notifySttDone(false, e.message||String(e));
   }finally{
     setSttBusy(false);
+    window.removeEventListener('beforeunload', warnSttLeave);
   }
+}
+
+/** 전사 중에 탭을 닫거나 새로고침하면 전사가 끊긴다 — 브라우저 확인 창을 띄운다 */
+function warnSttLeave(e){ e.preventDefault(); e.returnValue=''; }
+
+/** 참석자 수 선택값 (클로바노트처럼 알려주면 화자 구분이 정확해진다). 자동이면 null */
+function selectedSpeakers(){
+  const n=parseInt((document.getElementById('stt-speakers')||{}).value,10);
+  return n>=2&&n<=10?n:null;
+}
+
+/** 전사가 끝났을 때 — 분석 화면에 있으면 토스트, 다른 화면에 가 있으면 돌아갈 버튼이 있는 알림 */
+function notifySttDone(ok, errMsg){
+  const onUpload=document.getElementById('page-upload')?.classList.contains('active');
+  if(onUpload){
+    if(ok) toast('전사가 완료됐어요! 🎉','success');
+    else   toast('전사에 실패했어요: '+errMsg,'error');
+    return;
+  }
+  document.getElementById('stt-done-notice')?.remove();
+  const el=document.createElement('div');
+  el.id='stt-done-notice';
+  el.setAttribute('role','status');
+  el.style.cssText='position:fixed;right:24px;bottom:24px;z-index:1100;display:flex;align-items:center;gap:12px;'+
+    'padding:14px 16px;background:var(--surface);border:1px solid var(--bd-s);border-radius:var(--r-md);'+
+    'box-shadow:var(--shadow-pk);font-size:var(--fs-base);max-width:380px;';
+  el.innerHTML=`
+    <span style="font-size:22px;">${ok?'✅':'⚠️'}</span>
+    <span style="flex:1;line-height:1.5;">${ok?'회의 녹음 전사가 끝났어요.':'회의 녹음 전사에 실패했어요.'}</span>
+    <button class="btn-pk btn-pk-sm" id="stt-done-go">${ok?'분석하러 가기':'확인하기'}</button>
+    <button class="ico-btn" id="stt-done-x" title="닫기" style="font-size:16px;">✕</button>`;
+  document.body.appendChild(el);
+  el.querySelector('#stt-done-go').onclick=()=>{ el.remove(); gp('upload'); if(!ok) toast('전사에 실패했어요: '+errMsg,'error'); };
+  el.querySelector('#stt-done-x').onclick=()=>el.remove();
 }
 
 /* ── 전사 진행 막대 ──
@@ -131,10 +182,22 @@ function fmtMinSec(sec){
   const s=Math.max(0,Math.round(sec));
   return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 }
+/* Cloud Speech-to-Text 예상 시간 — 아직 실측 전이다. 공식 문서의 일반 수치("평균적으로 녹음 길이의
+   절반")로 잡았다. 결제 승인 후 실제 녹음으로 재서 고칠 것. */
+function estimateCloudSttSec(durSec){ return Math.round(20 + durSec*0.5); }
+
+/** 작업(job)이 끝날 때까지 진행 막대를 움직인다 */
+async function withSttProgress(durSec, estSec, job, label){
+  const stop=startSttProgress(durSec, estSec, label);
+  try{ const r=await job(); stop(true); return r; }
+  catch(e){ stop(false); throw e; }
+}
+
 /** 막대를 움직이기 시작하고, 멈추는 함수를 돌려준다 — stop(true)면 100%로 채우고 사라진다 */
-function startSttProgress(durSec){
+function startSttProgress(durSec, estSec, label){
   const wrap=document.getElementById('stt-prog'), fill=document.getElementById('stt-prog-fill');
-  const est=estimateSttSec(durSec||0), t0=Date.now();
+  const est=estSec||estimateSttSec(durSec||0), t0=Date.now();
+  const what=label||'음성을 텍스트로 옮기는 중이에요';
   if(wrap) wrap.hidden=false;
   if(fill) fill.style.width='0%';
   const tick=()=>{
@@ -142,7 +205,7 @@ function startSttProgress(durSec){
     const p=e<est ? 90*e/est : 90+8*(1-Math.exp(-(e-est)/est));
     if(fill) fill.style.width=p.toFixed(1)+'%';
     setSttStatus(e<est
-      ? `🗣️ 음성을 텍스트로 옮기는 중이에요 · ${fmtMinSec(e)} / 약 ${fmtMinSec(est)}`
+      ? `🗣️ ${what} · ${fmtMinSec(e)} / 약 ${fmtMinSec(est)} — 다른 화면으로 가도 계속 진행돼요`
       : `🗣️ 예상보다 오래 걸리고 있어요 · ${fmtMinSec(e)} — AI 서버가 붐빌 수 있어요. 조금만 더 기다려 주세요.`);
   };
   tick();
@@ -167,10 +230,26 @@ function audioDurationSec(blob){
   });
 }
 
-async function transcribeViaGemini(blob){
+async function transcribeViaGemini(blob, speakers){
   if(typeof window.mfTranscribeAudio!=='function') throw new Error('AI 모듈을 불러오는 중이에요.');
   const b64=await blobToBase64(blob);
-  return await window.mfTranscribeAudio(b64, blob.type||'audio/webm');
+  return await window.mfTranscribeAudio(b64, blob.type||'audio/webm', {speakers});
+}
+
+/** Cloud Speech-to-Text — 올리기(실제 진행률) → 함수 호출(예상 시간 막대) */
+async function transcribeViaCloud(blob, ext, durSec, speakers){
+  if(typeof window.mfUploadAudio!=='function'||typeof window.mfTranscribeCloud!=='function'){
+    throw new Error('Firebase 모듈을 불러오는 중이에요.');
+  }
+  const wrap=document.getElementById('stt-prog'), fill=document.getElementById('stt-prog-fill');
+  if(wrap) wrap.hidden=false;
+  const gcsUri=await window.mfUploadAudio(blob, ext, p=>{
+    if(fill) fill.style.width=(p*100).toFixed(0)+'%';
+    setSttStatus(`⬆️ 녹음을 올리는 중이에요 · ${Math.round(p*100)}%`);
+  });
+  if(fill) fill.style.width='0%';
+  return await withSttProgress(durSec, estimateCloudSttSec(durSec),
+    ()=>window.mfTranscribeCloud(gcsUri, {speakers}), '말한 사람을 나눠가며 옮기는 중이에요');
 }
 
 function blobToBase64(blob){

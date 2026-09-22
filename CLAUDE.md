@@ -161,7 +161,11 @@ PR을 올리면 **다른 한 명이 보고 머지**합니다.
   서비스 계정 인증이 필요해 Cloud Function과 **Blaze 요금제**가 있어야 하는데, 결제 가입이
   구글 심사에 걸려 막혀 있습니다. `functions/`(chirp_3 화자 분리)와 `storage.rules`는
   만들어져 있고 배포만 남았습니다.
-  - 전환 전까지는 Gemini 전사가 그대로 쓰입니다(화자 구분 없음, 48kbps·15MB·약 43분).
+  - 코드는 준비돼 있고 `js/stt.js`의 **`STT_CLOUD_ENABLED` 스위치가 꺼져 있습니다.** 결제 승인 후
+    `firebase deploy --only functions,storage` → 스위치를 `true`로 → **실제 10분 녹음으로 속도부터 재기**
+    (진행 막대의 Cloud 예상 시간 `estimateCloudSttSec`은 공식 문서 수치로 잡은 임시값입니다).
+  - Cloud 전사가 실패하면 Gemini로 대신합니다(15MB 이하일 때만). 함수는 전사가 끝나면 **녹음 파일을 지웁니다.**
+  - 전환 전까지는 Gemini 전사가 그대로 쓰입니다(화자 구분은 추정, 48kbps·15MB·약 40분).
   - **회의를 조각내 전사하지 마세요.** 화자 번호가 요청 단위로 매겨져서 나눠 보내면
     화자가 뒤섞입니다. 회의 전체를 한 번에 `batchRecognize`로 넘깁니다.
   - `chirp_3`는 `eu` 로케이션을 씁니다. 오디오가 EU로 전송된다는 뜻이라,

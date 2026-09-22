@@ -10,7 +10,17 @@
 // 로드되므로, https만 직접 import한다.
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const speech = require("@google-cloud/speech");
+const { initializeApp } = require("firebase-admin/app");
+const { getStorage } = require("firebase-admin/storage");
 const { extractTranscript } = require("./transcript");
+
+initializeApp();
+
+/** 이 프로젝트의 기본 Storage 버킷 — 다른 버킷의 파일은 받지 않는다 */
+function defaultBucket() {
+  try { return JSON.parse(process.env.FIREBASE_CONFIG || "{}").storageBucket || null; }
+  catch (_) { return null; }
+}
 
 /** 한국어 화자 분리는 chirp_3 모델에서만 지원되며, 문서상 eu 로케이션에 있다.
  *  리전을 옮겨야 하면 이 값만 바꾸면 된다. */
@@ -39,18 +49,28 @@ exports.transcribeMeeting = onCall(
     }
 
     const gcsUri = request.data && request.data.gcsUri;
-    if (!gcsUri || !/^gs:\/\/.+/.test(gcsUri)) {
+    const m = typeof gcsUri === "string" && gcsUri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+    if (!m) {
       throw new HttpsError("invalid-argument", "오디오 파일 경로(gcsUri)가 올바르지 않아요.");
     }
-    // 남의 파일을 전사시키지 못하도록 업로드 경로에 uid를 강제한다.
-    if (!gcsUri.includes(`/meetings/${request.auth.uid}/`)) {
+    const [, bucketName, objectPath] = m;
+    // 남의 파일을 전사하거나 지우지 못하도록 — 이 프로젝트 버킷의 meetings/<내 uid>/ 아래만 받는다.
+    // (전사가 끝나면 파일을 지우므로 예전의 includes() 검사보다 엄격하게 본다)
+    const bucket = defaultBucket();
+    if ((bucket && bucketName !== bucket) ||
+        !objectPath.startsWith(`meetings/${request.auth.uid}/`) || objectPath.includes("..")) {
       throw new HttpsError("permission-denied", "본인이 업로드한 파일만 전사할 수 있어요.");
     }
 
     const projectId = process.env.GCLOUD_PROJECT;
     const recognizer = `projects/${projectId}/locations/${STT_LOCATION}/recognizers/_`;
 
-    const maxSpeakers = Math.min(Math.max(Number(request.data.maxSpeakers) || 6, 2), 10);
+    // 참석자 수를 알려주면(클로바노트처럼) 화자 수를 그 수로 고정해 더 정확히 나눈다.
+    // 모르면 2~6명 사이에서 알아서 찾는다.
+    const exact = Number(request.data.speakers);
+    const known = Number.isInteger(exact) && exact >= 2 && exact <= 10;
+    const minSpeakers = known ? exact : 2;
+    const maxSpeakers = known ? exact : 6;
 
     try {
       const [operation] = await sttClient().batchRecognize({
@@ -63,7 +83,7 @@ exports.transcribeMeeting = onCall(
             enableAutomaticPunctuation: true,
             enableWordTimeOffsets: true,
             diarizationConfig: {
-              minSpeakerCount: 2,
+              minSpeakerCount: minSpeakers,
               maxSpeakerCount: maxSpeakers,
             },
           },
@@ -83,6 +103,14 @@ exports.transcribeMeeting = onCall(
       if (err instanceof HttpsError) throw err;
       console.error("[MeetFlow] STT 오류", err);
       throw new HttpsError("internal", err.message || "전사 중 오류가 발생했어요.");
+    } finally {
+      // 회의 녹음은 전사가 끝나면(실패해도) 지운다 — "음성 파일은 저장하지 않는다"를 지키기 위해.
+      // 다시 전사하려면 사용자가 다시 올린다. 삭제 실패는 전사 결과에 영향을 주지 않게 기록만 한다.
+      try {
+        await getStorage().bucket(bucketName).file(objectPath).delete({ ignoreNotFound: true });
+      } catch (e) {
+        console.error("[MeetFlow] 녹음 파일 삭제 실패", objectPath, e);
+      }
     }
   }
 );
