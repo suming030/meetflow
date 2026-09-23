@@ -33,7 +33,7 @@ function renderTrackSwitcher(){
 function changeProjectTrack(t){
   if(!currentProject||currentProject.track===t) return;
   if(currentProject.onboarding&&!confirm('유형을 바꾸면 기존 온보딩 결과가 삭제돼요. 계속할까요?')) return;
-  persistCurrentProject({track:t, onboarding:null, onboardStatus:'pending'});
+  persistCurrentProject({track:t, onboarding:null, milestonePlan:null, onboardStatus:'pending'});
   renderProjectBadge();
   renderProjectsGallery();
   renderAll();
@@ -88,7 +88,8 @@ function clubCadenceHTML(){
       </div>
     </div>`;
 }
-function onboardFieldsHTML(t){
+/* 이전 저장 결과를 읽을 때의 참고용 UI 규격. 새 온보딩은 아래 MVP 1차 함수를 사용한다. */
+function legacyOnboardFieldsHTML(t){
   if(t==='team') return [
     docFieldHTML('team-syllabus','📘 강의계획서','주차별 진도, 발표일, 제출 마감일이 담긴 강의계획서 내용을 붙여넣으세요.'),
     docFieldHTML('team-brief','📋 과제 안내문','과제 요구사항, 제출 형식, 평가 배점표가 있다면 함께 붙여넣으세요.'),
@@ -148,7 +149,7 @@ async function extractPdfText(file){
   return {text, pages:pdf.numPages};
 }
 
-function collectOnboardInputs(t){
+function legacyCollectOnboardInputs(t){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
   if(t==='team') return { syllabus:val('team-syllabus-ta'), brief:val('team-brief-ta'), members:val('team-members-ta') };
   if(t==='contest') return { guidelines:val('contest-guidelines-ta'), rubric:val('contest-rubric-ta'), pastWinners:val('contest-pastwinners-ta') };
@@ -162,7 +163,7 @@ function collectOnboardInputs(t){
   return {};
 }
 /* 개별 항목은 모두 선택 사항 — 분석할 내용이 하나도 없을 때만 막는다 */
-function onboardMissingField(t,inp){
+function legacyOnboardMissingField(t,inp){
   const texts = t==='club'
     ? [inp.history, inp.goals, inp.budget]
     : Object.values(inp);
@@ -186,15 +187,8 @@ async function runOnboarding(){
 
   try{
     const result=await callGeminiOnboard(t,inputs);
-    if(t==='club'){
-      result.recurringMeeting={
-        dayOfWeek:Number(inputs.weekday),
-        startDate:inputs.startDate,
-        weeksCount:Number(inputs.weeks)||15,
-        notes:(result.recurringMeeting&&result.recurringMeeting.notes)||''
-      };
-    }
-    persistCurrentProject({onboardStatus:'done', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}});
+    const milestonePlan=onboardMakePlan(t,inputs,result);
+    persistCurrentProject({onboardStatus:'done', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}, milestonePlan});
     /* 탭 전환(sdt)은 클래스만 바꾸고 다시 그리지 않는다. 여기서 마일스톤을 새로 그려두지 않으면
        대시보드로 갔을 때 "아직 온보딩을 완료하지 않았어요" 화면이 그대로 남는다.
        (skipOnboarding()은 원래부터 renderMilestones()를 부르고 있었다) */
@@ -227,7 +221,7 @@ async function callGeminiOnboard(track,inputs){
   const today=new Date().toISOString().split('T')[0];
   return await geminiRequest(onboardPrompt(track,inputs,today), onboardSchema(track), 8192);
 }
-function onboardPrompt(t,inputs,today){
+function legacyOnboardPrompt(t,inputs,today){
   if(t==='team') return `당신은 팀 프로젝트 온보딩을 돕는 AI입니다. 아래 문서를 분석해서 마일스톤·역할·배점·1차 회의 아젠다를 JSON으로 설계하세요.
 
 [강의계획서]
@@ -312,7 +306,7 @@ ${inputs.budget||'(제공되지 않음)'}
 
   return '';
 }
-function onboardSchema(t){
+function legacyOnboardSchema(t){
   if(t==='team') return {
     type:'object',
     properties:{
@@ -367,4 +361,106 @@ function onboardSchema(t){
     required:['recurringMeeting','eventMilestones','goalMilestones','budgetChecklist','firstMeetingAgenda']
   };
   return {type:'object',properties:{}};
+}
+function onboardPlanId(kind){
+  if(typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function') return `mp_${kind}_${crypto.randomUUID()}`;
+  return `mp_${kind}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,10)}`;
+}
+function onboardNormalizeDecisionStatus(status){ return ['undecided','decided','deferred'].includes(status)?status:'undecided'; }
+function onboardMakePlan(track,inputs,result){
+  const now=new Date().toISOString();
+  const uid=kind=>onboardPlanId(kind);
+  const s={requirements:[],rubrics:[],goals:[],deliverables:[],milestones:[],tasks:[],agendaThreads:[],firstMeetingAgenda:Array.isArray(result.firstMeetingAgenda)?result.firstMeetingAgenda:[],trackData:{}};
+  const task=(x,mid)=>({id:uid('task'),milestoneId:mid,title:x.title,assignee:x.assignee||null,dueDate:x.dueDate||null,status:'todo',definitionOfDone:x.definitionOfDone||'',needsDecomposition:!!x.needsDecomposition});
+  if(track==='club'){
+    (Array.isArray(result.agendaThreads)?result.agendaThreads:[]).forEach(x=>{
+      const isDecision=x.mode==='decision';
+      const th={id:uid('thread'),title:x.title,agendaType:x.agendaType,mode:isDecision?'decision':'delivery',targetDate:x.targetDate||null,assignees:Array.isArray(x.assignees)?x.assignees:[],status:isDecision?onboardNormalizeDecisionStatus(x.status):(x.status||'active'),decision:isDecision?{result:null,deferredReason:null}:null,milestones:[],tasks:[]};
+      if(th.mode==='delivery') (Array.isArray(x.milestones)?x.milestones:[]).forEach(m=>{
+        const mid=uid('milestone'),mo={id:mid,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||th.targetDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[]};
+        (Array.isArray(m.tasks)?m.tasks:[]).forEach(a=>{const z=task(a,mid);mo.taskIds.push(z.id);th.tasks.push(z);});
+        th.milestones.push(mo);
+      });
+      s.agendaThreads.push(th);
+    });
+  }else{
+    const didByKey={}, didsByLegacyTitle={};
+    (Array.isArray(result.goals)?result.goals:[]).forEach((g,i)=>{
+      const gid=uid('goal'),goal={id:gid,title:g.title,deliverableIds:[]};
+      s.goals.push(goal);
+      (Array.isArray(g.deliverables)?g.deliverables:[]).forEach((d,j)=>{
+        const did=uid('deliverable'),baseKey=String(d.refKey||`g${i + 1}-d${j + 1}`);
+        let refKey=baseKey, suffix=2;
+        while(didByKey[refKey]) refKey=`${baseKey}-${suffix++}`;
+        const del={id:did,refKey,goalId:gid,title:d.title,format:d.format||'',dueDate:d.dueDate||inputs.finalDeadline||null,requirementIds:[],rubricIds:[],milestoneIds:[]};
+        didByKey[refKey]=did;
+        (didsByLegacyTitle[d.title]||(didsByLegacyTitle[d.title]=[])).push(did);
+        goal.deliverableIds.push(did);s.deliverables.push(del);
+        (Array.isArray(d.milestones)?d.milestones:[]).forEach(m=>{
+          const mid=uid('milestone'),mo={id:mid,deliverableId:did,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||del.dueDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[]};
+          (Array.isArray(m.tasks)?m.tasks:[]).forEach(a=>{const z=task(a,mid);mo.taskIds.push(z.id);s.tasks.push(z);});
+          del.milestoneIds.push(mid);s.milestones.push(mo);
+        });
+      });
+    });
+    const linkedIds=entry=>{
+      const keys=Array.isArray(entry.relatedDeliverableKeys)?entry.relatedDeliverableKeys:[];
+      if(keys.length) return keys.map(key=>didByKey[key]).filter(Boolean);
+      return (Array.isArray(entry.relatedDeliverables)?entry.relatedDeliverables:[]).map(title=>{
+        const matches=didsByLegacyTitle[title]||[];
+        return matches.length===1?matches[0]:null;
+      }).filter(Boolean);
+    };
+    (Array.isArray(result.requirements)?result.requirements:[]).forEach(r=>{
+      const relatedDeliverableIds=linkedIds(r),item={id:uid('requirement'),title:r.title,acceptanceCriteria:Array.isArray(r.acceptanceCriteria)?r.acceptanceCriteria:[],relatedDeliverableIds};
+      s.requirements.push(item);relatedDeliverableIds.forEach(did=>{const del=s.deliverables.find(d=>d.id===did);if(del)del.requirementIds.push(item.id);});
+    });
+    (Array.isArray(result.rubric)?result.rubric:[]).forEach(r=>{
+      const relatedDeliverableIds=linkedIds(r),item={id:uid('rubric'),title:r.category,weight:r.weight||null,relatedDeliverableIds};
+      s.rubrics.push(item);relatedDeliverableIds.forEach(did=>{const del=s.deliverables.find(d=>d.id===did);if(del)del.rubricIds.push(item.id);});
+    });
+    s.trackData=track==='contest'?{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,contestType:inputs.contestType,profile:result.profile||{emphasis:onboardBuildProfile(inputs.contestType)}}:{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,midDeadline:inputs.midDeadline||null};
+  }
+  return {schemaVersion:1,track,status:'active',createdAt:now,updatedAt:now,currentVersion:1,baseline:{version:1,approvedAt:now,snapshot:s},current:{version:1,source:'baseline',snapshot:null,taskState:{},decisionState:{},validationState:{requirements:{},rubrics:{}}},links:[],pendingReplan:null,changeLog:[]};
+}
+
+/* ──── MVP 1차 입력·생성 구조 (아래 선언이 구형 온보딩 함수를 대체한다) ──── */
+function onboardDateInput(id,label){ return `<div class="up-panel"><div class="up-panel-ttl">${label}</div><input class="m-inp" type="date" id="${id}" style="max-width:240px;margin-bottom:0;"></div>`; }
+function onboardClubThreadHTML(i){ return `<div class="up-panel" data-thread="${i}" style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;gap:10px;"><div class="up-panel-ttl">Agenda Thread ${i+1}</div><button class="btn-ghost" type="button" onclick="onboardRemoveClubThread(${i})">삭제</button></div><input class="m-inp" data-f="title" placeholder="안건명" style="margin-bottom:8px;"><textarea class="textarea" data-f="description" rows="2" placeholder="안건 설명"></textarea><div class="g2"><select class="m-inp" data-f="agendaType"><option value="new_event">신규 기획 행사형</option><option value="recurring_event">반복 행사형</option><option value="content">콘텐츠 제작형</option><option value="outreach">섭외/매칭형</option><option value="operations_decision">운영/의사결정형</option></select><input class="m-inp" data-f="targetDate" type="date" placeholder="목표 날짜"></div><input class="m-inp" data-f="assignees" placeholder="담당자 (쉼표로 구분)" style="margin-bottom:0;"></div>`; }
+function onboardAddClubThread(){ const box=document.getElementById('club-thread-list'); if(box) box.insertAdjacentHTML('beforeend',onboardClubThreadHTML(box.children.length)); }
+function onboardRemoveClubThread(i){ const el=document.querySelector(`#club-thread-list [data-thread="${i}"]`); if(el) el.remove(); document.querySelectorAll('#club-thread-list [data-thread]').forEach((x,n)=>{x.dataset.thread=n;x.querySelector('.up-panel-ttl').textContent=`Agenda Thread ${n+1}`;}); }
+function onboardFieldsHTML(t){
+  if(t==='team') return [
+    `<div class="up-panel"><div class="up-panel-ttl">📚 과제 정보</div><input id="team-name" class="m-inp" placeholder="과제명" style="margin-bottom:0;"></div>`,
+    docFieldHTML('team-brief','📋 과제 요구사항 / 설명','필수 요구사항, 제약, 제출 조건을 붙여넣으세요.'),
+    docFieldHTML('team-deliverables','📦 제출물','예) 보고서 PDF, 발표 PPT, 시연 영상',{withPdf:false,rows:3}),
+    onboardDateInput('team-deadline','📅 최종 마감일'), onboardDateInput('team-mid-deadline','🗓️ 중간 마감일 (선택)'),
+    docFieldHTML('team-rubric','📊 Rubric / 평가기준','배점표와 평가 항목',{optional:true}), docFieldHTML('team-members','👥 팀원','예) 지은(기획), 수민(개발)',{optional:true,withPdf:false,rows:3})].join('');
+  if(t==='contest') return [
+    `<div class="up-panel"><div class="up-panel-ttl">🏆 공모전 정보</div><input id="contest-name" class="m-inp" placeholder="공모전명"><select id="contest-type" class="m-inp" style="margin-bottom:0;"><option value="idea">아이디어/기획</option><option value="data_ai">데이터분석/AI</option><option value="marketing">마케팅/콘텐츠</option><option value="startup_bm">창업/BM</option><option value="hackathon">개발/해커톤</option><option value="design">디자인</option></select></div>`,
+    docFieldHTML('contest-guidelines','📢 공모전 요강','자격요건, 제출 규격, 마감일, 제출 절차'),docFieldHTML('contest-deliverables','📦 제출물','예) 기획서 PDF, 발표 영상, 프로토타입',{withPdf:false,rows:3}),onboardDateInput('contest-deadline','📅 최종 마감일'),docFieldHTML('contest-rubric','📊 심사기준','배점표와 평가 항목'),docFieldHTML('contest-members','👥 팀원','예) 지은(기획), 수민(개발)',{optional:true,withPdf:false,rows:3})].join('');
+  return `<div class="up-panel"><div class="up-panel-ttl">🧵 Agenda Thread</div><p style="font-size:12px;color:var(--muted);">동아리 전체가 아니라, 병렬 안건을 각각 관리합니다.</p><div id="club-thread-list">${onboardClubThreadHTML(0)}</div><button class="btn-ghost" type="button" style="margin-top:10px;" onclick="onboardAddClubThread()">＋ 안건 추가</button></div>`;
+}
+function collectOnboardInputs(t){
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  if(t==='team') return {name:v('team-name'),requirements:v('team-brief-ta'),deliverables:v('team-deliverables-ta'),finalDeadline:v('team-deadline'),midDeadline:v('team-mid-deadline'),rubric:v('team-rubric-ta'),members:v('team-members-ta')};
+  if(t==='contest') return {name:v('contest-name'),guidelines:v('contest-guidelines-ta'),deliverables:v('contest-deliverables-ta'),finalDeadline:v('contest-deadline'),rubric:v('contest-rubric-ta'),contestType:v('contest-type')||'idea',members:v('contest-members-ta')};
+  return {threads:[...document.querySelectorAll('#club-thread-list [data-thread]')].map(el=>({title:el.querySelector('[data-f="title"]').value.trim(),description:el.querySelector('[data-f="description"]').value.trim(),agendaType:el.querySelector('[data-f="agendaType"]').value,targetDate:el.querySelector('[data-f="targetDate"]').value,assignees:el.querySelector('[data-f="assignees"]').value.split(',').map(x=>x.trim()).filter(Boolean)})).filter(x=>x.title)};
+}
+function onboardMissingField(t,input){ if(t==='club') return input.threads.length?'': '최소 한 개의 Agenda Thread를 입력해주세요.'; return (t==='team'?input.requirements||input.deliverables:input.guidelines||input.deliverables)?null:'최소 한 가지 핵심 정보를 입력해주세요.'; }
+function onboardBuildProfile(type){ return {idea:['문제 정의','차별성','공모전 의도 부합','논리 검증','실행 가능성'],data_ai:['데이터 품질','방법론 선정 근거','재현성','기술 검증','결과 해석'],marketing:['타깃','채널','핵심 메시지','실행안','성과 지표'],startup_bm:['문제/고객 검증','가치제안','경쟁 분석','수익구조','시장 검증','Q&A 준비'],hackathon:['구현 범위','MVP','핵심 기능','테스트','데모','데모 백업'],design:['요구사항 해석','Concept','Draft/Feedback','Refinement','제출 규격','최종 완성도']}[type]||[]; }
+function onboardPrompt(t,i,today){
+  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 기본 계층은 Goal → Deliverable → Milestone → Task입니다. Requirement와 Rubric은 이 계층의 부모가 아니라 관련 Deliverable 또는 Milestone의 검수 기준입니다. 각 Deliverable에는 응답 안에서 고유한 refKey를 부여하고, Requirement/Rubric의 relatedDeliverableKeys에는 제목이 아닌 그 refKey만 넣으세요. 마감일/목표일에서 역산하고, '자료조사·PPT 만들기'처럼 큰 업무는 담당자가 완료 확인할 수 있는 Task로 나누세요.`;
+  if(t==='team') return `대학 팀플 초기 계획을 JSON으로 만드세요. 과제명:${i.name}\nRequirement:${i.requirements}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n중간 마감:${i.midDeadline||'없음'}\nRubric:${i.rubric||'없음'}\n팀원:${i.members||'없음'}\n${rules}`;
+  if(t==='contest') return `공모전 초기 계획을 JSON으로 만드세요. 공모전명:${i.name}\n요강:${i.guidelines}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n심사기준:${i.rubric}\n팀원:${i.members||'없음'}\n유형:${i.contestType}, 강조 Profile:${onboardBuildProfile(i.contestType).join(', ')}\n${rules}\nProfile은 고정 템플릿이 아니며, 실제 요강과 심사기준이 항상 우선입니다. 필요한 milestone에 checkpoint(완료 지점이 아닌 검증 기준)를 넣으세요.`;
+  return `동아리 Agenda Thread 초기 계획을 JSON으로 만드세요. 입력:${JSON.stringify(i.threads)}\n${rules}\nnew_event, recurring_event, content, outreach는 mode:'delivery'와 각 Thread 내부 milestones/tasks를 만드세요. operations_decision은 mode:'decision', status:undecided/decided/deferred만 두고 milestones/tasks를 만들지 마세요.`;
+}
+function onboardTaskSchema(){return {type:'object',properties:{title:{type:'string'},assignee:{type:'string',nullable:true},dueDate:{type:'string',nullable:true},definitionOfDone:{type:'string'},needsDecomposition:{type:'boolean'}},required:['title','definitionOfDone','needsDecomposition']};}
+function onboardMilestoneSchema(){return {type:'object',properties:{title:{type:'string'},kind:{type:'string'},dueDate:{type:'string',nullable:true},checkpoints:{type:'array',items:{type:'object',properties:{title:{type:'string'},focus:{type:'string'},criteria:{type:'array',items:{type:'string'}}},required:['title','criteria']}},tasks:{type:'array',items:onboardTaskSchema()}},required:['title','tasks']};}
+function onboardSchema(t){
+  if(t==='club') return {type:'object',properties:{agendaThreads:{type:'array',items:{type:'object',properties:{title:{type:'string'},agendaType:{type:'string'},mode:{type:'string'},targetDate:{type:'string',nullable:true},assignees:{type:'array',items:{type:'string'}},status:{type:'string'},milestones:{type:'array',items:onboardMilestoneSchema()}},required:['title','agendaType','mode','status','milestones']}},firstMeetingAgenda:{type:'array',items:{type:'string'}}},required:['agendaThreads','firstMeetingAgenda']};
+  const criterionSchema={type:'object',properties:{title:{type:'string'},acceptanceCriteria:{type:'array',items:{type:'string'}},relatedDeliverableKeys:{type:'array',items:{type:'string'}}},required:['title','acceptanceCriteria','relatedDeliverableKeys']};
+  const rubricSchema={type:'object',properties:{category:{type:'string'},weight:{type:'number',nullable:true},relatedDeliverableKeys:{type:'array',items:{type:'string'}}},required:['category','relatedDeliverableKeys']};
+  const deliverableSchema={type:'object',properties:{refKey:{type:'string'},title:{type:'string'},format:{type:'string'},dueDate:{type:'string',nullable:true},milestones:{type:'array',items:onboardMilestoneSchema()}},required:['refKey','title','milestones']};
+  return {type:'object',properties:{requirements:{type:'array',items:criterionSchema},rubric:{type:'array',items:rubricSchema},goals:{type:'array',items:{type:'object',properties:{title:{type:'string'},deliverables:{type:'array',items:deliverableSchema}},required:['title','deliverables']}},profile:{type:'object',properties:{emphasis:{type:'array',items:{type:'string'}}}},firstMeetingAgenda:{type:'array',items:{type:'string'}}},required:['requirements','rubric','goals','firstMeetingAgenda']};
 }
