@@ -58,56 +58,74 @@
   </div>
 
     <!-- 제품 미리보기 -->
-    <div class="hero-preview">
-      <div class="hp-bar"></div>
-      <div class="hp-chrome">
-        <div class="hp-dot" style="background:#ff5f57;"></div>
-        <div class="hp-dot" style="background:#febc2e;"></div>
-        <div class="hp-dot" style="background:#28c840;"></div>
-        <div class="hp-url">meetflow-ai.app/dashboard</div>
+<div class="hero-preview">
+  <div class="hp-bar"></div>
+  <div class="hp-chrome">
+    <div class="hp-dot" style="background:#ff5f57;"></div>
+    <div class="hp-dot" style="background:#febc2e;"></div>
+    <div class="hp-dot" style="background:#28c840;"></div>
+    <div class="hp-url">meetflow-ai.app/dashboard</div>
+  </div>
+  <div class="hpv-body">
+    <div class="hpv-sidebar">
+      <div class="hpv-sb-logo"><span class="hpv-sb-ico"></span>MeetFlow</div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+        개요
       </div>
-      <div class="hp-body">
-        <div class="hp-sidebar">
-          <div class="hp-sb-logo">
-            <div class="hp-sb-ico">💜</div>
-            <span style="font-size:11px;font-weight:800;">MeetFlow</span>
-          </div>
-          <div class="hp-sb-item">📊 개요</div>
-          <div class="hp-sb-item">🗂️ 업무 ▸</div>
-          <div class="hp-sb-item a">🕒 회의 타임라인</div>
-          <div class="hp-sb-item">📋 브리핑 ▸</div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+        업무
+      </div>
+      <div class="hpv-sb-item on">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        회의 타임라인
+      </div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        브리핑
+      </div>
+    </div>
+
+    <div class="hpv-main">
+      <div class="hpv-title">3차 회의 · UX 리서치 팀플</div>
+      <div class="hpv-meta">10월 14일 · 42분 · 4명 참여</div>
+
+      <div class="hpv-card">
+        <div class="hpv-card-lbl">핵심 요약</div>
+        <div class="hpv-summary">
+          1. 발표 자료 초안 배분과 QA 시나리오 작성이 이번 회의의 핵심 안건이었습니다.<br>
+          2. 지난 회의에서 이어진 경쟁사 분석은 이번 주 안에 마무리하기로 했습니다.
         </div>
-        <!-- 3차례 회의가 쌓이며 선명해지는 모습을 그대로 축소해 보여준다 (실제 회의 타임라인 화면과 같은 구성) -->
-        <div class="hp-main">
-          <div class="hp-tl">
-            <div class="hp-tl-row">
-              <div class="hp-tl-node">1</div>
-              <div class="hp-tl-card">
-                <div class="hp-tl-ttl">1차 회의</div>
-                <div class="hp-tl-task">✅ 마케팅 기획서 작성</div>
-              </div>
-            </div>
-            <div class="hp-tl-row">
-              <div class="hp-tl-node">2</div>
-              <div class="hp-tl-card">
-                <div class="hp-tl-ttl">2차 회의</div>
-                <div class="hp-tl-task">✅ 백엔드 API 문서화</div>
-                <div class="hp-tl-task muted">⏳ 경쟁사 분석 — 이어짐</div>
-              </div>
-            </div>
-            <div class="hp-tl-row">
-              <div class="hp-tl-node on">3</div>
-              <div class="hp-tl-card on">
-                <div class="hp-tl-ttl">3차 회의<span class="hp-tl-new">최신</span></div>
-                <div class="hp-tl-task">🔄 발표 슬라이드 디자인</div>
-                <div class="hp-tl-task">📅 QA 테스트 시나리오</div>
-              </div>
-            </div>
-          </div>
+      </div>
+
+      <div class="hpv-tasks">
+        <div class="hpv-task">
+          <span class="hpv-task-dot on"></span>
+          <span class="hpv-task-name">발표 슬라이드 디자인</span>
+          <span class="hpv-task-meta">도윤 · 10/18</span>
+        </div>
+        <div class="hpv-task">
+          <span class="hpv-task-dot"></span>
+          <span class="hpv-task-name">QA 테스트 시나리오</span>
+          <span class="hpv-task-meta">서연 · 10/20</span>
+        </div>
+      </div>
+
+      <div class="hpv-card-lbl" style="margin-top:14px;">담당자별 업무 비중</div>
+      <div class="hpv-bars">
+        <div>
+          <div class="hpv-bar-hd"><span>도윤</span><span>45%</span></div>
+          <div class="hpv-bar-track"><div class="hpv-bar-fill" style="width:45%;"></div></div>
+        </div>
+        <div>
+          <div class="hpv-bar-hd"><span>서연</span><span>30%</span></div>
+          <div class="hpv-bar-track"><div class="hpv-bar-fill dim" style="width:30%;"></div></div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
     <!-- 기능 소개 -->
   <div class="section-wrap">
