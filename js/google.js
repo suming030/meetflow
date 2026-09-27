@@ -252,52 +252,10 @@ async function exportMeetingToDocs(target){
       method: 'POST', body: JSON.stringify({ title: titleText }),
     });
     const documentId = doc.documentId;
-    const docUrl = `https://docs.googleapis.com/v1/documents/${documentId}`;
 
-    /* 1단계: 제목(HEADING_1) + 빈 2x2 표(회의 주제/일자)를 먼저 넣는다.
-       Docs API는 표를 만드는 요청과 그 표 안에 글자를 채우는 요청을 같은 batchUpdate
-       안에서 못 하게 막아둔다 — 표를 넣은 뒤 문서를 다시 읽어서 셀 위치를 알아내야 한다. */
-    const heading = titleText + '\n';
-    await googleApiRequest(`${docUrl}:batchUpdate`, {
-      method: 'POST', body: JSON.stringify({ requests: [
-        { insertText: { location: { index: 1 }, text: heading } },
-        { updateParagraphStyle: {
-            range: { startIndex: 1, endIndex: 1 + titleText.length },
-            paragraphStyle: { namedStyleType: 'HEADING_1' },
-            fields: 'namedStyleType',
-        } },
-        { insertTable: { rows: 2, columns: 2, location: { index: 1 + heading.length } } },
-      ] }),
-    });
-
-    /* 2단계: 방금 넣은 표를 다시 읽어서 각 셀의 실제 시작 위치를 알아낸다 */
-    const docState = await googleApiRequest(docUrl);
-    const tableEl = (docState.body.content || []).find(el => el.table);
-    if(!tableEl) throw new Error('표를 만드는 데 실패했어요.');
-    const cells = tableEl.table.rows.flatMap(r => r.cells);
-
-    /* 3단계: 표 채우기(회의 주제/일자, 앞 셀부터 순서대로 — 삽입할 때마다 뒤 셀 위치가
-       밀리므로 offset으로 누적 보정한다) + 표 뒤에 나머지 회의록 본문을 이어붙인다 */
-    const cellTexts = ['회의 주제', meetingTopicsSummary(meeting), '일자', formatDateKR(meeting.date)];
-    let offset = 0;
-    const cellRequests = [], boldRequests = [];
-    cells.forEach((cell, i) => {
-      const insertAt = cell.content[0].startIndex + offset;
-      const text = cellTexts[i] || '';
-      cellRequests.push({ insertText: { location: { index: insertAt }, text } });
-      if(i === 0 || i === 2){
-        boldRequests.push({ updateTextStyle: {
-          range: { startIndex: insertAt, endIndex: insertAt + text.length },
-          textStyle: { bold: true }, fields: 'bold',
-        } });
-      }
-      offset += text.length;
-    });
-
-    const bodyRequests = buildDocsRequests(meeting, tableEl.endIndex + offset);
-
-    await googleApiRequest(`${docUrl}:batchUpdate`, {
-      method: 'POST', body: JSON.stringify({ requests: [...cellRequests, ...boldRequests, ...bodyRequests] }),
+    const requests = buildDocsRequests(meeting, titleText);
+    await googleApiRequest(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+      method: 'POST', body: JSON.stringify({ requests }),
     });
 
     toast('📄 회의록이 Google Docs로 내보내졌어요!', 'success');
@@ -364,9 +322,11 @@ function meetingTopicsSummary(meeting){
   return titles.length ? titles.join(', ') : (meeting.summary || '(안건 없음)');
 }
 
-/* startIndex: 표 뒤에 이 본문을 이어붙일 시작 위치. exportMeetingToDocs()가 제목+표를
-   먼저 넣고 그 끝 위치를 읽어서 넘겨준다. 안 넘기면(단독 테스트 등) 1부터 시작한다. */
-function buildDocsRequests(meeting, startIndex){
+/* titleText: exportMeetingToDocs()가 만든 "{프로젝트명} N차 회의록" — 문서 첫 줄(H1)에 쓴다.
+   실제 Google Docs 표(insertTable)는 표 생성과 내용 채우기를 한 batchUpdate 안에서 못 하게
+   막혀 있어(공식 문서 명시) 검증에 손이 많이 가서 안 쓰기로 했다 — 대신 "회의 주제"/"일자"를
+   표 없이 라벨 한 줄씩으로 둔다. */
+function buildDocsRequests(meeting, titleText){
   const items    = meeting.items || [];
   const topics   = meeting.topics || [];
   const carried  = meeting.carriedOver || [];
@@ -380,7 +340,11 @@ function buildDocsRequests(meeting, startIndex){
      소제목은 굵게만 표시해 개요에는 큰 섹션(HEADING_2) 5개만 남긴다. */
   const add = (text, style, bullet, bold) => lines.push({ text, style: style || null, bullet: !!bullet, bold: !!bold });
 
+  add(titleText || '회의록', 'HEADING_1');
+  add(`회의 주제: ${meetingTopicsSummary(meeting)}`, null);
+  add(`일자: ${formatDateKR(meeting.date)}`, null);
   add('', null);
+
   add('핵심 안건 요약', 'HEADING_2');
   const summaryLines = meeting.summary ? gaejoshikLines(meeting.summary) : [];
   if(summaryLines.length) summaryLines.forEach(s => add(s, null, true));
@@ -439,8 +403,9 @@ function buildDocsRequests(meeting, startIndex){
     gaps.forEach(g => gaejoshikLines(g).forEach(s => add(s, null, true)));
   }
 
-  /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다. */
-  const bodyStart = startIndex || 1;
+  /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
+     Docs 문서 본문은 index 1부터 시작한다. */
+  const bodyStart = 1;
   let cursor = bodyStart, fullText = '';
   const ranges = lines.map(l => {
     const start = cursor;
