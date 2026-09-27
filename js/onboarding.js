@@ -188,12 +188,13 @@ async function runOnboarding(){
   try{
     const result=await callGeminiOnboard(t,inputs);
     const milestonePlan=onboardMakePlan(t,inputs,result);
-    persistCurrentProject({onboardStatus:'review', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}, milestonePlan});
+    persistCurrentProject({onboardStatus:'done', onboarding:{track:t, inputs, result, completedAt:new Date().toISOString()}, milestonePlan});
     /* 탭 전환(sdt)은 클래스만 바꾸고 다시 그리지 않는다. 여기서 마일스톤을 새로 그려두지 않으면
        대시보드로 갔을 때 "아직 온보딩을 완료하지 않았어요" 화면이 그대로 남는다.
        (skipOnboarding()은 원래부터 renderMilestones()를 부르고 있었다) */
+    renderMilestones();
     renderOnboardResult();
-    toast('AI가 큰 마일스톤 흐름을 제안했어요. 확인해주세요.','success');
+    toast('온보딩이 완료됐어요! 🎉','success');
   }catch(e){
     showOnboardErr(e.message);
     document.getElementById('ob-actions').style.display='block';
@@ -204,44 +205,15 @@ async function runOnboarding(){
 function renderOnboardResult(){
   const el=document.getElementById('ob-result');
   el.classList.add('show');
-  el.innerHTML=onboardMilestoneReviewHTML();
-}
-
-function onboardDraftMilestones(plan){
-  const snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap) return [];
-  if(plan.track==='club') return (snap.agendaThreads||[]).filter(thread=>thread.mode==='delivery').flatMap(thread=>(thread.milestones||[]).map(milestone=>({milestone,thread})));
-  return (snap.milestones||[]).map(milestone=>({milestone,thread:null}));
-}
-function onboardMilestoneReviewHTML(){
-  const plan=currentProject&&currentProject.milestonePlan,rows=onboardDraftMilestones(plan);
-  return `<div class="sum-banner"><div class="sum-ico">✨</div><div><div class="sum-lbl">AI가 큰 흐름을 제안했어요</div><div class="sum-txt">이름과 순서를 다듬고 필요한 단계만 남겨주세요. 세부 업무는 시작한 뒤 원할 때만 추천받을 수 있어요.</div></div></div>
-    <div class="panel" style="margin-top:14px;"><div class="panel-ttl">추천 마일스톤</div>${rows.map(({milestone,thread},index)=>`<div class="mini-task" style="gap:8px;"><span class="bdg b-nodl">${index+1}</span><div class="mt-name" style="flex:1;">${thread?`<span style="font-size:11px;color:var(--muted);">${thread.title}</span><br>`:''}${milestone.title}</div><button class="btn-ghost" type="button" onclick="onboardEditMilestone('${milestone.id}')">수정</button><button class="btn-ghost" type="button" ${index===0?'disabled':''} onclick="onboardMoveMilestone('${milestone.id}',-1)">↑</button><button class="btn-ghost" type="button" ${index===rows.length-1?'disabled':''} onclick="onboardMoveMilestone('${milestone.id}',1)">↓</button><button class="btn-ghost" type="button" onclick="onboardDeleteMilestone('${milestone.id}')">삭제</button></div>`).join('')||'<div style="font-size:13px;color:var(--muted);">아직 제안된 delivery 마일스톤이 없어요.</div>'}<button class="btn-ghost" type="button" style="margin-top:10px;" onclick="onboardAddMilestone()">＋ 단계 추가</button></div>
-    <div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-pk" type="button" onclick="onboardApproveMilestones()">이 흐름으로 시작</button><button class="btn-ghost" type="button" onclick="runOnboarding()">AI 다시 추천</button></div>`;
-}
-function onboardFindDraftMilestone(plan,id){
-  const snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap) return null;
-  if(plan.track==='club') for(const thread of snap.agendaThreads||[]){const index=(thread.milestones||[]).findIndex(item=>item.id===id);if(index>=0)return {list:thread.milestones,index,thread};}
-  const index=(snap.milestones||[]).findIndex(item=>item.id===id);return index>=0?{list:snap.milestones,index,thread:null}:null;
-}
-function onboardSaveDraft(plan){plan.updatedAt=new Date().toISOString();persistCurrentProject({milestonePlan:plan});renderOnboardResult();}
-function onboardEditMilestone(id){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found)return;const title=prompt('마일스톤 이름',found.list[found.index].title);if(title&&title.trim()){found.list[found.index].title=title.trim();onboardSaveDraft(plan);}}
-function onboardDeleteMilestone(id){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found||!confirm('이 단계를 삭제할까요?'))return;found.list.splice(found.index,1);onboardSaveDraft(plan);}
-function onboardMoveMilestone(id,direction){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found)return;const next=found.index+direction;if(next<0||next>=found.list.length)return;[found.list[found.index],found.list[next]]=[found.list[next],found.list[found.index]];onboardSaveDraft(plan);}
-function onboardAddMilestone(){
-  const plan=currentProject&&currentProject.milestonePlan,snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap)return;
-  const title=prompt('추가할 단계 이름');if(!title||!title.trim())return;
-  const milestone={id:onboardPlanId('milestone'),title:title.trim(),kind:'work',dueDate:null,taskIds:[],checkpoints:[],recommendations:[]};
-  if(plan.track==='club'){
-    const deliveries=(snap.agendaThreads||[]).filter(thread=>thread.mode==='delivery');if(!deliveries.length){toast('delivery Thread가 있어야 단계를 추가할 수 있어요.','info');return;}
-    const chosen=deliveries.length===1?deliveries[0]:deliveries.find(thread=>thread.id===prompt(`추가할 Thread ID\n${deliveries.map(thread=>`${thread.id}: ${thread.title}`).join('\n')}`));if(!chosen)return;chosen.milestones.push(milestone);
-  }else{
-    const deliverable=(snap.deliverables||[])[0];if(!deliverable)return;milestone.deliverableId=deliverable.id;snap.milestones.push(milestone);deliverable.milestoneIds=deliverable.milestoneIds||[];deliverable.milestoneIds.push(milestone.id);
-  }
-  onboardSaveDraft(plan);
-}
-function onboardApproveMilestones(){
-  const plan=currentProject&&currentProject.milestonePlan;if(!plan||!onboardDraftMilestones(plan).length){toast('최소 한 개의 delivery 마일스톤이 필요해요.','error');return;}
-  const now=new Date().toISOString();plan.status='active';plan.baseline.approvedAt=now;plan.current.source='baseline';plan.updatedAt=now;persistCurrentProject({onboardStatus:'done',milestonePlan:plan});renderMilestones();toast('마일스톤 흐름을 확정했어요.','success');gp('dash',{tab:'milestones'});
+  el.innerHTML=`
+    <div class="sum-banner">
+      <div class="sum-ico">🎉</div>
+      <div>
+        <div class="sum-lbl">온보딩 완료</div>
+        <div class="sum-txt">AI가 마일스톤과 다음 회의 아젠다를 준비했어요. 대시보드의 🧭 마일스톤 탭에서 확인하세요.</div>
+      </div>
+    </div>
+    <button class="btn-pk" onclick="gp('dash',{tab:'milestones'})">대시보드에서 확인하기 →</button>`;
 }
 
 /* ──── 온보딩 전용 Gemini 프롬프트/스키마 ──── */
@@ -405,7 +377,7 @@ function onboardMakePlan(track,inputs,result){
       const isDecision=x.mode==='decision';
       const th={id:uid('thread'),title:x.title,agendaType:x.agendaType,mode:isDecision?'decision':'delivery',targetDate:x.targetDate||null,assignees:Array.isArray(x.assignees)?x.assignees:[],status:isDecision?onboardNormalizeDecisionStatus(x.status):(x.status||'active'),decision:isDecision?{result:null,deferredReason:null}:null,milestones:[],tasks:[]};
       if(th.mode==='delivery') (Array.isArray(x.milestones)?x.milestones:[]).forEach(m=>{
-        const mid=uid('milestone'),mo={id:mid,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||th.targetDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[],recommendations:Array.isArray(m.recommendations)?m.recommendations:[]};
+        const mid=uid('milestone'),mo={id:mid,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||th.targetDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[]};
         (Array.isArray(m.tasks)?m.tasks:[]).forEach(a=>{const z=task(a,mid);mo.taskIds.push(z.id);th.tasks.push(z);});
         th.milestones.push(mo);
       });
@@ -425,7 +397,7 @@ function onboardMakePlan(track,inputs,result){
         (didsByLegacyTitle[d.title]||(didsByLegacyTitle[d.title]=[])).push(did);
         goal.deliverableIds.push(did);s.deliverables.push(del);
         (Array.isArray(d.milestones)?d.milestones:[]).forEach(m=>{
-          const mid=uid('milestone'),mo={id:mid,deliverableId:did,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||del.dueDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[],recommendations:Array.isArray(m.recommendations)?m.recommendations:[]};
+          const mid=uid('milestone'),mo={id:mid,deliverableId:did,title:m.title,kind:m.kind||'work',dueDate:m.dueDate||del.dueDate||null,taskIds:[],checkpoints:Array.isArray(m.checkpoints)?m.checkpoints:[]};
           (Array.isArray(m.tasks)?m.tasks:[]).forEach(a=>{const z=task(a,mid);mo.taskIds.push(z.id);s.tasks.push(z);});
           del.milestoneIds.push(mid);s.milestones.push(mo);
         });
@@ -449,7 +421,7 @@ function onboardMakePlan(track,inputs,result){
     });
     s.trackData=track==='contest'?{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,contestType:inputs.contestType,profile:result.profile||{emphasis:onboardBuildProfile(inputs.contestType)}}:{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,midDeadline:inputs.midDeadline||null};
   }
-  return {schemaVersion:1,track,status:'draft',createdAt:now,updatedAt:now,currentVersion:1,baseline:{version:1,approvedAt:null,snapshot:s},current:{version:1,source:'baseline',snapshot:null,taskState:{},decisionState:{},validationState:{requirements:{},rubrics:{}}},links:[],pendingReplan:null,changeLog:[]};
+  return {schemaVersion:1,track,status:'active',createdAt:now,updatedAt:now,currentVersion:1,baseline:{version:1,approvedAt:now,snapshot:s},current:{version:1,source:'baseline',snapshot:null,taskState:{},decisionState:{},validationState:{requirements:{},rubrics:{}}},links:[],pendingReplan:null,changeLog:[]};
 }
 
 /* ──── MVP 1차 입력·생성 구조 (아래 선언이 구형 온보딩 함수를 대체한다) ──── */
@@ -478,13 +450,13 @@ function collectOnboardInputs(t){
 function onboardMissingField(t,input){ if(t==='club') return input.threads.length?'': '최소 한 개의 Agenda Thread를 입력해주세요.'; return (t==='team'?input.requirements||input.deliverables:input.guidelines||input.deliverables)?null:'최소 한 가지 핵심 정보를 입력해주세요.'; }
 function onboardBuildProfile(type){ return {idea:['문제 정의','차별성','공모전 의도 부합','논리 검증','실행 가능성'],data_ai:['데이터 품질','방법론 선정 근거','재현성','기술 검증','결과 해석'],marketing:['타깃','채널','핵심 메시지','실행안','성과 지표'],startup_bm:['문제/고객 검증','가치제안','경쟁 분석','수익구조','시장 검증','Q&A 준비'],hackathon:['구현 범위','MVP','핵심 기능','테스트','데모','데모 백업'],design:['요구사항 해석','Concept','Draft/Feedback','Refinement','제출 규격','최종 완성도']}[type]||[]; }
 function onboardPrompt(t,i,today){
-  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 단 하나의 추천 구조로 프로젝트 전체에 핵심 마일스톤을 3~5개만 만드세요. 처음에는 세부 Task를 만들지 말고 각 milestone의 tasks는 빈 배열로 두세요. 벤치마킹·사례조사·인터뷰·baseline·경쟁사 분석 같은 방법론은 자동 Task가 아니라 milestone.recommendations에 2~4개의 선택형 제안으로 넣으세요. 기본 계층 Goal → Deliverable → Milestone은 내부 데이터로 유지하고 Requirement와 Rubric은 관련 Deliverable/Milestone의 검수 기준으로 두세요. 각 Deliverable에 고유한 refKey를 부여하고 relatedDeliverableKeys에는 그 refKey만 넣으세요. 마감일/목표일은 실제 입력을 우선하세요.`;
+  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 기본 계층은 Goal → Deliverable → Milestone → Task입니다. Requirement와 Rubric은 이 계층의 부모가 아니라 관련 Deliverable 또는 Milestone의 검수 기준입니다. 각 Deliverable에는 응답 안에서 고유한 refKey를 부여하고, Requirement/Rubric의 relatedDeliverableKeys에는 제목이 아닌 그 refKey만 넣으세요. 마감일/목표일에서 역산하고, '자료조사·PPT 만들기'처럼 큰 업무는 담당자가 완료 확인할 수 있는 Task로 나누세요.`;
   if(t==='team') return `대학 팀플 초기 계획을 JSON으로 만드세요. 과제명:${i.name}\nRequirement:${i.requirements}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n중간 마감:${i.midDeadline||'없음'}\nRubric:${i.rubric||'없음'}\n팀원:${i.members||'없음'}\n${rules}`;
   if(t==='contest') return `공모전 초기 계획을 JSON으로 만드세요. 공모전명:${i.name}\n요강:${i.guidelines}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n심사기준:${i.rubric}\n팀원:${i.members||'없음'}\n유형:${i.contestType}, 강조 Profile:${onboardBuildProfile(i.contestType).join(', ')}\n${rules}\nProfile은 고정 템플릿이 아니며, 실제 요강과 심사기준이 항상 우선입니다. 필요한 milestone에 checkpoint(완료 지점이 아닌 검증 기준)를 넣으세요.`;
   return `동아리 Agenda Thread 초기 계획을 JSON으로 만드세요. 입력:${JSON.stringify(i.threads)}\n${rules}\nnew_event, recurring_event, content, outreach는 mode:'delivery'와 각 Thread 내부 milestones/tasks를 만드세요. operations_decision은 mode:'decision', status:undecided/decided/deferred만 두고 milestones/tasks를 만들지 마세요.`;
 }
 function onboardTaskSchema(){return {type:'object',properties:{title:{type:'string'},assignee:{type:'string',nullable:true},dueDate:{type:'string',nullable:true},definitionOfDone:{type:'string'},needsDecomposition:{type:'boolean'}},required:['title','definitionOfDone','needsDecomposition']};}
-function onboardMilestoneSchema(){return {type:'object',properties:{title:{type:'string'},kind:{type:'string'},dueDate:{type:'string',nullable:true},checkpoints:{type:'array',items:{type:'object',properties:{title:{type:'string'},focus:{type:'string'},criteria:{type:'array',items:{type:'string'}}},required:['title','criteria']}},recommendations:{type:'array',items:{type:'string'}},tasks:{type:'array',items:onboardTaskSchema()}},required:['title','recommendations','tasks']};}
+function onboardMilestoneSchema(){return {type:'object',properties:{title:{type:'string'},kind:{type:'string'},dueDate:{type:'string',nullable:true},checkpoints:{type:'array',items:{type:'object',properties:{title:{type:'string'},focus:{type:'string'},criteria:{type:'array',items:{type:'string'}}},required:['title','criteria']}},tasks:{type:'array',items:onboardTaskSchema()}},required:['title','tasks']};}
 function onboardSchema(t){
   if(t==='club') return {type:'object',properties:{agendaThreads:{type:'array',items:{type:'object',properties:{title:{type:'string'},agendaType:{type:'string'},mode:{type:'string'},targetDate:{type:'string',nullable:true},assignees:{type:'array',items:{type:'string'}},status:{type:'string'},milestones:{type:'array',items:onboardMilestoneSchema()}},required:['title','agendaType','mode','status','milestones']}},firstMeetingAgenda:{type:'array',items:{type:'string'}}},required:['agendaThreads','firstMeetingAgenda']};
   const criterionSchema={type:'object',properties:{title:{type:'string'},acceptanceCriteria:{type:'array',items:{type:'string'}},relatedDeliverableKeys:{type:'array',items:{type:'string'}}},required:['title','acceptanceCriteria','relatedDeliverableKeys']};
