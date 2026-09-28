@@ -76,7 +76,7 @@ function renderWrapupIntro(){
 
     ${people.length
       ? `<div class="wrap-note">
-           <div style="margin-bottom:8px;">누구를 눌러보세요 — 그 사람의 경험만 자세히 정리해드려요</div>
+           <div style="margin-bottom:8px;">내 이름을 누르면 내 경험만 골라 자세히 정리해드려요</div>
            ${people.map((p,i)=>`<span class="bdg b-person wrap-person" onclick="openMemberWrapupAt(${i})">👤 ${esc2(p)}</span>`).join(' ')}
          </div>`
       : `<div class="wrap-warn">
