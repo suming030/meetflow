@@ -100,6 +100,113 @@ function parseGeminiJson(raw){
   }
 }
 
+/* ════════════════════════════════
+   전사본 정확도 다듬기 (2026-09-28)
+
+   녹음 하나를 두 모델에 동시에 보낸다(js/stt.js).
+     - flash          : 화자를 나눠주지만("화자1:") 단어를 더 자주 틀린다
+     - 3.5-transcribe : 화자는 못 나누지만 받아쓰기가 정확하다
+   그래서 **flash 전사본을 기준으로 두고, 잘못 들은 단어만 transcribe 것을 보고 고친다.**
+
+   통째로 다시 쓰게 하면 8천 자짜리 회의에서 요청이 취소됐다(499). 그래서
+   flash 전사본을 줄 단위로 잘라 한 번에 40줄씩만 고친다. transcribe 전사본에는
+   줄 구분이 없으므로, 같은 구간을 위치 비율로 찾아 앞뒤 여유를 붙여 참고로 준다.
+
+   고친 결과가 원래 줄과 너무 달라지면(AI가 요약하거나 지어낸 경우) 그 묶음은 버리고
+   flash 전사본을 그대로 쓴다. 최악의 경우에도 지금까지 쓰던 전사본이 남는다.
+════════════════════════════════ */
+const REFINE_LINES = 40;    /* 한 번에 고칠 줄 수 */
+const REFINE_AT_ONCE = 3;   /* 동시에 보낼 요청 수 — 분당 한도에 걸리지 않을 만큼만 */
+
+/** 글자만 남긴다 — 띄어쓰기·문장부호·화자 라벨은 비교에서 뺀다 */
+function transcriptCore(s){
+  return String(s||'').replace(/^\s*화자\s*\d+\s*:/gm,'').replace(/[\s\p{P}\p{S}]/gu,'');
+}
+/** 두 글이 같은 내용인지 0~1로 (글자 개수를 견줘서 — 긴 글에도 빠르다) */
+function transcriptSimilarity(a,b){
+  const ca=transcriptCore(a), cb=transcriptCore(b);
+  if(!ca.length || !cb.length) return 0;
+  const count=s=>{ const m=new Map(); for(const ch of s) m.set(ch,(m.get(ch)||0)+1); return m; };
+  const ma=count(ca), mb=count(cb);
+  let shared=0;
+  for(const [ch,n] of ma) shared+=Math.min(n, mb.get(ch)||0);
+  return shared/Math.max(ca.length, cb.length);
+}
+
+/** 묶음 하나를 고친다. 못 믿을 결과면 원래 줄을 그대로 돌려준다. */
+async function refineChunk(lines, reference){
+  const prompt=`회의 녹음을 받아쓴 결과입니다. **잘못 들은 단어만 고치세요.**
+
+고칠 부분 (화자 구분이 되어 있음):
+"""
+${lines.join('\n')}
+"""
+
+참고 — 같은 구간을 더 정확하게 받아쓴 것 (화자 구분은 없고, 앞뒤가 더 넓을 수 있음):
+"""
+${reference}
+"""
+
+규칙:
+- 줄 수를 그대로 유지하세요. ${lines.length}줄을 받았으면 ${lines.length}줄을 돌려주세요.
+- 각 줄의 "화자N:" 표시를 그대로 두세요. 화자 번호를 바꾸지 마세요.
+- 참고본에 같은 대목이 있으면 그쪽 표기를 따르세요. (예: "내내일" → "내 모레")
+- 참고본에 없는 대목은 원래 줄을 그대로 두세요.
+- 문장을 다듬거나 요약하지 마세요. 내용을 더하거나 빼지 마세요.`;
+
+  const schema={
+    type:'object',
+    properties:{ lines:{type:'array', items:{type:'string'}} },
+    required:['lines']
+  };
+
+  const parsed=await geminiRequest(prompt,schema,8192);
+  const out=Array.isArray(parsed.lines)?parsed.lines.filter(l=>typeof l==='string'&&l.trim()):[];
+  /* 줄 수가 달라졌거나 내용이 많이 바뀌었으면 AI가 요약·창작을 한 것이다 */
+  if(out.length!==lines.length) return lines;
+  return transcriptSimilarity(out.join('\n'), lines.join('\n'))>=0.8 ? out : lines;
+}
+
+/** flash 전사본(화자 구분)을 transcribe 전사본(정확한 받아쓰기)으로 다듬는다. */
+async function refineTranscript(labeled, exact, onProgress){
+  const lines=String(labeled||'').split('\n').filter(l=>l.trim());
+  if(!lines.length || !exact || !exact.trim()) return labeled;
+  /* 화자 구분이 없으면 다듬을 기준이 없다. flash가 막혀서 받아쓰기 전용 모델이 양쪽을
+     다 맡은 경우가 여기다 — 같은 글을 놓고 고치느라 호출만 쓰게 된다. */
+  if(!/화자\s*\d/.test(labeled) || transcriptSimilarity(labeled, exact)>0.98) return labeled;
+
+  /* 각 묶음이 녹음의 어느 대목인지를 글자 수 비율로 어림잡아 참고 구간을 자른다.
+     회의가 진행될수록 두 전사본의 위치가 조금씩 어긋나므로 앞뒤로 넉넉히 준다. */
+  const total=lines.reduce((n,l)=>n+l.length,0);
+  const margin=Math.max(600, Math.round(exact.length*0.12));
+  const chunks=[];
+  for(let i=0, before=0; i<lines.length; i+=REFINE_LINES){
+    const part=lines.slice(i, i+REFINE_LINES);
+    const len=part.reduce((n,l)=>n+l.length,0);
+    const from=Math.max(0, Math.round(exact.length*(before/total))-margin);
+    const to  =Math.min(exact.length, Math.round(exact.length*((before+len)/total))+margin);
+    chunks.push({part, reference:exact.slice(from,to)});
+    before+=len;
+  }
+
+  let done=0;
+  const results=new Array(chunks.length);
+  /* 한꺼번에 다 보내면 분당 한도에 걸린다 — 몇 개씩 나눠 보낸다 */
+  for(let i=0; i<chunks.length; i+=REFINE_AT_ONCE){
+    const group=chunks.slice(i, i+REFINE_AT_ONCE);
+    await Promise.all(group.map(async (c,j)=>{
+      try{
+        results[i+j]=await refineChunk(c.part, c.reference);
+      }catch(e){
+        console.warn('[MeetFlow] 전사본 다듬기 실패 — 이 부분은 그대로 둡니다', e);
+        results[i+j]=c.part;   /* 실패한 묶음만 원본 유지 */
+      }
+      if(onProgress) onProgress(++done, chunks.length);
+    }));
+  }
+  return results.flat().join('\n');
+}
+
 /**
  * 회의 텍스트를 분석한다 — **두 요청으로 나눠 동시에** 보낸다.
  *   A. callGeminiTasks   : 요약 + 업무 + 지난 회의 업무 판단 + 결정 사항·미결 안건 (짧다 → 먼저 도착)
