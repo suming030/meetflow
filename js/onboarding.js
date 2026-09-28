@@ -17,11 +17,31 @@ function renderOnboardPage(){
   renderTrackSwitcher();
   ['team','contest','club'].forEach(k=>{ document.getElementById('ob-fields-'+k).style.display=(k===t)?'block':'none'; });
   document.getElementById('ob-fields-'+t).innerHTML=onboardFieldsHTML(t);
+  const saved=currentProject.onboarding&&currentProject.onboarding.track===t?currentProject.onboarding.inputs:null;
+  if(saved) onboardRestoreInputs(t,saved);
   document.getElementById('ob-actions').style.display='block';
   document.getElementById('ob-err').style.display='none';
   document.getElementById('ob-proc').classList.remove('show');
   document.getElementById('ob-result').classList.remove('show');
   document.getElementById('ob-result').innerHTML='';
+  if(currentProject.milestonePlan&&currentProject.milestonePlan.status==='draft'){
+    document.getElementById('ob-actions').style.display='none';
+    renderOnboardResult();
+  }
+}
+function onboardSetValue(id,value){const el=document.getElementById(id);if(el)el.value=value||'';}
+function onboardRestoreInputs(t,inputs){
+  if(t==='team'){
+    onboardSetValue('team-name',inputs.name);onboardSetValue('team-brief-ta',inputs.requirements);onboardSetValue('team-deliverables-ta',inputs.deliverables);onboardSetValue('team-deadline',inputs.finalDeadline);onboardSetValue('team-mid-deadline',inputs.midDeadline);onboardSetValue('team-rubric-ta',inputs.rubric);onboardSetValue('team-members-ta',inputs.members);
+    ['team-brief','team-deliverables','team-rubric','team-members'].forEach(updateDocCC);return;
+  }
+  if(t==='contest'){
+    onboardSetValue('contest-name',inputs.name);onboardSetValue('contest-guidelines-ta',inputs.guidelines);onboardSetValue('contest-deliverables-ta',inputs.deliverables);onboardSetValue('contest-deadline',inputs.finalDeadline);onboardSetValue('contest-rubric-ta',inputs.rubric);onboardSetValue('contest-type',inputs.contestType);onboardSetValue('contest-members-ta',inputs.members);
+    ['contest-guidelines','contest-deliverables','contest-rubric','contest-members'].forEach(updateDocCC);return;
+  }
+  const box=document.getElementById('club-thread-list'),threads=Array.isArray(inputs.threads)?inputs.threads:[];if(!box||!threads.length)return;
+  box.innerHTML=threads.map((_,index)=>onboardClubThreadHTML(index)).join('');
+  [...box.querySelectorAll('[data-thread]')].forEach((el,index)=>{const thread=threads[index]||{};el.querySelector('[data-f="title"]').value=thread.title||'';el.querySelector('[data-f="description"]').value=thread.description||'';el.querySelector('[data-f="agendaType"]').value=thread.agendaType||'new_event';el.querySelector('[data-f="targetDate"]').value=thread.targetDate||'';el.querySelector('[data-f="assignees"]').value=(thread.assignees||[]).join(', ');});
 }
 function renderTrackSwitcher(){
   const el=document.getElementById('ob-track-switch'); if(!el||!currentProject) return;
@@ -205,6 +225,7 @@ function renderOnboardResult(){
   const el=document.getElementById('ob-result');
   el.classList.add('show');
   el.innerHTML=onboardMilestoneReviewHTML();
+  onboardUpdateMilestoneChrome();
 }
 
 function onboardDraftMilestones(plan){
@@ -212,10 +233,15 @@ function onboardDraftMilestones(plan){
   if(plan.track==='club') return (snap.agendaThreads||[]).filter(thread=>thread.mode==='delivery').flatMap(thread=>(thread.milestones||[]).map(milestone=>({milestone,thread})));
   return (snap.milestones||[]).map(milestone=>({milestone,thread:null}));
 }
+function onboardDraftTasks(plan,milestone,thread){
+  const snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap)return [];
+  const tasks=thread?(thread.tasks||[]):(snap.tasks||[]);
+  return tasks.filter(task=>task.milestoneId===milestone.id);
+}
 function onboardMilestoneReviewHTML(){
   const plan=currentProject&&currentProject.milestonePlan,rows=onboardDraftMilestones(plan);
-  return `<div class="sum-banner"><div class="sum-ico">✨</div><div><div class="sum-lbl">AI가 큰 흐름을 제안했어요</div><div class="sum-txt">이름과 순서를 다듬고 필요한 단계만 남겨주세요. 세부 업무는 시작한 뒤 원할 때만 추천받을 수 있어요.</div></div></div>
-    <div class="panel" style="margin-top:14px;"><div class="panel-ttl">추천 마일스톤</div>${rows.map(({milestone,thread},index)=>`<div class="mini-task" style="gap:8px;"><span class="bdg b-nodl">${index+1}</span><div class="mt-name" style="flex:1;">${thread?`<span style="font-size:11px;color:var(--muted);">${thread.title}</span><br>`:''}${milestone.title}</div><button class="btn-ghost" type="button" onclick="onboardEditMilestone('${milestone.id}')">수정</button><button class="btn-ghost" type="button" ${index===0?'disabled':''} onclick="onboardMoveMilestone('${milestone.id}',-1)">↑</button><button class="btn-ghost" type="button" ${index===rows.length-1?'disabled':''} onclick="onboardMoveMilestone('${milestone.id}',1)">↓</button><button class="btn-ghost" type="button" onclick="onboardDeleteMilestone('${milestone.id}')">삭제</button></div>`).join('')||'<div style="font-size:13px;color:var(--muted);">아직 제안된 delivery 마일스톤이 없어요.</div>'}<button class="btn-ghost" type="button" style="margin-top:10px;" onclick="onboardAddMilestone()">＋ 단계 추가</button></div>
+  return `<div class="sum-banner"><div class="sum-ico">✨</div><div><div class="sum-lbl">AI가 마일스톤 흐름을 제안했어요</div><div class="sum-txt">큰 단계를 먼저 확인하고, 필요하면 펼쳐서 세부 업무를 확인하세요. 마우스를 올리면 왼쪽에 이동 핸들이 나타나요.</div></div></div>
+    <div class="panel" style="margin-top:14px;padding-left:46px;" data-ob-list ondragover="onboardListDragOver(event)" ondrop="onboardListDrop(event)"><div class="panel-ttl">추천 마일스톤</div>${rows.map(({milestone,thread},index)=>{const tasks=onboardDraftTasks(plan,milestone,thread);return `<details style="position:relative;background:var(--surface);border:1px solid transparent;border-radius:7px;padding:9px 10px;margin:2px 0;box-shadow:none;transition:border-color .12s,margin .14s;" data-ob-ms="${milestone.id}" onmouseenter="onboardShowMilestoneHandle('${milestone.id}')" onmouseleave="onboardHideMilestoneHandle('${milestone.id}')"><button type="button" draggable="true" data-ob-handle onmousedown="onboardDragSelect('${milestone.id}')" ondragstart="onboardDragStart(event,'${milestone.id}')" ondragend="onboardDragEnd()" onclick="event.preventDefault();event.stopPropagation();onboardSelectMilestone('${milestone.id}')" onmouseenter="this.style.background='var(--pk-light)'" onmouseleave="this.style.background='transparent'" style="position:absolute;left:-32px;top:8px;width:24px;height:26px;padding:5px;border:0;border-radius:5px;background:transparent;opacity:0;cursor:grab;display:grid;grid-template-columns:repeat(2,3px);grid-template-rows:repeat(3,3px);gap:2px;align-content:center;justify-content:center;transition:opacity .1s,background .1s;" title="끌어서 순서 변경" aria-label="${milestone.title} 이동">${'<i style="width:3px;height:3px;border-radius:50%;background:var(--muted);display:block;"></i>'.repeat(6)}</button><summary onclick="onboardSelectMilestone('${milestone.id}')" style="display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;min-height:30px;"><span style="width:22px;color:var(--hint);font-size:11px;font-weight:700;">${String(index+1).padStart(2,'0')}</span><span class="mt-name" data-ob-title style="flex:1;font-weight:600;">${thread?`<span style="font-size:11px;color:var(--muted);">${thread.title}</span><br>`:''}${milestone.title}</span><span style="font-size:11px;color:var(--hint);">업무 ${tasks.length}</span><button class="btn-ghost" type="button" style="padding:4px 7px;border-color:transparent;" onclick="onboardStartEdit(event,'${milestone.id}')">수정</button><button class="btn-ghost" type="button" style="padding:4px 7px;border-color:transparent;" onclick="event.preventDefault();event.stopPropagation();onboardDeleteMilestone('${milestone.id}')">삭제</button></summary><div style="padding:10px 0 2px 30px;" data-ob-task-list="${milestone.id}" ondragover="onboardTaskListDragOver(event,'${milestone.id}')" ondrop="onboardTaskListDrop(event,'${milestone.id}')">${tasks.map((task,taskIndex)=>`<div class="mini-task" data-ob-task="${task.id}" onmouseenter="onboardShowTaskHandle('${task.id}')" onmouseleave="onboardHideTaskHandle('${task.id}')" style="position:relative;gap:10px;border:1px solid transparent;border-radius:6px;padding:7px 6px;margin:1px 0;transition:margin .14s,border-color .12s;"><button type="button" draggable="true" data-ob-task-handle ondragstart="onboardTaskDragStart(event,'${task.id}','${milestone.id}')" ondragend="onboardTaskDragEnd()" onclick="event.preventDefault();event.stopPropagation()" style="position:absolute;left:-25px;top:5px;width:22px;height:24px;padding:5px;border:0;border-radius:4px;background:transparent;opacity:0;cursor:grab;display:grid;grid-template-columns:repeat(2,3px);grid-template-rows:repeat(3,3px);gap:2px;align-content:center;justify-content:center;transition:opacity .1s;" title="끌어서 순서 변경" aria-label="${task.title} 이동">${'<i style="width:3px;height:3px;border-radius:50%;background:var(--muted);display:block;"></i>'.repeat(6)}</button><span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--bd-s);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${taskIndex+1}</span><span class="mt-name" data-ob-task-title style="flex:1;">${task.title}</span><button class="btn-ghost" type="button" style="padding:4px 7px;border-color:transparent;" onclick="onboardStartTaskEdit(event,'${task.id}')">수정</button><button class="btn-ghost" type="button" style="padding:4px 7px;border-color:transparent;" onclick="onboardDeleteTask(event,'${task.id}')">삭제</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted);">세부 업무가 아직 없어요.</div>'}<button class="btn-ghost" type="button" style="margin-top:7px;border-color:transparent;" onclick="onboardAddTask(event,'${milestone.id}')">＋ 세부 업무 추가</button></div></details>`;}).join('')||'<div style="font-size:13px;color:var(--muted);">아직 제안된 delivery 마일스톤이 없어요.</div>'}<button class="btn-ghost" type="button" style="margin-top:10px;" onclick="onboardAddMilestone()">＋ 단계 추가</button></div>
     <div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-pk" type="button" onclick="onboardApproveMilestones()">이 흐름으로 시작</button><button class="btn-ghost" type="button" onclick="runOnboarding()">AI 다시 추천</button></div>`;
 }
 function onboardFindDraftMilestone(plan,id){
@@ -223,21 +249,82 @@ function onboardFindDraftMilestone(plan,id){
   if(plan.track==='club') for(const thread of snap.agendaThreads||[]){const index=(thread.milestones||[]).findIndex(item=>item.id===id);if(index>=0)return {list:thread.milestones,index,thread};}
   const index=(snap.milestones||[]).findIndex(item=>item.id===id);return index>=0?{list:snap.milestones,index,thread:null}:null;
 }
-function onboardSaveDraft(plan){plan.updatedAt=new Date().toISOString();persistCurrentProject({milestonePlan:plan});renderOnboardResult();}
-function onboardEditMilestone(id){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found)return;const title=prompt('마일스톤 이름',found.list[found.index].title);if(title&&title.trim()){found.list[found.index].title=title.trim();onboardSaveDraft(plan);}}
+function onboardSaveDraft(plan,openMilestoneId){plan.updatedAt=new Date().toISOString();persistCurrentProject({milestonePlan:plan});renderOnboardResult();if(openMilestoneId){const card=document.querySelector(`[data-ob-ms="${openMilestoneId}"]`);if(card)card.open=true;}}
+function onboardStartEdit(event,id){
+  if(event){event.preventDefault();event.stopPropagation();}
+  const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id),card=document.querySelector(`[data-ob-ms="${id}"]`),host=card&&card.querySelector('[data-ob-title]');if(!found||!host)return;
+  const input=document.createElement('input');input.className='m-inp';input.style.margin='0';input.value=found.list[found.index].title;
+  const save=document.createElement('button');save.className='btn-pk';save.type='button';save.textContent='저장';save.style.padding='6px 10px';save.onclick=e=>{e.preventDefault();e.stopPropagation();onboardCommitEdit(id,input.value);};
+  const cancel=document.createElement('button');cancel.className='btn-ghost';cancel.type='button';cancel.textContent='취소';cancel.style.padding='6px 10px';cancel.onclick=e=>{e.preventDefault();e.stopPropagation();renderOnboardResult();};
+  host.replaceChildren(input,save,cancel);host.style.display='flex';host.style.gap='6px';input.focus();input.select();
+  input.onkeydown=e=>{if(e.key==='Enter')save.click();if(e.key==='Escape')cancel.click();};
+}
+function onboardCommitEdit(id,title){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id),next=(title||'').trim();if(!found||!next)return;found.list[found.index].title=next;onboardSaveDraft(plan);}
+function onboardFindDraftTask(plan,id){
+  const snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap)return null;
+  const groups=[{tasks:snap.tasks||[]}].concat((snap.agendaThreads||[]).map(thread=>({tasks:thread.tasks||[],thread})));
+  for(const group of groups){const index=group.tasks.findIndex(task=>task.id===id);if(index>=0)return {tasks:group.tasks,index,task:group.tasks[index],thread:group.thread||null};}
+  return null;
+}
+function onboardStartTaskEdit(event,id){
+  event.preventDefault();event.stopPropagation();const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftTask(plan,id),row=document.querySelector(`[data-ob-task="${id}"]`),host=row&&row.querySelector('[data-ob-task-title]');if(!found||!host)return;
+  const input=document.createElement('input');input.className='m-inp';input.style.margin='0';input.value=found.task.title;
+  const save=document.createElement('button');save.className='btn-pk';save.type='button';save.textContent='저장';save.style.padding='6px 10px';save.onclick=e=>{e.preventDefault();e.stopPropagation();onboardCommitTaskEdit(id,input.value);};
+  const cancel=document.createElement('button');cancel.className='btn-ghost';cancel.type='button';cancel.textContent='취소';cancel.style.padding='6px 10px';cancel.onclick=e=>{e.preventDefault();e.stopPropagation();onboardSaveDraft(plan,found.task.milestoneId);};
+  host.replaceChildren(input,save,cancel);host.style.display='flex';host.style.gap='6px';input.focus();input.select();input.onkeydown=e=>{if(e.key==='Enter')save.click();if(e.key==='Escape')cancel.click();};
+}
+function onboardCommitTaskEdit(id,title){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftTask(plan,id),next=(title||'').trim();if(!found||!next)return;found.task.title=next;onboardSaveDraft(plan,found.task.milestoneId);}
+function onboardDeleteTask(event,id){event.preventDefault();event.stopPropagation();const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftTask(plan,id);if(!found||!confirm('이 세부 업무를 삭제할까요?'))return;const milestone=onboardFindDraftMilestone(plan,found.task.milestoneId);found.tasks.splice(found.index,1);if(milestone)milestone.list[milestone.index].taskIds=(milestone.list[milestone.index].taskIds||[]).filter(taskId=>taskId!==id);onboardSaveDraft(plan,found.task.milestoneId);}
+function onboardAddTask(event,milestoneId){
+  event.preventDefault();event.stopPropagation();const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,milestoneId),snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!found||!snap)return;
+  const tasks=found.thread?(found.thread.tasks||(found.thread.tasks=[])):(snap.tasks||(snap.tasks=[])),task={id:onboardPlanId('task'),milestoneId,title:'새 세부 업무',assignee:null,dueDate:found.list[found.index].dueDate||null,status:'todo',definitionOfDone:'세부 업무 완료',needsDecomposition:false};tasks.push(task);found.list[found.index].taskIds=found.list[found.index].taskIds||[];found.list[found.index].taskIds.push(task.id);onboardSaveDraft(plan,milestoneId);setTimeout(()=>onboardStartTaskEdit({preventDefault(){},stopPropagation(){}},task.id),0);
+}
 function onboardDeleteMilestone(id){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found||!confirm('이 단계를 삭제할까요?'))return;found.list.splice(found.index,1);onboardSaveDraft(plan);}
-function onboardMoveMilestone(id,direction){const plan=currentProject&&currentProject.milestonePlan,found=onboardFindDraftMilestone(plan,id);if(!found)return;const next=found.index+direction;if(next<0||next>=found.list.length)return;[found.list[found.index],found.list[next]]=[found.list[next],found.list[found.index]];onboardSaveDraft(plan);}
+let onboardDraggedMilestoneId=null,onboardSelectedMilestoneId=null,onboardDropTargetId=null,onboardDropPosition='before';
+function onboardUpdateMilestoneChrome(){document.querySelectorAll('[data-ob-ms]').forEach(card=>{const selected=card.dataset.obMs===onboardSelectedMilestoneId,handle=card.querySelector('[data-ob-handle]');card.style.borderColor=selected?'var(--pk)':'transparent';card.style.borderWidth='1px';if(handle)handle.style.opacity=selected?'1':'0';});}
+function onboardSelectMilestone(id){onboardSelectedMilestoneId=id;onboardUpdateMilestoneChrome();}
+function onboardShowMilestoneHandle(id){const card=document.querySelector(`[data-ob-ms="${id}"]`),handle=card&&card.querySelector('[data-ob-handle]');if(handle)handle.style.opacity='1';}
+function onboardHideMilestoneHandle(id){if(id===onboardSelectedMilestoneId||id===onboardDraggedMilestoneId)return;const card=document.querySelector(`[data-ob-ms="${id}"]`),handle=card&&card.querySelector('[data-ob-handle]');if(handle)handle.style.opacity='0';}
+function onboardDragSelect(id){onboardSelectedMilestoneId=id;onboardUpdateMilestoneChrome();}
+function onboardDragStart(event,id){onboardDraggedMilestoneId=id;onboardDragSelect(id);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}
+function onboardClearDropGaps(){document.querySelectorAll('[data-ob-ms]').forEach(card=>{card.style.marginTop='2px';card.style.marginBottom='2px';delete card.dataset.dropPosition;});}
+function onboardDragEnd(){onboardDraggedMilestoneId=null;onboardDropTargetId=null;onboardDropPosition='before';onboardClearDropGaps();onboardUpdateMilestoneChrome();}
+function onboardListDragOver(event){
+  if(!onboardDraggedMilestoneId)return;event.preventDefault();event.dataTransfer.dropEffect='move';const cards=[...event.currentTarget.querySelectorAll('[data-ob-ms]')].filter(card=>card.dataset.obMs!==onboardDraggedMilestoneId);if(!cards.length)return;
+  let target=cards.find(card=>event.clientY<card.getBoundingClientRect().top+card.getBoundingClientRect().height/2),position='before';if(!target){target=cards[cards.length-1];position='after';}
+  onboardClearDropGaps();onboardDropTargetId=target.dataset.obMs;onboardDropPosition=position;target.style.marginTop=position==='before'?'22px':'2px';target.style.marginBottom=position==='after'?'22px':'2px';
+}
+function onboardListDrop(event){
+  event.preventDefault();event.stopPropagation();const plan=currentProject&&currentProject.milestonePlan,sourceId=onboardDraggedMilestoneId||event.dataTransfer.getData('text/plain'),targetId=onboardDropTargetId,position=onboardDropPosition;onboardDragEnd();if(!plan||!sourceId||!targetId||sourceId===targetId)return;
+  const source=onboardFindDraftMilestone(plan,sourceId),target=onboardFindDraftMilestone(plan,targetId);if(!source||!target||source.list!==target.list)return;
+  const [item]=source.list.splice(source.index,1),targetIndex=source.list.findIndex(entry=>entry.id===targetId);source.list.splice(targetIndex+(position==='after'?1:0),0,item);onboardSaveDraft(plan);
+}
+let onboardDraggedTaskId=null,onboardTaskDropTargetId=null,onboardTaskDropPosition='before';
+function onboardShowTaskHandle(id){const row=document.querySelector(`[data-ob-task="${id}"]`),handle=row&&row.querySelector('[data-ob-task-handle]');if(handle)handle.style.opacity='1';}
+function onboardHideTaskHandle(id){if(id===onboardDraggedTaskId)return;const row=document.querySelector(`[data-ob-task="${id}"]`),handle=row&&row.querySelector('[data-ob-task-handle]');if(handle)handle.style.opacity='0';}
+function onboardTaskDragStart(event,id,milestoneId){event.stopPropagation();onboardDraggedTaskId=id;onboardSelectedMilestoneId=milestoneId;onboardUpdateMilestoneChrome();const row=document.querySelector(`[data-ob-task="${id}"]`);if(row)row.style.borderColor='var(--pk)';event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);}
+function onboardClearTaskDropGaps(){document.querySelectorAll('[data-ob-task]').forEach(row=>{row.style.marginTop='1px';row.style.marginBottom='1px';row.style.borderColor=row.dataset.obTask===onboardDraggedTaskId?'var(--pk)':'transparent';});}
+function onboardTaskDragEnd(){onboardDraggedTaskId=null;onboardTaskDropTargetId=null;onboardTaskDropPosition='before';onboardClearTaskDropGaps();}
+function onboardTaskListDragOver(event,milestoneId){
+  if(!onboardDraggedTaskId)return;event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='move';const rows=[...event.currentTarget.querySelectorAll('[data-ob-task]')].filter(row=>row.dataset.obTask!==onboardDraggedTaskId);if(!rows.length)return;
+  let target=rows.find(row=>event.clientY<row.getBoundingClientRect().top+row.getBoundingClientRect().height/2),position='before';if(!target){target=rows[rows.length-1];position='after';}
+  onboardClearTaskDropGaps();onboardTaskDropTargetId=target.dataset.obTask;onboardTaskDropPosition=position;target.style.marginTop=position==='before'?'18px':'1px';target.style.marginBottom=position==='after'?'18px':'1px';
+}
+function onboardTaskListDrop(event,milestoneId){
+  event.preventDefault();event.stopPropagation();const plan=currentProject&&currentProject.milestonePlan,sourceId=onboardDraggedTaskId||event.dataTransfer.getData('text/plain'),targetId=onboardTaskDropTargetId,position=onboardTaskDropPosition;onboardTaskDragEnd();if(!plan||!sourceId||!targetId||sourceId===targetId)return;
+  const source=onboardFindDraftTask(plan,sourceId),target=onboardFindDraftTask(plan,targetId);if(!source||!target||source.tasks!==target.tasks||source.task.milestoneId!==milestoneId||target.task.milestoneId!==milestoneId)return;
+  const [item]=source.tasks.splice(source.index,1),targetIndex=source.tasks.findIndex(task=>task.id===targetId);source.tasks.splice(targetIndex+(position==='after'?1:0),0,item);onboardSaveDraft(plan,milestoneId);
+}
 function onboardAddMilestone(){
   const plan=currentProject&&currentProject.milestonePlan,snap=plan&&plan.baseline&&plan.baseline.snapshot;if(!snap)return;
-  const title=prompt('추가할 단계 이름');if(!title||!title.trim())return;
-  const milestone={id:onboardPlanId('milestone'),title:title.trim(),kind:'work',dueDate:null,taskIds:[],checkpoints:[],recommendations:[]};
+  const milestone={id:onboardPlanId('milestone'),title:'새 마일스톤',kind:'work',dueDate:null,taskIds:[],checkpoints:[],recommendations:[]};
   if(plan.track==='club'){
     const deliveries=(snap.agendaThreads||[]).filter(thread=>thread.mode==='delivery');if(!deliveries.length){toast('delivery Thread가 있어야 단계를 추가할 수 있어요.','info');return;}
-    const chosen=deliveries.length===1?deliveries[0]:deliveries.find(thread=>thread.id===prompt(`추가할 Thread ID\n${deliveries.map(thread=>`${thread.id}: ${thread.title}`).join('\n')}`));if(!chosen)return;chosen.milestones.push(milestone);
+    const chosen=deliveries[0];chosen.milestones.push(milestone);
   }else{
     const deliverable=(snap.deliverables||[])[0];if(!deliverable)return;milestone.deliverableId=deliverable.id;snap.milestones.push(milestone);deliverable.milestoneIds=deliverable.milestoneIds||[];deliverable.milestoneIds.push(milestone.id);
   }
-  onboardSaveDraft(plan);
+  onboardSaveDraft(plan);setTimeout(()=>onboardStartEdit(null,milestone.id),0);
 }
 function onboardApproveMilestones(){
   const plan=currentProject&&currentProject.milestonePlan;if(!plan||!onboardDraftMilestones(plan).length){toast('최소 한 개의 delivery 마일스톤이 필요해요.','error');return;}
@@ -247,7 +334,13 @@ function onboardApproveMilestones(){
 /* ──── 온보딩 전용 Gemini 프롬프트/스키마 ──── */
 async function callGeminiOnboard(track,inputs){
   const today=new Date().toISOString().split('T')[0];
-  return await geminiRequest(onboardPrompt(track,inputs,today), onboardSchema(track), 8192);
+  return await geminiRequest(onboardPrompt(track,onboardCompactInputs(track,inputs),today), onboardSchema(track), 4096);
+}
+function onboardCompactText(value,limit){const text=String(value||'').replace(/\s+/g,' ').trim();if(text.length<=limit)return text;const half=Math.floor(limit/2);return text.slice(0,half)+' … '+text.slice(-half);}
+function onboardCompactInputs(track,inputs){
+  if(track==='team')return {...inputs,requirements:onboardCompactText(inputs.requirements,3500),deliverables:onboardCompactText(inputs.deliverables,1800),rubric:onboardCompactText(inputs.rubric,1200),members:onboardCompactText(inputs.members,500)};
+  if(track==='contest')return {...inputs,guidelines:onboardCompactText(inputs.guidelines,3500),deliverables:onboardCompactText(inputs.deliverables,1800),rubric:onboardCompactText(inputs.rubric,1600),members:onboardCompactText(inputs.members,500)};
+  return {...inputs,threads:(inputs.threads||[]).map(thread=>({...thread,description:onboardCompactText(thread.description,1200)}))};
 }
 function legacyOnboardPrompt(t,inputs,today){
   if(t==='team') return `당신은 팀 프로젝트 온보딩을 돕는 AI입니다. 아래 문서를 분석해서 마일스톤·역할·배점·1차 회의 아젠다를 JSON으로 설계하세요.
@@ -399,7 +492,7 @@ function onboardMakePlan(track,inputs,result){
   const now=new Date().toISOString();
   const uid=kind=>onboardPlanId(kind);
   const s={requirements:[],rubrics:[],goals:[],deliverables:[],milestones:[],tasks:[],agendaThreads:[],firstMeetingAgenda:Array.isArray(result.firstMeetingAgenda)?result.firstMeetingAgenda:[],trackData:{}};
-  const task=(x,mid)=>({id:uid('task'),milestoneId:mid,title:x.title,assignee:x.assignee||null,dueDate:x.dueDate||null,status:'todo',definitionOfDone:x.definitionOfDone||'',needsDecomposition:!!x.needsDecomposition});
+  const task=(x,mid)=>({id:uid('task'),milestoneId:mid,title:x.title,assignee:null,dueDate:x.dueDate||null,status:'todo',definitionOfDone:x.definitionOfDone||'',needsDecomposition:!!x.needsDecomposition});
   if(track==='club'){
     (Array.isArray(result.agendaThreads)?result.agendaThreads:[]).forEach(x=>{
       const isDecision=x.mode==='decision';
@@ -449,7 +542,7 @@ function onboardMakePlan(track,inputs,result){
     });
     s.trackData=track==='contest'?{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,contestType:inputs.contestType,profile:result.profile||{emphasis:onboardBuildProfile(inputs.contestType)}}:{name:inputs.name||null,finalDeadline:inputs.finalDeadline||null,midDeadline:inputs.midDeadline||null};
   }
-  return {schemaVersion:1,track,status:'draft',createdAt:now,updatedAt:now,currentVersion:1,baseline:{version:1,approvedAt:null,snapshot:s},current:{version:1,source:'baseline',snapshot:null,taskState:{},decisionState:{},validationState:{requirements:{},rubrics:{}}},links:[],pendingReplan:null,changeLog:[]};
+  return {schemaVersion:1,assigneePolicyVersion:1,track,status:'draft',createdAt:now,updatedAt:now,currentVersion:1,baseline:{version:1,approvedAt:null,snapshot:s},current:{version:1,source:'baseline',snapshot:null,taskState:{},decisionState:{},validationState:{requirements:{},rubrics:{}}},links:[],pendingReplan:null,changeLog:[]};
 }
 
 /* ──── MVP 1차 입력·생성 구조 (아래 선언이 구형 온보딩 함수를 대체한다) ──── */
@@ -478,7 +571,7 @@ function collectOnboardInputs(t){
 function onboardMissingField(t,input){ if(t==='club') return input.threads.length?'': '최소 한 개의 Agenda Thread를 입력해주세요.'; return (t==='team'?input.requirements||input.deliverables:input.guidelines||input.deliverables)?null:'최소 한 가지 핵심 정보를 입력해주세요.'; }
 function onboardBuildProfile(type){ return {idea:['문제 정의','차별성','공모전 의도 부합','논리 검증','실행 가능성'],data_ai:['데이터 품질','방법론 선정 근거','재현성','기술 검증','결과 해석'],marketing:['타깃','채널','핵심 메시지','실행안','성과 지표'],startup_bm:['문제/고객 검증','가치제안','경쟁 분석','수익구조','시장 검증','Q&A 준비'],hackathon:['구현 범위','MVP','핵심 기능','테스트','데모','데모 백업'],design:['요구사항 해석','Concept','Draft/Feedback','Refinement','제출 규격','최종 완성도']}[type]||[]; }
 function onboardPrompt(t,i,today){
-  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 단 하나의 추천 구조로 프로젝트 전체에 핵심 마일스톤을 3~5개만 만드세요. 처음에는 세부 Task를 만들지 말고 각 milestone의 tasks는 빈 배열로 두세요. 벤치마킹·사례조사·인터뷰·baseline·경쟁사 분석 같은 방법론은 자동 Task가 아니라 milestone.recommendations에 2~4개의 선택형 제안으로 넣으세요. 기본 계층 Goal → Deliverable → Milestone은 내부 데이터로 유지하고 Requirement와 Rubric은 관련 Deliverable/Milestone의 검수 기준으로 두세요. 각 Deliverable에 고유한 refKey를 부여하고 relatedDeliverableKeys에는 그 refKey만 넣으세요. 마감일/목표일은 실제 입력을 우선하세요.`;
+  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 단 하나의 추천 구조로 프로젝트 전체에 핵심 마일스톤을 3~5개만 만드세요. 각 milestone 안에는 실제로 실행할 세부 Task를 2~5개 넣으세요. Task는 담당자가 완료 여부를 판단할 수 있는 크기와 표현으로 만들고, 첫 회의 전에는 담당자를 임의 배정하지 말고 모든 task.assignee를 null로 두세요. 별도의 방법론 추천 단계는 만들지 마세요. milestone.recommendations는 빈 배열로 두세요. 기본 계층 Goal → Deliverable → Milestone → Task는 내부 데이터로 유지하고 Requirement와 Rubric은 관련 Deliverable/Milestone의 검수 기준으로 두세요. 각 Deliverable에 고유한 refKey를 부여하고 relatedDeliverableKeys에는 그 refKey만 넣으세요. 마감일/목표일은 실제 입력을 우선하세요.`;
   if(t==='team') return `대학 팀플 초기 계획을 JSON으로 만드세요. 과제명:${i.name}\nRequirement:${i.requirements}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n중간 마감:${i.midDeadline||'없음'}\nRubric:${i.rubric||'없음'}\n팀원:${i.members||'없음'}\n${rules}`;
   if(t==='contest') return `공모전 초기 계획을 JSON으로 만드세요. 공모전명:${i.name}\n요강:${i.guidelines}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n심사기준:${i.rubric}\n팀원:${i.members||'없음'}\n유형:${i.contestType}, 강조 Profile:${onboardBuildProfile(i.contestType).join(', ')}\n${rules}\nProfile은 고정 템플릿이 아니며, 실제 요강과 심사기준이 항상 우선입니다. 필요한 milestone에 checkpoint(완료 지점이 아닌 검증 기준)를 넣으세요.`;
   return `동아리 Agenda Thread 초기 계획을 JSON으로 만드세요. 입력:${JSON.stringify(i.threads)}\n${rules}\nnew_event, recurring_event, content, outreach는 mode:'delivery'와 각 Thread 내부 milestones/tasks를 만드세요. operations_decision은 mode:'decision', status:undecided/decided/deferred만 두고 milestones/tasks를 만들지 마세요.`;
