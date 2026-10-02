@@ -26,6 +26,13 @@ function groupBy(items){
   return g;
 }
 function esc(s){ return encodeURIComponent(s||''); }
+/** 텍스트를 HTML에 넣기 전에 이스케이프한다(esc는 URL 인코딩이라 용도가 다르다).
+    원래 js/research.js에 있었는데, 자료 찾기를 빼면서 여러 파일이 쓰는 이 함수만 여기로 옮겼다. */
+function esc2(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function setLoading(on){
   const btn=document.getElementById('anlz-btn'); btn.disabled=on;
   document.getElementById('spin').style.display=on?'block':'none';

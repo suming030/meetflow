@@ -94,8 +94,6 @@ function renderTimeline(){
             ${m.summary?`<div style="font-size:14px;line-height:1.85;color:var(--text);background:var(--pk-bg);padding:14px 16px;border-radius:10px;${items.length?'margin-top:14px;':''}">${m.summary}</div>`:''}
           </div>
           ${carryOverHTML(m)}
-          ${/* "놓치고 있는 부분" 바로 아래 — 못 정한 것을 웹에서 찾아보게 잇는다 (js/research.js) */''}
-          ${researchBlockHTML(m, pfx)}
         </div>
       </div>`;
   }).join('');
@@ -358,7 +356,7 @@ function renderMeetingDetail(){
   const i=history.indexOf(m), no=history.length-i;
   const hasPrev=i<history.length-1, hasNext=i>0;   /* 최신순이라 이전 회의가 배열 뒤쪽에 있다 */
   const items=m.items||[];
-  TL_MEETINGS['md']={meeting:m, no};               /* 회의록 모달·자료 찾기가 여기서 찾아 쓴다 */
+  TL_MEETINGS['md']={meeting:m, no};               /* 회의록 모달이 여기서 찾아 쓴다 */
 
   wrap.innerHTML=`
     <div class="pg-hd">
@@ -383,6 +381,5 @@ function renderMeetingDetail(){
         ?`<div class="ac-grid">${items.map((it,k)=>acHTML(it,k,'md')).join('')}</div>`
         :`<div style="font-size:13px;color:var(--muted);">이 회의에서 새로 정한 업무가 없어요.</div>`}
     </div>
-    ${carryOverHTML(m)}
-    ${researchBlockHTML(m,'md')}`;
+    ${carryOverHTML(m)}`;
 }

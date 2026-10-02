@@ -42,7 +42,16 @@ async function analyze(){
 
   try{
     const pending=collectPendingItems();
-    const result=await callGemini(text, pending);
+    const past={decisions:collectPastDecisions(), issues:collectOpenIssues()};
+    /* 두 요청을 동시에 보낸다(js/gemini.js). 업무(A)가 먼저 오면 바로 보여주고 저장하고,
+       긴 회의록 본문(B)은 도착하는 대로 그 회의에 채워 넣는다. */
+    const projectId=currentProject&&currentProject.id;   /* B가 오기 전에 프로젝트를 바꿔도 제자리에 저장되게 */
+    const tasksP=callGeminiTasks(text, pending, past);
+    const minutesP=callGeminiMinutes(text);
+    minutesP.catch(()=>{});   /* A가 먼저 실패해 아무도 기다리지 않아도 '처리 안 된 오류'로 남지 않게 */
+    const result=await tasksP;
+    result.topics=[]; result.gaps=[];
+    linkDecisions(result, past);
     clearInterval(stInt);
     steps.forEach(s=>{ document.getElementById(s).className='ai-step done'; });
     const applied=await applyCarriedOver(result.carriedOver);
@@ -55,6 +64,7 @@ async function analyze(){
     /* 저장됐으면 분석 페이지를 비우고 방금 회의 화면으로 넘어간다 — 다음 회의를 바로 받을 수 있게.
        저장에 실패했으면 결과까지 사라지면 안 되니 이 화면에 그대로 둔다. */
     if(saved&&saved.id){ resetUploadPage(); openMeeting(saved.id); }
+    fillMinutesLater(minutesP, saved, result, projectId);   /* 기다리지 않는다 — 뒤에서 채운다 */
   }catch(e){
     clearInterval(stInt);
     showErr(e.message);
@@ -62,6 +72,24 @@ async function analyze(){
   }finally{
     setLoading(false);
     setTimeout(()=>document.getElementById('ai-proc').classList.remove('show'),400);
+  }
+}
+
+/** 회의록 본문(B)이 도착하면 방금 저장한 회의에 채워 넣는다.
+    실패해도 업무(A)는 이미 저장돼 있으니 알리기만 한다. (알림 문구는 임시 — ③이 다듬는다) */
+async function fillMinutesLater(minutesP, meeting, result, projectId){
+  try{
+    const m=await minutesP;
+    result.topics=m.topics; result.gaps=m.gaps;
+    if(meeting){
+      meeting.topics=m.topics; meeting.gaps=m.gaps;
+      if(meeting.id&&projectId) await window.mfDb.updateMeeting(projectId, meeting.id, {topics:m.topics, gaps:m.gaps});
+      renderAll();
+    }
+    toast('회의록 본문까지 정리됐어요.','success');
+  }catch(e){
+    console.error('[MeetFlow] 회의록 본문 만들기 실패', e);
+    toast('회의록 본문은 만들지 못했어요. 업무는 저장됐어요.','error');
   }
 }
 
@@ -114,6 +142,73 @@ async function applyCarriedOver(carried){
   }
   if(count) renderAll();
   return count;
+}
+
+/* ──── 결정 사항·미뤄지는 안건 이어붙이기 ────
+   업무와 같은 방식으로, 지난 회의에서 정한 것과 결론이 안 난 안건을 AI에게 넘긴다.
+   AI는 이번 회의의 결정이 지난 결정을 바꿨는지(replaces), 미결 안건을 풀었는지(resolves),
+   이번에도 결론 없이 넘어간 안건이 전과 같은 것인지(sameAs)를 id로 알려준다.
+   회의 문서에는 decisions:[{id,text,replaces,resolves}], openIssues:[{id,text,sameAs,streak}]로 남는다.
+   streak = 그 안건이 결론 없이 넘어간 회의 수 (이번 회의 포함). */
+
+/** id로 결정·미결 안건을 찾는다 → {d|q, m(그 회의)} */
+function findDecision(id){
+  for(const m of history){ const d=(m.decisions||[]).find(x=>x.id===id); if(d) return {d,m}; }
+  return null;
+}
+function findIssue(id){
+  for(const m of history){ const q=(m.openIssues||[]).find(x=>x.id===id); if(q) return {q,m}; }
+  return null;
+}
+/** 이 결정을 나중에 바꾼 결정 / 이 안건을 나중에 이어받거나 푼 것 */
+function laterChangeOf(decisionId){
+  for(const m of history){ const d=(m.decisions||[]).find(x=>x.replaces===decisionId); if(d) return {d,m}; }
+  return null;
+}
+function laterFateOf(issueId){
+  for(const m of history){
+    const d=(m.decisions||[]).find(x=>x.resolves===issueId); if(d) return {kind:'resolved', d, m};
+    const q=(m.openIssues||[]).find(x=>x.sameAs===issueId);   if(q) return {kind:'again', q, m};
+  }
+  return null;
+}
+
+/** 아직 유효한 결정 — 나중 결정이 바꾼 것은 뺀다. 최신 회의 것부터. */
+function collectPastDecisions(){
+  const out=[];
+  for(const m of history) for(const d of (m.decisions||[])){
+    if(!laterChangeOf(d.id)) out.push({id:d.id, text:d.text, no:meetingNo(m)});
+  }
+  return out.slice(0,30);
+}
+/** 아직 결론이 안 난 안건 — 뒤에서 이어받았거나 결정으로 풀린 것은 뺀다(사슬의 마지막 것만 남는다). */
+function collectOpenIssues(){
+  const out=[];
+  for(const m of history) for(const q of (m.openIssues||[])){
+    if(!laterFateOf(q.id)) out.push({id:q.id, text:q.text, no:meetingNo(m), streak:q.streak||1});
+  }
+  return out.slice(0,20);
+}
+
+/** AI가 준 결정·미결 안건에 id를 붙이고, 없는 id를 가리키면 끊는다. streak도 여기서 센다. */
+function linkDecisions(result, past){
+  const stamp=Date.now();
+  const decIds=new Set(past.decisions.map(d=>d.id));
+  const issues=new Map(past.issues.map(q=>[q.id,q]));
+  const clean=s=>typeof s==='string'?s.trim():'';
+  result.decisions=(result.decisions||[])
+    .filter(d=>d&&clean(d.text))
+    .map((d,i)=>({
+      id:'d'+stamp+'_'+i, text:clean(d.text),
+      replaces:decIds.has(d.replaces)?d.replaces:null,
+      resolves:issues.has(d.resolves)?d.resolves:null
+    }));
+  result.openIssues=(result.openIssues||[])
+    .filter(q=>q&&clean(q.text))
+    .map((q,i)=>{
+      const prev=issues.get(q.sameAs);
+      return {id:'q'+stamp+'_'+i, text:clean(q.text), sameAs:prev?q.sameAs:null, streak:prev?(prev.streak||1)+1:1};
+    });
 }
 
 /* ════════════════════════════════
@@ -295,8 +390,6 @@ function editItemTask(ev, itemId){
 /* ──── 업로드 결과 렌더링 ──── */
 function renderUpResult(result){
   const items=result.items;
-  lastResult=result;                                  /* 자료 찾기(js/research.js)가 참고한다 */
-  document.getElementById('up-research').innerHTML=''; /* 지난 회의의 검색 결과를 남기지 않는다 */
   document.getElementById('result-wrap').classList.add('show');
   document.getElementById('up-empty').style.display='none';
 
@@ -314,7 +407,8 @@ function renderUpResult(result){
 /** 지난 회의에서 이어받은 업무와 AI가 짚은 빈틈을 보여준다. */
 function carryOverHTML(result){
   const carried=result.carriedOver||[], gaps=result.gaps||[];
-  if(!carried.length && !gaps.length) return '';
+  const decisionsBlock=decisionsHTML(result);
+  if(!carried.length && !gaps.length) return decisionsBlock;
 
   const done=carried.filter(c=>c.resolved), still=carried.filter(c=>!c.resolved);
   const row=(c,ico)=>`
@@ -327,6 +421,7 @@ function carryOverHTML(result){
     </div>`;
 
   return `
+    ${decisionsBlock}
     ${carried.length?`
     <div class="panel">
       <div class="panel-hd"><div class="panel-ttl">🔗 지난 회의에서 이어진 일</div></div>
@@ -346,6 +441,94 @@ function carryOverHTML(result){
     </div>`:''}`;
 }
 
+/* ──── 결정 사항·미결 안건 표시 ────
+   모양과 문구는 임시다 — ③이 다듬는다. 기존 panel·rec-item 클래스를 그대로 빌려 쓴다. */
+
+/** 미결 안건 사슬의 첫 회의 번호 — "몇 차 회의부터 미뤄졌는지" */
+function issueStartNo(issueId){
+  let cur=findIssue(issueId), no=cur?meetingNo(cur.m):null;
+  while(cur&&cur.q.sameAs){ cur=findIssue(cur.q.sameAs); if(cur) no=meetingNo(cur.m); }
+  return no;
+}
+function decRow(ico, ttl, notes, struck){
+  return `
+    <div class="rec-item">
+      <span class="rec-ico">${ico}</span>
+      <div class="rec-body">
+        <div class="rec-ttl"${struck?' style="text-decoration:line-through;color:var(--hint);"':''}>${esc2(ttl)}</div>
+        ${notes.filter(Boolean).map(n=>`<div class="rec-desc">${n}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/** 한 회의의 "정한 것"과 "결론이 안 난 안건" — 분석 결과 화면과 회의 화면(carryOverHTML)이 쓴다 */
+function decisionsHTML(m){
+  const decs=m.decisions||[], issues=m.openIssues||[];
+  if(!decs.length && !issues.length) return '';
+
+  const decRows=decs.map(d=>{
+    const old=d.replaces&&findDecision(d.replaces);
+    const solved=d.resolves&&findIssue(d.resolves);
+    const later=laterChangeOf(d.id);
+    return decRow(old?'🔄':'📌', d.text, [
+      old?`${meetingNo(old.m)}차 회의에서 정한 "${esc2(old.d.text)}"에서 바뀌었어요`:'',
+      solved?`${issueStartNo(d.resolves)}차 회의부터 미뤄진 "${esc2(solved.q.text)}"의 결론이에요`:'',
+      later?`→ ${meetingNo(later.m)}차 회의에서 "${esc2(later.d.text)}"(으)로 바뀌었어요`:''
+    ], !!later);
+  }).join('');
+
+  const issueRows=issues.map(q=>{
+    const fate=laterFateOf(q.id);
+    const n=q.streak||1;
+    return decRow(n>=3?'🚨':n===2?'⚠️':'⏸', q.text, [
+      n>=2?`<b>${n}번째 회의에서도 결론이 안 났어요</b> (${issueStartNo(q.id)}차 회의부터)`:'',
+      fate&&fate.kind==='resolved'?`→ ${meetingNo(fate.m)}차 회의에서 "${esc2(fate.d.text)}"(으)로 결론 났어요`:'',
+      fate&&fate.kind==='again'?`→ ${meetingNo(fate.m)}차 회의로 다시 넘어갔어요`:''
+    ], fate&&fate.kind==='resolved');
+  }).join('');
+
+  return `
+    ${decs.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📌 이번 회의에서 정한 것</div></div>
+      ${decRows}
+    </div>`:''}
+    ${issues.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">⏸ 결론이 안 난 안건</div></div>
+      ${issueRows}
+    </div>`:''}`;
+}
+
+/** 프로젝트 전체 — 지금 유효한 결정 전부와, 아직 결론이 안 난 안건. 브리핑 탭(js/dashboard.js)이 쓴다.
+    "그거 언제 정했더라?"에 답하는 곳이라 회의별이 아니라 한데 모아 보여준다. */
+function decisionBoardHTML(){
+  const decs=collectPastDecisions();
+  const issues=collectOpenIssues().sort((a,b)=>b.streak-a.streak);
+  if(!decs.length && !issues.length) return '';
+  const tag=no=>`<span class="bdg b-nodl" style="margin-left:6px;">${no}차</span>`;
+  return `
+    ${issues.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">⏸ 아직 결론이 안 난 안건</div></div>
+      ${issues.map(q=>decRow(q.streak>=3?'🚨':q.streak===2?'⚠️':'⏸', q.text, [
+        q.streak>=2?`<b>${q.streak}번 연속 결론 없이 넘어갔어요</b> (${issueStartNo(q.id)}차 회의부터)`
+                   :`${q.no}차 회의에서 결론이 안 났어요`
+      ])).join('')}
+    </div>`:''}
+    ${decs.length?`
+    <div class="panel">
+      <div class="panel-hd"><div class="panel-ttl">📌 지금까지 정한 것</div></div>
+      ${decs.map(d=>{
+        const old=(findDecision(d.id)||{}).d;
+        const prev=old&&old.replaces&&findDecision(old.replaces);
+        return decRow('📌', d.text, [
+          `${tag(d.no)}${prev?` · ${meetingNo(prev.m)}차 회의의 "${esc2(prev.d.text)}"에서 바뀜`:''}`
+        ]);
+      }).join('')}
+    </div>`:''}`;
+}
+
 /* ──── 이력 저장 ────
    회의는 프로젝트 하위 컬렉션에 쌓인다. "회의가 쌓일수록 선명해진다"가 이 제품의
    핵심이므로 개수 제한을 두지 않는다. */
@@ -361,6 +544,9 @@ async function saveHistory(result,text){
        분석 당시의 판단을 회의 문서에 함께 남겨야 한다. */
     carriedOver:result.carriedOver||[],
     gaps:result.gaps||[],
+    /* 정한 것과 결론이 안 난 안건 — 다음 회의 분석이 이어받는다 (linkDecisions에서 id를 붙였다) */
+    decisions:result.decisions||[],
+    openIssues:result.openIssues||[],
     /* 안건별 논의 내용 — 회의 타임라인의 회의록 본문이 된다.
        이 필드가 없는 과거 회의는 회의록에서 요약+업무 표로 자동 폴백한다. */
     topics:result.topics||[],
@@ -389,6 +575,5 @@ function resetUploadPage(){
   updateCC();
   document.getElementById('result-wrap').classList.remove('show');
   document.getElementById('up-empty').style.display='block';
-  document.getElementById('up-research').innerHTML='';
   if(typeof setSttStatus==='function') setSttStatus('');
 }

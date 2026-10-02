@@ -8,7 +8,7 @@
 
 | 역할 | 담당 파일 |
 | --- | --- |
-| ① 회의 입력·분석 (STT 포함) + 자료 찾기 — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `js/research.js`, `functions/`, `storage.rules` |
+| ① 회의 입력·분석 (STT 포함) — **수민** | `js/stt.js`, `js/meetings.js`, `js/gemini.js`, `functions/`, `storage.rules` |
 | ② 첫 시작 페이지(랜딩) 전담 - **세은** | `css/landing.css`, index.html 랜딩 구역 |
 | ③ 디자인 — 세부 디테일 (랜딩 외 모든 화면) - **주향** | `css/base.css`, `css/layout.css`, `css/app.css`, `js/dashboard.js`, `js/timeline.js`, index.html 상단바·로그인·트랙 선택·사이드바·대시보드 |
 | ④ 마일스톤 (온보딩 + 트랙별 틀) - **지은** | `js/onboarding.js`, `js/milestones.js` |
@@ -89,9 +89,8 @@ python -m http.server 8000
   API 키는 코드에 없습니다.
   - `window.mfGenerateJSON` — 구조화 JSON (회의 분석)
   - `window.mfTranscribeAudio` — 음성 전사
-  - `window.mfGroundedSearch` — Google 검색 그라운딩 (추가 자료 찾기)
 
-  셋 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
+  둘 다 `mfCallWithFallback`을 거칩니다. 모델 이름은 `MF_MODELS` 한 곳에만 있고,
   한도 초과(429)·없는 모델(404)·과부하(500/503)·시간 초과(5분)가 나면 아래 후보로 내려갑니다.
   **모델 이름을 개별 함수에 하드코딩하지 마세요.**
 
@@ -153,10 +152,25 @@ PR을 올리면 **다른 한 명이 보고 머지**합니다.
     무료 티어에서 과부하로 110~180초씩 붙잡다 실패했고, 같은 20분 녹음을 3.6은 약 85초에 전사했습니다.
   - **전사에는 lite 모델을 쓰지 않습니다**(`skipLite`). 20분 녹음을 넣었더니 녹음에 없는 내용을
     지어냈습니다. 회의 분석은 lite까지 내려갑니다.
-- **Google 검색 그라운딩은 구조화 JSON 출력과 함께 쓰지 않습니다.** 같이 쓰면
-  출처 정보(`groundingChunks`)가 비어서 돌아오는 문제가 보고돼 있습니다.
-  회의 분석(JSON)과 자료 찾기(그라운딩)는 **반드시 별도 호출**로 유지하세요.
-  또 그라운딩 응답은 Google 정책상 **검색 제안과 출처를 화면에 표시해야 합니다.**
+  - 후보 목록은 **기능마다 다릅니다.** 전사는 `MF_TRANSCRIBE_MODELS`를 씁니다.
+    성공한 모델을 기억하는 것도 기능별입니다(`mfWorking`) — 안 그러면 전사에서 성공한
+    받아쓰기 전용 모델을 회의 분석이 먼저 써서 빈 응답을 받습니다.
+- **화자 구분 지시문은 조건부로 쓰면 안 됩니다 (2026-09-28, 실제 26분 녹음으로 확인).**
+  - "화자가 구분되면 화자1: 형태로 표시하세요"라고 했더니 **라벨이 0개**로, 26분이 한 덩어리로 왔습니다.
+  - **"모든 줄을 반드시 '화자1:' 형태로 시작"**으로 못박으니 같은 녹음이 **화자 4명·405줄**로 나뉩니다.
+    참석자 수를 알려주면(화면의 참석자 수 선택) 그 수에 맞춰 나눕니다.
+  - 목소리가 아니라 문맥으로 나누는 추정이라 틀릴 수 있습니다. **"화자 분리 기능"이라고
+    말하지 말고**, 사람이 화자 이름 칸(`js/stt.js`의 `renderSpeakerMapper`)에서 확인하는 것을
+    전제로 두세요. 목소리 기반 화자 분리는 Cloud STT(`functions/`)에만 있습니다
+    (Firebase AI Logic의 `generateContent`로는 안 됩니다 — diarization 설정은 전부 400).
+- **전사 후보는 `MF_TRANSCRIBE_MODELS`이고 flash가 1순위입니다.** 화자를 나눠주는 건 flash뿐입니다.
+  같은 26분 녹음: flash 107~262초(화자 4명), `gemini-3.5-transcribe` 52초(화자 구분 없음, 받아쓰기는 더 정확).
+  transcribe는 flash가 막혔을 때 내려가는 마지막 후보입니다. 응답 모양도 달라
+  결과가 `parts[].audioTranscription.text`에 담겨 오고 `response.text()`는 빈 문자열입니다
+  (`mfPartsText`로 꺼냅니다). **회의 분석(JSON)에는 쓰면 안 됩니다** — 글자만 보내면 빈 응답이 옵니다.
+- **자료 찾기(Google 검색 그라운딩)는 뺐습니다 (2026-09-22, 팀 결정).** 다시 넣는다면
+  구조화 JSON 출력과 **반드시 별도 호출**로 해야 합니다(같이 쓰면 출처가 비어서 옵니다).
+  예전 코드는 git 기록의 `js/research.js`에 있습니다.
 - **STT(Cloud Speech-to-Text) 전환은 보류 중입니다 (2026-09-21).** 화자 분리를 쓰려면
   서비스 계정 인증이 필요해 Cloud Function과 **Blaze 요금제**가 있어야 하는데, 결제 가입이
   구글 심사에 걸려 막혀 있습니다. `functions/`(chirp_3 화자 분리)와 `storage.rules`는

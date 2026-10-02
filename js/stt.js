@@ -123,7 +123,8 @@ async function processAudio(blob, ext, durSec){
         text=await withSttProgress(dur, estimateSttSec(dur), ()=>transcribeViaGemini(blob, speakers));
       }
     }else{
-      text=await withSttProgress(dur, estimateSttSec(dur), ()=>transcribeViaGemini(blob, speakers));
+      const r=await withSttProgress(dur, estimateSttSec(dur), ()=>transcribeAndRefine(blob, speakers));
+      text=r.text; note=r.note;
     }
     appendTranscript(text);
     setSttStatus('✅ 전사가 끝났어요'+note+' — 아래 텍스트를 확인하고 수정하세요.');
@@ -234,6 +235,36 @@ async function transcribeViaGemini(blob, speakers){
   if(typeof window.mfTranscribeAudio!=='function') throw new Error('AI 모듈을 불러오는 중이에요.');
   const b64=await blobToBase64(blob);
   return await window.mfTranscribeAudio(b64, blob.type||'audio/webm', {speakers});
+}
+
+/** 두 모델에 같은 녹음을 동시에 보내고, 화자 구분본의 잘못 들은 단어를 정확한 받아쓰기로 다듬는다.
+    (왜 이렇게 하는지는 js/gemini.js의 refineTranscript 설명 참고)
+    한쪽이 실패해도 나머지로 전사는 끝난다 — 무엇이 빠졌는지 안내 문구로 알린다. */
+async function transcribeAndRefine(blob, speakers){
+  const b64=await blobToBase64(blob);
+  const mime=blob.type||'audio/webm';
+  const [labeled, exact]=await Promise.allSettled([
+    window.mfTranscribeAudio(b64, mime, {speakers}),
+    window.mfTranscribeExact(b64, mime)
+  ]);
+  const ok=r=>r.status==='fulfilled' && r.value && r.value.trim();
+
+  if(!ok(labeled)){
+    /* 화자를 나눠주는 쪽이 실패 — 정확한 받아쓰기만으로 간다(화자 구분 없음) */
+    if(ok(exact)) return {text:exact.value, note:' (말한 사람은 나누지 못했어요)'};
+    throw (labeled.reason || exact.reason || new Error('음성에서 말소리를 찾지 못했어요.'));
+  }
+  if(!ok(exact)) return {text:labeled.value, note:' (정확도 다듬기는 건너뛰었어요)'};
+
+  try{
+    setSttStatus('🔍 잘못 들은 단어를 다듬는 중이에요…');
+    const refined=await refineTranscript(labeled.value, exact.value,
+      (done,total)=>setSttStatus(`🔍 잘못 들은 단어를 다듬는 중이에요… ${done}/${total}`));
+    return {text:refined, note:''};
+  }catch(e){
+    console.error('[MeetFlow] 전사본 다듬기 실패', e);
+    return {text:labeled.value, note:' (정확도 다듬기는 건너뛰었어요)'};
+  }
 }
 
 /** Cloud Speech-to-Text — 올리기(실제 진행률) → 함수 호출(예상 시간 막대) */

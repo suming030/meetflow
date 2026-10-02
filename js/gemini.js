@@ -1,6 +1,6 @@
 /* MeetFlow — Gemini 공통 호출·JSON 파싱 + 회의 분석 프롬프트
    담당: ① 회의 입력·분석. 프로젝트 마무리 프롬프트는 js/wrapup.js(⑤)로 옮겼다.
-   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩 ④·회고 ⑤·자료 찾기)도 쓰는 공용 도구다. */
+   geminiRequest·parseGeminiJson·aiErrorInfo는 다른 파일(온보딩 ④·회고 ⑤)도 쓰는 공용 도구다. */
 
 /* AI 호출 실패를 화면에 보여줄 안내로 바꾼다. 원인마다 사용자가 할 일이 달라서
    (기다리기 / 콘솔 설정 고치기 / 그냥 재시도) 구분해준다. */
@@ -24,15 +24,6 @@ function classifyAiError(msg,feature){
      'billing'이라는 단어만 보고 결제 문제로 단정하면 안 된다 — 무료 한도 소진일 뿐이다.
      여기까지 왔다면 index.html의 모델 폴백이 후보 모델을 전부 시도한 뒤다. */
   if(/quota|RESOURCE_EXHAUSTED|\b429\b/i.test(msg)){
-    /* 자료 찾기는 Google 검색 그라운딩이라 회의 분석과 할당량 주머니가 다르다.
-       그래서 "회의 분석은 되는데 자료 찾기만 안 되는" 상황이 정상적으로 생긴다. */
-    if(feature==='search') return {
-      title:'웹 검색 할당량을 다 썼어요',
-      desc:'자료 찾기는 Google 검색 그라운딩을 쓰는데, 회의 분석·온보딩과는 ' +
-           '별도의 무료 한도를 씁니다. 그래서 다른 AI 기능은 그대로 되는데 자료 찾기만 막혀요. ' +
-           '모델을 바꿔도 같은 한도라 소용없고, 태평양 시간 자정(한국 시간 오후 4~5시)에 초기화돼요.',
-      retry:true, wait:true
-    };
     return {
       title:'오늘 쓸 수 있는 AI 사용량을 다 썼어요',
       desc:'무료 한도로 쓸 수 있는 모델을 차례로 다 시도했는데 모두 한도에 걸렸어요. ' +
@@ -109,23 +100,127 @@ function parseGeminiJson(raw){
   }
 }
 
-/**
- * 회의 텍스트를 분석한다.
- * 이 서비스의 차별점은 회의를 "이어붙이는" 것이므로, 이전 회의에서 끝나지 않은
- * 업무를 함께 넘겨 AI가 이번 회의에서 해결됐는지까지 판단하게 한다.
- * @param {string} text     이번 회의 텍스트
- * @param {Array}  pending  이전 회의의 미완료 업무 [{id,task,assignee,deadline,status,meetingDate}]
- */
-async function callGemini(text, pending=[]){
-  const today=new Date().toISOString().split('T')[0];
+/* ════════════════════════════════
+   전사본 정확도 다듬기 (2026-09-28)
 
-  const pendingBlock = pending.length
-    ? `\n지난 회의에서 아직 끝나지 않은 업무 (이번 회의에서 다뤄졌는지 판단해야 함):
+   녹음 하나를 두 모델에 동시에 보낸다(js/stt.js).
+     - flash          : 화자를 나눠주지만("화자1:") 단어를 더 자주 틀린다
+     - 3.5-transcribe : 화자는 못 나누지만 받아쓰기가 정확하다
+   그래서 **flash 전사본을 기준으로 두고, 잘못 들은 단어만 transcribe 것을 보고 고친다.**
+
+   통째로 다시 쓰게 하면 8천 자짜리 회의에서 요청이 취소됐다(499). 그래서
+   flash 전사본을 줄 단위로 잘라 한 번에 40줄씩만 고친다. transcribe 전사본에는
+   줄 구분이 없으므로, 같은 구간을 위치 비율로 찾아 앞뒤 여유를 붙여 참고로 준다.
+
+   고친 결과가 원래 줄과 너무 달라지면(AI가 요약하거나 지어낸 경우) 그 묶음은 버리고
+   flash 전사본을 그대로 쓴다. 최악의 경우에도 지금까지 쓰던 전사본이 남는다.
+════════════════════════════════ */
+const REFINE_LINES = 40;    /* 한 번에 고칠 줄 수 */
+const REFINE_AT_ONCE = 3;   /* 동시에 보낼 요청 수 — 분당 한도에 걸리지 않을 만큼만 */
+
+/** 글자만 남긴다 — 띄어쓰기·문장부호·화자 라벨은 비교에서 뺀다 */
+function transcriptCore(s){
+  return String(s||'').replace(/^\s*화자\s*\d+\s*:/gm,'').replace(/[\s\p{P}\p{S}]/gu,'');
+}
+/** 두 글이 같은 내용인지 0~1로 (글자 개수를 견줘서 — 긴 글에도 빠르다) */
+function transcriptSimilarity(a,b){
+  const ca=transcriptCore(a), cb=transcriptCore(b);
+  if(!ca.length || !cb.length) return 0;
+  const count=s=>{ const m=new Map(); for(const ch of s) m.set(ch,(m.get(ch)||0)+1); return m; };
+  const ma=count(ca), mb=count(cb);
+  let shared=0;
+  for(const [ch,n] of ma) shared+=Math.min(n, mb.get(ch)||0);
+  return shared/Math.max(ca.length, cb.length);
+}
+
+/** 묶음 하나를 고친다. 못 믿을 결과면 원래 줄을 그대로 돌려준다. */
+async function refineChunk(lines, reference){
+  const prompt=`회의 녹음을 받아쓴 결과입니다. **잘못 들은 단어만 고치세요.**
+
+고칠 부분 (화자 구분이 되어 있음):
 """
-${pending.map(p=>`- [${p.id}] ${p.task} (담당: ${p.assignee||'미지정'}, 마감: ${p.deadline||'미정'}, 상태: ${ST.lbl[p.status]||p.status}, ${p.meetingDate} 회의)`).join('\n')}
-"""\n`
-    : '\n(이번이 첫 회의라 이어받을 업무가 없습니다.)\n';
+${lines.join('\n')}
+"""
 
+참고 — 같은 구간을 더 정확하게 받아쓴 것 (화자 구분은 없고, 앞뒤가 더 넓을 수 있음):
+"""
+${reference}
+"""
+
+규칙:
+- 줄 수를 그대로 유지하세요. ${lines.length}줄을 받았으면 ${lines.length}줄을 돌려주세요.
+- 각 줄의 "화자N:" 표시를 그대로 두세요. 화자 번호를 바꾸지 마세요.
+- 참고본에 같은 대목이 있으면 그쪽 표기를 따르세요. (예: "내내일" → "내 모레")
+- 참고본에 없는 대목은 원래 줄을 그대로 두세요.
+- 문장을 다듬거나 요약하지 마세요. 내용을 더하거나 빼지 마세요.`;
+
+  const schema={
+    type:'object',
+    properties:{ lines:{type:'array', items:{type:'string'}} },
+    required:['lines']
+  };
+
+  const parsed=await geminiRequest(prompt,schema,8192);
+  const out=Array.isArray(parsed.lines)?parsed.lines.filter(l=>typeof l==='string'&&l.trim()):[];
+  /* 줄 수가 달라졌거나 내용이 많이 바뀌었으면 AI가 요약·창작을 한 것이다 */
+  if(out.length!==lines.length) return lines;
+  return transcriptSimilarity(out.join('\n'), lines.join('\n'))>=0.8 ? out : lines;
+}
+
+/** flash 전사본(화자 구분)을 transcribe 전사본(정확한 받아쓰기)으로 다듬는다. */
+async function refineTranscript(labeled, exact, onProgress){
+  const lines=String(labeled||'').split('\n').filter(l=>l.trim());
+  if(!lines.length || !exact || !exact.trim()) return labeled;
+  /* 화자 구분이 없으면 다듬을 기준이 없다. flash가 막혀서 받아쓰기 전용 모델이 양쪽을
+     다 맡은 경우가 여기다 — 같은 글을 놓고 고치느라 호출만 쓰게 된다. */
+  if(!/화자\s*\d/.test(labeled) || transcriptSimilarity(labeled, exact)>0.98) return labeled;
+
+  /* 각 묶음이 녹음의 어느 대목인지를 글자 수 비율로 어림잡아 참고 구간을 자른다.
+     회의가 진행될수록 두 전사본의 위치가 조금씩 어긋나므로 앞뒤로 넉넉히 준다. */
+  const total=lines.reduce((n,l)=>n+l.length,0);
+  const margin=Math.max(600, Math.round(exact.length*0.12));
+  const chunks=[];
+  for(let i=0, before=0; i<lines.length; i+=REFINE_LINES){
+    const part=lines.slice(i, i+REFINE_LINES);
+    const len=part.reduce((n,l)=>n+l.length,0);
+    const from=Math.max(0, Math.round(exact.length*(before/total))-margin);
+    const to  =Math.min(exact.length, Math.round(exact.length*((before+len)/total))+margin);
+    chunks.push({part, reference:exact.slice(from,to)});
+    before+=len;
+  }
+
+  let done=0;
+  const results=new Array(chunks.length);
+  /* 한꺼번에 다 보내면 분당 한도에 걸린다 — 몇 개씩 나눠 보낸다 */
+  for(let i=0; i<chunks.length; i+=REFINE_AT_ONCE){
+    const group=chunks.slice(i, i+REFINE_AT_ONCE);
+    await Promise.all(group.map(async (c,j)=>{
+      try{
+        results[i+j]=await refineChunk(c.part, c.reference);
+      }catch(e){
+        console.warn('[MeetFlow] 전사본 다듬기 실패 — 이 부분은 그대로 둡니다', e);
+        results[i+j]=c.part;   /* 실패한 묶음만 원본 유지 */
+      }
+      if(onProgress) onProgress(++done, chunks.length);
+    }));
+  }
+  return results.flat().join('\n');
+}
+
+/**
+ * 회의 텍스트를 분석한다 — **두 요청으로 나눠 동시에** 보낸다.
+ *   A. callGeminiTasks   : 요약 + 업무 + 지난 회의 업무 판단 + 결정 사항·미결 안건 (짧다 → 먼저 도착)
+ *   B. callGeminiMinutes : 안건별 회의록 본문 + 놓친 부분   (길다 → 뒤따라 도착)
+ * 한 번에 받으면 가장 긴 회의록이 다 써질 때까지 업무도 못 보여준다. 사용자가 제일 먼저
+ * 보고 싶은 "누가 뭘 언제까지"를 먼저 띄우려고 나눴다(2026-09-22). 대신 회의 텍스트를
+ * 두 번 보내므로 AI 사용량이 조금 늘어난다.
+ * 이 서비스의 차별점은 회의를 "이어붙이는" 것이므로, A에는 이전 회의에서 끝나지 않은
+ * 업무를 함께 넘겨 이번 회의에서 해결됐는지까지 판단하게 한다.
+ */
+
+/** A·B가 같이 쓰는 앞부분 — 오늘 날짜와, 음성 전사본일 때 붙는 주의 규칙 */
+function analysisContext(text){
+  const today=new Date().toISOString().split('T')[0];
   /* 음성 전사본은 구어체에 (불분명) 구간이 섞여 있는데, topics의 분량 기준과 만나면
      AI가 근거 없는 내용으로 빈칸을 메우기 쉽다. 전사본으로 보일 때만 제동 규칙을 붙인다.
      (mfTranscribeAudio가 화자1/화자2·(불분명) 표기를 쓰므로 그걸로 판별한다) */
@@ -150,13 +245,44 @@ ${pending.map(p=>`- [${p.id}] ${p.task} (담당: ${p.assignee||'미지정'}, 마
   들린 내용이 적으면 적은 대로 두세요. 분량을 맞추려고 지어내는 것이 가장 나쁩니다.
 - 구어체 군더더기(음..., 그러니까, 아 네네)는 빼고 내용만 문장으로 정리하세요.` : '';
 
+  return {today, transcriptBlock};
+}
+
+/**
+ * A. 요약 + 업무 + 지난 회의 업무 판단
+ * @param {string} text     이번 회의 텍스트
+ * @param {Array}  pending  이전 회의의 미완료 업무 [{id,task,assignee,deadline,status,meetingDate}]
+ * @param {Object} past     지난 회의들의 {decisions:[{id,text,no}], issues:[{id,text,no,streak}]}
+ *                          — 아직 유효한 결정과 결론이 안 난 안건 (js/meetings.js의 collectPast…)
+ */
+async function callGeminiTasks(text, pending=[], past={decisions:[],issues:[]}){
+  const {today, transcriptBlock}=analysisContext(text);
+  /* 결정·미결 안건도 업무처럼 지난 회의 것을 넘겨야 "바뀐 결정", "또 미뤄진 안건"을 알아챈다 */
+  const pastDecisions=(past&&past.decisions)||[], pastIssues=(past&&past.issues)||[];
+  const pastBlock =
+    (pastDecisions.length ? `\n지난 회의에서 정한 것 (아직 유효한 결정):
+"""
+${pastDecisions.map(d=>`- [${d.id}] ${d.text} (${d.no}차 회의)`).join('\n')}
+"""\n` : '') +
+    (pastIssues.length ? `\n지난 회의에서 결론이 안 난 안건:
+"""
+${pastIssues.map(q=>`- [${q.id}] ${q.text} (${q.no}차 회의${q.streak>1?`, ${q.streak}번째 결론 없음`:''})`).join('\n')}
+"""\n` : '');
+  const pendingBlock = pending.length
+    ? `\n지난 회의에서 아직 끝나지 않은 업무 (이번 회의에서 다뤄졌는지 판단해야 함):
+"""
+${pending.map(p=>`- [${p.id}] ${p.task} (담당: ${p.assignee||'미지정'}, 마감: ${p.deadline||'미정'}, 상태: ${ST.lbl[p.status]||p.status}, ${p.meetingDate} 회의)`).join('\n')}
+"""\n`
+    : '\n(이번이 첫 회의라 이어받을 업무가 없습니다.)\n';
+
   const prompt=`다음은 한 프로젝트의 회의 기록입니다. 아래 JSON 스키마에 맞게 응답하세요.
+안건별 회의록 본문은 따로 만드니, 여기서는 요약·업무·지난 업무 판단만 하세요.
 
 이번 회의 텍스트:
 """
 ${text}
 """
-${pendingBlock}
+${pendingBlock}${pastBlock}
 규칙:
 - items에는 **이번 회의에서 새로 정해진 업무만** 넣으세요. 위에 이미 있는 업무는 넣지 마세요.
 - status는 항상 "todo"로 고정
@@ -175,34 +301,21 @@ carriedOver 작성 규칙 (지난 회의 미완료 업무에 대한 판단):
 - note: 근거를 회의 내용에서 인용해 한 문장으로. 미뤄졌다면 그 이유를 쓰세요.
 - newDeadline: 마감일이 새로 정해졌으면 YYYY-MM-DD, 아니면 null
 
-gaps 작성 규칙:
-- 이번 회의에서 논의가 빠졌거나 결정이 미뤄진 부분, 팀이 놓치고 있는 것을 짚어주세요.
-- 회의 내용에 근거한 것만, 최대 3개. 없으면 빈 배열.
+decisions 작성 규칙 (이번 회의에서 팀이 정한 것):
+- 방향·선택·일정·규칙처럼 **팀이 합의해 확정한 것**만 넣으세요. (예: "발표 주제는 캠퍼스 쓰레기 문제로", "중간발표는 10월 5일")
+- 누가 무엇을 할지는 items에 들어가니 decisions에는 넣지 마세요.
+- 제안만 나오고 합의되지 않은 것은 넣지 마세요.
+- text는 40자 이내, "~로 정함"처럼 결론이 드러나게.
+- 위 "지난 회의에서 정한 것"과 같은 내용을 다시 확인만 했다면 넣지 마세요.
+- 지난 결정을 바꾸거나 뒤집었다면 replaces에 그 결정의 id(대괄호 안 값)를, 아니면 null.
+- 위 "결론이 안 난 안건"이 이번에 결론 났다면 resolves에 그 안건의 id를, 아니면 null.
+- 최대 8개. 없으면 빈 배열.
 
-topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분):
-- summary가 2~3문장 요약이라면, topics는 **이 회의에 참석하지 않은 사람이 읽어도
-  회의 전체를 이해할 수 있는 상세 기록**입니다. 요약이 아니라 기록입니다.
-- 회의에서 다뤄진 안건(주제)별로 나눠서 정리하세요.
-- 각 안건마다 discussion 배열에 논의된 내용과 결정 사항을 항목별 문장으로 적으세요.
-
-분량과 깊이:
-- **짧게 줄이는 것이 가장 나쁩니다.** 회의 텍스트에 있는 내용은 최대한 살려 적으세요.
-- 안건 하나당 discussion을 최소 3개, 논의가 길었던 안건은 6~12개까지 적으세요.
-- 결정된 결과만 쓰지 말고 **왜 그렇게 정했는지(배경·근거)**, 검토된 다른 방안,
-  나온 우려나 반대 의견, 보류된 쟁점까지 각각 항목으로 적으세요.
-- 한 항목에 여러 내용을 몰아넣지 말고 내용이 다르면 항목을 나누세요.
-- 문장을 압축하지 말고 완결된 문장으로 쓰세요. 개조식 단어 나열은 피하세요.
-
-정확성:
-- 언급된 담당자·날짜·장소·금액·수량·조건은 문장 안에 그대로 살리세요.
-  (예: "혜강관 209호 예약하기 (지은)", "상품은 스타벅스 5000원 상품권 6개 증정")
-- 명단·타임테이블·후보안처럼 나열된 것은 항목을 빠뜨리지 말고 모두 적으세요.
-  개수가 많아도 생략하거나 "등"으로 뭉뚱그리지 마세요.
-- 안건 제목은 회의에서 실제로 쓰인 표현을 우선 사용하세요.
-- 안건 순서는 회의에서 다뤄진 순서를 따르세요.
-- 논의만 하고 결론이 안 난 안건도 넣으세요. "결론은 다음 회의로 미룸"처럼 상태를 적으면 됩니다.
-- 회의 텍스트에 없는 내용은 절대 지어내지 마세요. 분량을 채우려고 추측을 덧붙이지 마세요.
-  회의 내용이 짧으면 그만큼만 적으면 됩니다.${transcriptBlock}`;
+openIssues 작성 규칙 (논의했지만 결론이 안 난 안건):
+- 이번 회의에서 이야기는 했는데 결정하지 못하고 다음으로 넘긴 안건만 넣으세요. 언급조차 안 된 것은 넣지 마세요.
+- text는 30자 이내의 안건 이름. (예: "역할 분담", "발표 자료 디자인 방향")
+- 위 "결론이 안 난 안건"과 같은 안건이 이번에도 결론 없이 끝났다면 sameAs에 그 id를, 새 안건이면 null.
+- 최대 5개. 없으면 빈 배열.${transcriptBlock}`;
 
   const schema={
     type:'object',
@@ -236,6 +349,91 @@ topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분)
           required:['id','task','resolved','note']
         }
       },
+      decisions:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            text:    {type:'string'},
+            replaces:{type:'string', nullable:true},
+            resolves:{type:'string', nullable:true},
+          },
+          required:['text']
+        }
+      },
+      openIssues:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            text:  {type:'string'},
+            sameAs:{type:'string', nullable:true},
+          },
+          required:['text']
+        }
+      },
+    },
+    required:['summary','items']
+  };
+
+  const parsed=await geminiRequest(prompt,schema,8192);
+  if(!Array.isArray(parsed.items)) throw new Error('AI 응답 형식이 올바르지 않아요.');
+
+  /* deadline이 빈 문자열이면 null로 정규화 */
+  parsed.items=parsed.items.map(it=>({
+    ...it,
+    deadline: it.deadline&&it.deadline.trim()!==''?it.deadline:null,
+    status:   'todo',
+  }));
+  parsed.carriedOver=Array.isArray(parsed.carriedOver)?parsed.carriedOver:[];
+  parsed.decisions=Array.isArray(parsed.decisions)?parsed.decisions:[];
+  parsed.openIssues=Array.isArray(parsed.openIssues)?parsed.openIssues:[];
+  return parsed;
+}
+
+/** B. 안건별 회의록 본문 + 놓친 부분 — 길어서 A보다 늦게 도착한다 */
+async function callGeminiMinutes(text){
+  const {transcriptBlock}=analysisContext(text);
+  const prompt=`다음은 한 프로젝트의 회의 기록입니다. 아래 JSON 스키마에 맞게 응답하세요.
+요약과 업무 목록은 따로 만드니, 여기서는 놓친 부분(gaps)과 안건별 회의록(topics)만 작성하세요.
+
+이번 회의 텍스트:
+"""
+${text}
+"""
+
+gaps 작성 규칙:
+- 이번 회의에서 논의가 빠졌거나 결정이 미뤄진 부분, 팀이 놓치고 있는 것을 짚어주세요.
+- 회의 내용에 근거한 것만, 최대 3개. 없으면 빈 배열.
+
+topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분):
+- summary가 2~3문장 요약이라면, topics는 **이 회의에 참석하지 않은 사람이 읽어도
+  회의 전체를 이해할 수 있는 상세 기록**입니다. 요약이 아니라 기록입니다.
+- 회의에서 다뤄진 안건(주제)별로 나눠서 정리하세요.
+- 각 안건마다 discussion 배열에 논의된 내용과 결정 사항을 항목별 문장으로 적으세요.
+
+분량과 깊이:
+- **짧게 줄이는 것이 가장 나쁩니다.** 회의 텍스트에 있는 내용은 최대한 살려 적으세요.
+- 안건 하나당 discussion을 최소 3개, 논의가 길었던 안건은 6~12개까지 적으세요.
+- 결정된 결과만 쓰지 말고 **왜 그렇게 정했는지(배경·근거)**, 검토된 다른 방안,
+  나온 우려나 반대 의견, 보류된 쟁점까지 각각 항목으로 적으세요.
+- 한 항목에 여러 내용을 몰아넣지 말고 내용이 다르면 항목을 나누세요.
+- 문장을 압축하지 말고 완결된 문장으로 쓰세요. 개조식 단어 나열은 피하세요.
+
+정확성:
+- 언급된 담당자·날짜·장소·금액·수량·조건은 문장 안에 그대로 살리세요.
+  (예: "혜강관 209호 예약하기 (지은)", "상품은 스타벅스 5000원 상품권 6개 증정")
+- 명단·타임테이블·후보안처럼 나열된 것은 항목을 빠뜨리지 말고 모두 적으세요.
+  개수가 많아도 생략하거나 "등"으로 뭉뚱그리지 마세요.
+- 안건 제목은 회의에서 실제로 쓰인 표현을 우선 사용하세요.
+- 안건 순서는 회의에서 다뤄진 순서를 따르세요.
+- 논의만 하고 결론이 안 난 안건도 넣으세요. "결론은 다음 회의로 미룸"처럼 상태를 적으면 됩니다.
+- 회의 텍스트에 없는 내용은 절대 지어내지 마세요. 분량을 채우려고 추측을 덧붙이지 마세요.
+  회의 내용이 짧으면 그만큼만 적으면 됩니다.${transcriptBlock}`;
+
+  const schema={
+    type:'object',
+    properties:{
       gaps:{type:'array', items:{type:'string'}},
       /* 안건별 논의 내용 — 회의록 본문. summary(2~3문장)와 달리 상세 기록이다. */
       topics:{
@@ -250,21 +448,12 @@ topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분)
         }
       }
     },
-    required:['summary','items','topics']
+    required:['topics']
   };
 
   /* topics가 회의록 본문이라 출력이 길어진다. 8192로는 긴 회의에서 잘린다.
      안건별 상세 기록까지 담으려면 여유가 더 필요해 24576으로 둔다. */
   const parsed=await geminiRequest(prompt,schema,24576);
-  if(!Array.isArray(parsed.items)) throw new Error('AI 응답 형식이 올바르지 않아요.');
-
-  /* deadline이 빈 문자열이면 null로 정규화 */
-  parsed.items=parsed.items.map(it=>({
-    ...it,
-    deadline: it.deadline&&it.deadline.trim()!==''?it.deadline:null,
-    status:   'todo',
-  }));
-  parsed.carriedOver=Array.isArray(parsed.carriedOver)?parsed.carriedOver:[];
   parsed.gaps=Array.isArray(parsed.gaps)?parsed.gaps:[];
   /* 제목 없는 안건과 빈 논의 문장은 회의록에서 빈 줄로만 보이므로 여기서 걸러낸다. */
   parsed.topics=Array.isArray(parsed.topics)
@@ -277,4 +466,10 @@ topics 작성 규칙 (회의록 본문에 해당하는, 가장 중요한 부분)
     : [];
 
   return parsed;
+}
+
+/** 예전처럼 한 번에 전부 받고 싶을 때 — A·B를 동시에 보내고 합친다 */
+async function callGemini(text, pending=[], past){
+  const [a,b]=await Promise.all([callGeminiTasks(text,pending,past), callGeminiMinutes(text)]);
+  return {...a, gaps:b.gaps, topics:b.topics};
 }
