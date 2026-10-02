@@ -170,6 +170,20 @@ function persistItemStatus(itemId, st){
     });
 }
 
+/* 사이드바 접기/펼치기 — 프로젝트 목록 이동과 분리된 별도 토글, 상태는 새로고침해도 유지 */
+const SB_COLLAPSE_KEY='mf_sidebar_collapsed';
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar'), ico=document.getElementById('sb-collapse-ico');
+  if(!sb) return;
+  const collapsed=sb.classList.toggle('collapsed');
+  if(ico) ico.textContent=collapsed?'›':'‹';
+  localStorage.setItem(SB_COLLAPSE_KEY, collapsed?'1':'0');
+}
+(function initSidebarCollapse(){
+  const sb=document.getElementById('sidebar');
+  if(sb && localStorage.getItem(SB_COLLAPSE_KEY)==='1') toggleSidebar();
+})();
+
 /* 사이드바 업무·브리핑 그룹 접기/펼치기 */
 const SB_GROUP_OF={members:'work',taskflow:'work',timeline:'meet',briefing:'meet',meeting:'meet'};
 function toggleSbGroup(key){

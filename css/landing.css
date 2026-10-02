@@ -73,6 +73,33 @@
 .hp-dot{width:10px;height:10px;border-radius:50%;}
 .hp-url{flex:1;background:#fff;border:1px solid var(--bd);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--hint);text-align:left;}
 .hp-body{display:flex;height:300px;}
+.hpv-body{display:flex;min-height:300px;}
+.hpv-sidebar{width:150px;flex-shrink:0;border-right:1px solid var(--bd);padding:14px 10px;background:var(--surface);}
+.hpv-sb-logo{display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;font-weight:700;margin-bottom:10px;}
+.hpv-sb-ico{width:18px;height:18px;border-radius:5px;background:var(--pk);flex-shrink:0;}
+.hpv-sb-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:12px;color:var(--muted);}
+.hpv-sb-item.on{background:var(--pk-light);color:var(--pk-dark);font-weight:600;}
+
+.hpv-main{flex:1;min-width:0;padding:18px 20px;background:var(--bg);}
+.hpv-title{font-size:15px;font-weight:700;}
+.hpv-meta{font-size:12px;color:var(--hint);margin-top:2px;}
+
+.hpv-card{background:var(--surface);border-radius:var(--r-md);padding:14px 16px;margin:14px 0 12px;}
+.hpv-card-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;}
+.hpv-summary{font-size:13px;line-height:1.75;color:var(--text);}
+
+.hpv-tasks{display:flex;flex-direction:column;gap:8px;}
+.hpv-task{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border-radius:var(--r-md);}
+.hpv-task-dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--bd-s);flex-shrink:0;}
+.hpv-task-dot.on{background:var(--pk);border-color:var(--pk);}
+.hpv-task-name{flex:1;font-size:13px;}
+.hpv-task-meta{font-size:11px;color:var(--hint);}
+
+.hpv-bars{display:flex;flex-direction:column;gap:6px;}
+.hpv-bar-hd{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;}
+.hpv-bar-track{height:5px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.hpv-bar-fill{height:100%;background:var(--pk);}
+.hpv-bar-fill.dim{opacity:.55;}
 .hp-sidebar{width:160px;flex-shrink:0;border-right:1px solid var(--bd);padding:12px 8px;background:var(--surface);}
 .hp-sb-logo{display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;font-weight:700;margin-bottom:8px;}
 .hp-sb-ico{width:22px;height:22px;background:linear-gradient(135deg,var(--pk),var(--pk-dark));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;}

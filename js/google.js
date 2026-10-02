@@ -245,13 +245,15 @@ async function exportMeetingToDocs(target){
 
   try{
     const no = meetingNo(meeting);
-    const title = `MeetFlow ${no ? no + '차 ' : ''}회의록 – ${formatDateKR(meeting.date)}`;
+    const projectName = (currentProject && currentProject.name) || '프로젝트';
+    const titleText = no ? `${projectName} ${no}차 회의록` : `${projectName} 회의록`;
+
     const doc = await googleApiRequest('https://docs.googleapis.com/v1/documents', {
-      method: 'POST', body: JSON.stringify({ title }),
+      method: 'POST', body: JSON.stringify({ title: titleText }),
     });
     const documentId = doc.documentId;
 
-    const requests = buildDocsRequests(meeting);
+    const requests = buildDocsRequests(meeting, titleText);
     await googleApiRequest(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
       method: 'POST', body: JSON.stringify({ requests }),
     });
@@ -314,7 +316,17 @@ function gaejoshikLines(text){
   return splitSentences(text).map(toGaejoshik);
 }
 
-function buildDocsRequests(meeting){
+/** 회의 주제 표 셀에 쓸 한 줄 — 안건 제목들을 이어붙이고, 안건이 없으면 요약으로 대신한다 */
+function meetingTopicsSummary(meeting){
+  const titles = (meeting.topics || []).map(t => t.title).filter(Boolean);
+  return titles.length ? titles.join(', ') : (meeting.summary || '(안건 없음)');
+}
+
+/* titleText: exportMeetingToDocs()가 만든 "{프로젝트명} N차 회의록" — 문서 첫 줄(H1)에 쓴다.
+   실제 Google Docs 표(insertTable)는 표 생성과 내용 채우기를 한 batchUpdate 안에서 못 하게
+   막혀 있어(공식 문서 명시) 검증에 손이 많이 가서 안 쓰기로 했다 — 대신 "회의 주제"/"일자"를
+   표 없이 라벨 한 줄씩으로 둔다. */
+function buildDocsRequests(meeting, titleText){
   const items    = meeting.items || [];
   const topics   = meeting.topics || [];
   const carried  = meeting.carriedOver || [];
@@ -328,10 +340,9 @@ function buildDocsRequests(meeting){
      소제목은 굵게만 표시해 개요에는 큰 섹션(HEADING_2) 5개만 남긴다. */
   const add = (text, style, bullet, bold) => lines.push({ text, style: style || null, bullet: !!bullet, bold: !!bold });
 
-  const projectName = (currentProject && currentProject.name) || '프로젝트';
-  const no = meetingNo(meeting);
-  add(no ? `${projectName} ${no}차 회의록` : `${projectName} 회의록`, 'HEADING_1');
-  add(`회의일: ${formatDateKR(meeting.date)}`, null);
+  add(titleText || '회의록', 'HEADING_1');
+  add(`회의 주제: ${meetingTopicsSummary(meeting)}`, null);
+  add(`일자: ${formatDateKR(meeting.date)}`, null);
   add('', null);
 
   add('핵심 안건 요약', 'HEADING_2');
@@ -394,7 +405,8 @@ function buildDocsRequests(meeting){
 
   /* 각 줄의 문서 내 시작/끝 인덱스를 누적 계산하면서 한 번에 삽입할 문자열을 만든다.
      Docs 문서 본문은 index 1부터 시작한다. */
-  let cursor = 1, fullText = '';
+  const bodyStart = 1;
+  let cursor = bodyStart, fullText = '';
   const ranges = lines.map(l => {
     const start = cursor;
     const seg = l.text + '\n';
@@ -403,7 +415,7 @@ function buildDocsRequests(meeting){
     return { start, end: start + l.text.length, style: l.style, bullet: l.bullet, bold: l.bold };
   });
 
-  const requests = [{ insertText: { location: { index: 1 }, text: fullText } }];
+  const requests = [{ insertText: { location: { index: bodyStart }, text: fullText } }];
 
   ranges.forEach(r => {
     if(r.style){

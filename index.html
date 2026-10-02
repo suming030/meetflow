@@ -58,58 +58,77 @@
   </div>
 
     <!-- 제품 미리보기 -->
-    <div class="hero-preview">
-      <div class="hp-bar"></div>
-      <div class="hp-chrome">
-        <div class="hp-dot" style="background:#ff5f57;"></div>
-        <div class="hp-dot" style="background:#febc2e;"></div>
-        <div class="hp-dot" style="background:#28c840;"></div>
-        <div class="hp-url">meetflow-ai.app/dashboard</div>
+<div class="hero-preview">
+  <div class="hp-bar"></div>
+  <div class="hp-chrome">
+    <div class="hp-dot" style="background:#ff5f57;"></div>
+    <div class="hp-dot" style="background:#febc2e;"></div>
+    <div class="hp-dot" style="background:#28c840;"></div>
+    <div class="hp-url">meetflow-ai.app/dashboard</div>
+  </div>
+  <div class="hpv-body">
+    <div class="hpv-sidebar">
+      <div class="hpv-sb-logo"><span class="hpv-sb-ico"></span>MeetFlow</div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+        개요
       </div>
-      <div class="hp-body">
-        <div class="hp-sidebar">
-          <div class="hp-sb-logo">
-            <div class="hp-sb-ico">💜</div>
-            <span style="font-size:11px;font-weight:800;">MeetFlow</span>
-          </div>
-          <div class="hp-sb-item">📊 개요</div>
-          <div class="hp-sb-item">🗂️ 업무 ▸</div>
-          <div class="hp-sb-item a">🕒 회의 타임라인</div>
-          <div class="hp-sb-item">📋 브리핑 ▸</div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+        업무
+      </div>
+      <div class="hpv-sb-item on">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        회의 타임라인
+      </div>
+      <div class="hpv-sb-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        브리핑
+      </div>
+    </div>
+
+    <div class="hpv-main">
+      <div class="hpv-title">3차 회의 · UX 리서치 팀플</div>
+      <div class="hpv-meta">10월 14일 · 42분 · 4명 참여</div>
+
+      <div class="hpv-card">
+        <div class="hpv-card-lbl">핵심 요약</div>
+        <div class="hpv-summary">
+          1. 발표 자료 초안 배분과 QA 시나리오 작성이 이번 회의의 핵심 안건이었습니다.<br>
+          2. 지난 회의에서 이어진 경쟁사 분석은 이번 주 안에 마무리하기로 했습니다.
         </div>
-        <!-- 3차례 회의가 쌓이며 선명해지는 모습을 그대로 축소해 보여준다 (실제 회의 타임라인 화면과 같은 구성) -->
-        <div class="hp-main">
-          <div class="hp-tl">
-            <div class="hp-tl-row">
-              <div class="hp-tl-node">1</div>
-              <div class="hp-tl-card">
-                <div class="hp-tl-ttl">1차 회의</div>
-                <div class="hp-tl-task">✅ 마케팅 기획서 작성</div>
-              </div>
-            </div>
-            <div class="hp-tl-row">
-              <div class="hp-tl-node">2</div>
-              <div class="hp-tl-card">
-                <div class="hp-tl-ttl">2차 회의</div>
-                <div class="hp-tl-task">✅ 백엔드 API 문서화</div>
-                <div class="hp-tl-task muted">⏳ 경쟁사 분석 — 이어짐</div>
-              </div>
-            </div>
-            <div class="hp-tl-row">
-              <div class="hp-tl-node on">3</div>
-              <div class="hp-tl-card on">
-                <div class="hp-tl-ttl">3차 회의<span class="hp-tl-new">최신</span></div>
-                <div class="hp-tl-task">🔄 발표 슬라이드 디자인</div>
-                <div class="hp-tl-task">📅 QA 테스트 시나리오</div>
-              </div>
-            </div>
-          </div>
+      </div>
+
+      <div class="hpv-tasks">
+        <div class="hpv-task">
+          <span class="hpv-task-dot on"></span>
+          <span class="hpv-task-name">발표 슬라이드 디자인</span>
+          <span class="hpv-task-meta">도윤 · 10/18</span>
+        </div>
+        <div class="hpv-task">
+          <span class="hpv-task-dot"></span>
+          <span class="hpv-task-name">QA 테스트 시나리오</span>
+          <span class="hpv-task-meta">서연 · 10/20</span>
+        </div>
+      </div>
+
+      <div class="hpv-card-lbl" style="margin-top:14px;">담당자별 업무 비중</div>
+      <div class="hpv-bars">
+        <div>
+          <div class="hpv-bar-hd"><span>도윤</span><span>45%</span></div>
+          <div class="hpv-bar-track"><div class="hpv-bar-fill" style="width:45%;"></div></div>
+        </div>
+        <div>
+          <div class="hpv-bar-hd"><span>서연</span><span>30%</span></div>
+          <div class="hpv-bar-track"><div class="hpv-bar-fill dim" style="width:30%;"></div></div>
         </div>
       </div>
     </div>
   </div>
+</div>
+</div>
 
-  <!-- 기능 소개 -->
+    <!-- 기능 소개 -->
   <div class="section-wrap">
   <div class="sec-ttl">회의 한 건이 아니라, 프로젝트 전체를 봅니다</div>
   <div class="sec-sub">기존 AI 회의록은 회의 하나를 잘 남기는 데서 멈춰요. MeetFlow는 회의를 이어 붙입니다.</div>
@@ -120,16 +139,23 @@
       <div class="feat-row-label">PLAN · 자료 기반 설계</div>
       <h3 class="feat-row-headline">강의계획서 한 장이면<br>첫 회의 준비가 끝나요</h3>
       <p class="feat-row-desc">
-        강의계획서와 모집요강을 올리면 AI가 목표와 필요 산출물을 뽑아내요.<br>
-        역할 분담, 마일스톤, 첫 회의 아젠다까지 자동으로 설계해 드려요.
+        강의계획서와 모집요강을 올리면<br>
+        목표부터 마일스톤까지 AI가 설계해 드려요.
       </p>
     </div>
     <div class="feat-row-visual">
-      <div class="frv-card">
-        <div class="frv-card-hd">🧭 마일스톤</div>
-        <div class="frv-ms-item on"><span class="frv-ms-dot"></span>1주차 · 주제 선정 & 역할 분담</div>
-        <div class="frv-ms-item on"><span class="frv-ms-dot"></span>3주차 · 중간 발표 준비</div>
-        <div class="frv-ms-item"><span class="frv-ms-dot"></span>6주차 · 최종 제출</div>
+      <div class="frv-chrome">
+        <span class="frv-dot" style="background:#ff5f57;"></span>
+        <span class="frv-dot" style="background:#febc2e;"></span>
+        <span class="frv-dot" style="background:#28c840;"></span>
+      </div>
+      <div class="frv-body">
+        <div class="frv-card">
+          <div class="frv-card-hd">🧭 마일스톤</div>
+          <div class="frv-ms-item on"><span class="frv-ms-dot"></span>1주차 · 주제 선정 & 역할 분담</div>
+          <div class="frv-ms-item on"><span class="frv-ms-dot"></span>3주차 · 중간 발표 준비</div>
+          <div class="frv-ms-item"><span class="frv-ms-dot"></span>6주차 · 최종 제출</div>
+        </div>
       </div>
     </div>
   </div>
@@ -140,26 +166,34 @@
       <div class="feat-row-label">FLOW · 회의가 쌓일수록 선명해져요</div>
       <h3 class="feat-row-headline">서기 없이도<br>회의록이 저절로 정리돼요</h3>
       <p class="feat-row-desc">
-        녹음하거나 텍스트만 붙여넣으면 담당자·업무·마감일까지 AI가 뽑아내요.<br>
+        녹음하거나 텍스트만 붙여넣으면<br>
+        담당자·업무·마감일까지 AI가 정리해요.<br>
         지난 회의에서 못 끝낸 일도 자동으로 이어 붙이고, 팀원별 이력도 쌓아드려요.
       </p>
     </div>
     <div class="feat-row-visual">
-      <div class="frv-notes">
-        <div class="fr-note">
-          <div class="fr-note-hd"><span class="fr-note-avatar"></span>김도윤 · 10:02</div>
-          <div class="fr-note-body">다음 주 <span class="fr-note-hl">발표 자료</span>는 제가 초안 잡고 공유할게요.</div>
-        </div>
-        <div class="fr-note">
-          <div class="fr-note-hd"><span class="fr-note-avatar"></span>박서연 · 10:15</div>
-          <div class="fr-note-body">저는 <span class="fr-note-hl">설문 데이터 정리</span>해서 화요일까지 올릴게요.</div>
-        </div>
+      <div class="frv-chrome">
+        <span class="frv-dot" style="background:#ff5f57;"></span>
+        <span class="frv-dot" style="background:#febc2e;"></span>
+        <span class="frv-dot" style="background:#28c840;"></span>
       </div>
-      <div class="fr-float">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span>🎙️</span><b style="font-size:13px;">3차 회의 분석 중</b>
+      <div class="frv-body">
+        <div class="frv-notes">
+          <div class="fr-note">
+            <div class="fr-note-hd"><span class="fr-note-avatar"></span>김도윤 · 10:02</div>
+            <div class="fr-note-body">다음 주 <span class="fr-note-hl">발표 자료</span>는 제가 초안 잡고 공유할게요.</div>
+          </div>
+          <div class="fr-note">
+            <div class="fr-note-hd"><span class="fr-note-avatar"></span>박서연 · 10:15</div>
+            <div class="fr-note-body">저는 <span class="fr-note-hl">설문 데이터 정리</span>해서 화요일까지 올릴게요.</div>
+          </div>
         </div>
-        <div style="font-size:11px;opacity:.65;margin-top:4px;">00:04:12</div>
+        <div class="fr-float">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>🎙️</span><b style="font-size:13px;">3차 회의 분석 중</b>
+          </div>
+          <div style="font-size:11px;opacity:.65;margin-top:4px;">00:04:12</div>
+        </div>
       </div>
     </div>
   </div>
@@ -171,19 +205,26 @@
       <h3 class="feat-row-headline">프로젝트가 끝나면<br>경험이 문서로 남아요</h3>
       <p class="feat-row-desc">
         팀원별 기여와 성과를 자동으로 정리해 드려요.<br>
-        포트폴리오·자기소개서에 그대로 활용할 수 있어요.
+        포트폴리오에 그대로 활용할 수 있어요.
       </p>
     </div>
     <div class="feat-row-visual">
-      <div class="frv-card">
-        <div class="frv-card-hd">📝 회고 · 프로젝트 마무리</div>
-        <div class="frv-arch-row"><b>도윤</b> — 발표 자료 초안 3건, 최종 리허설 진행</div>
-        <div class="frv-arch-row"><b>서연</b> — 설문 데이터 수집·분석, 인사이트 정리</div>
+      <div class="frv-chrome">
+        <span class="frv-dot" style="background:#ff5f57;"></span>
+        <span class="frv-dot" style="background:#febc2e;"></span>
+        <span class="frv-dot" style="background:#28c840;"></span>
+      </div>
+      <div class="frv-body">
+        <div class="frv-card">
+          <div class="frv-card-hd">📝 회고 · 프로젝트 마무리</div>
+          <div class="frv-arch-row"><b>도윤</b> — 발표 자료 초안 3건, 최종 리허설 진행</div>
+          <div class="frv-arch-row"><b>서연</b> — 설문 데이터 수집·분석, 인사이트 정리</div>
+        </div>
       </div>
     </div>
   </div>
 
-</div>
+  </div>
 
   <!-- Google Workspace 연동 -->
   <div class="gw-section">
@@ -358,7 +399,6 @@
         onclick="document.getElementById('meeting-input').focus()">
         <div class="drop-ico">📄</div>
         <div class="drop-ttl">회의 텍스트를 드래그하거나 아래에 직접 입력하세요</div>
-        <div class="drop-sub">파일을 이곳에 드롭하거나 아래 텍스트창에 붙여넣기 하세요</div>
         <div class="drop-types">
           <span class="type-badge">📝 회의록</span>
           <span class="type-badge">💬 채팅 로그</span>
@@ -487,41 +527,46 @@
 
     <!-- 사이드바 -->
     <!-- 담당: ③ 디자인 — 세부 디테일 (사이드바) -->
-    <aside class="sidebar">
-      <div class="sb-item" onclick="gp('projects')"><span class="sico">←</span> 프로젝트 목록</div>
-      <div class="sb-item" onclick="showInviteCode()"><span class="sico">🔑</span> 팀원 초대 코드</div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-top">
+        <div class="sb-item sb-back" onclick="gp('projects')" title="프로젝트 목록"><span class="sico">📁</span> 프로젝트 목록</div>
+        <button class="sb-collapse-btn" id="sb-collapse-btn" onclick="toggleSidebar()" title="사이드바 접기/펼치기">
+          <span id="sb-collapse-ico">‹</span>
+        </button>
+      </div>
+      <div class="sb-item" onclick="showInviteCode()" title="팀원 초대 코드"><span class="sico">🔑</span> 팀원 초대 코드</div>
       <!-- 매일 쓰는 버튼이라 사이드바에서 가장 눈에 띄게 -->
-      <button class="sb-new" onclick="gp('upload')">
+      <button class="sb-new" onclick="gp('upload')" title="새 회의 하기">
         <span class="sb-new-ico">＋</span>
         <span><b>새 회의 하기</b><small>녹음·파일·텍스트로 분석</small></span>
       </button>
       <div class="sb-lbl" style="margin-top:0;">메뉴</div>
-      <div class="sb-item on" id="sb-overview" onclick="sdt('overview')"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
+      <div class="sb-item on" id="sb-overview" onclick="sdt('overview')" title="개요"><span class="sico">📊</span> 개요<span class="sb-cnt" id="sb-cnt-total" style="display:none;">0</span></div>
 
       <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('work')" title="업무"><span class="sico">🗂️</span> 업무<span class="sb-chev" id="sb-chev-work">▸</span></div>
         <div class="sb-sub" id="sb-sub-work">
-          <div class="sb-item sb-child" id="sb-members"  onclick="sdt('members')"><span class="sico">👥</span> 담당자별</div>
-          <div class="sb-item sb-child" id="sb-taskflow" onclick="sdt('taskflow')"><span class="sico">🔗</span> Task Flow</div>
+          <div class="sb-item sb-child" id="sb-members"  onclick="sdt('members')" title="담당자별"><span class="sico">👥</span> 담당자별</div>
+          <div class="sb-item sb-child" id="sb-taskflow" onclick="sdt('taskflow')" title="Task Flow"><span class="sico">🔗</span> Task Flow</div>
         </div>
       </div>
 
       <div class="sb-group">
-        <div class="sb-item sb-parent" onclick="toggleSbGroup('meet')"><span class="sico">🕒</span> 회의 정리<span class="sb-chev" id="sb-chev-meet">▸</span></div>
+        <div class="sb-item sb-parent" onclick="toggleSbGroup('meet')" title="회의 정리"><span class="sico">🕒</span> 회의 정리<span class="sb-chev" id="sb-chev-meet">▸</span></div>
         <div class="sb-sub" id="sb-sub-meet">
-          <div class="sb-item sb-child" id="sb-timeline" onclick="sdt('timeline')"><span class="sico">🕒</span> 회의 타임라인</div>
-          <div class="sb-item sb-child" id="sb-briefing" onclick="sdt('briefing')"><span class="sico">📋</span> 회의 브리핑</div>
+          <div class="sb-item sb-child" id="sb-timeline" onclick="sdt('timeline')" title="회의 타임라인"><span class="sico">🕒</span> 회의 타임라인</div>
+          <div class="sb-item sb-child" id="sb-briefing" onclick="sdt('briefing')" title="회의 브리핑"><span class="sico">📋</span> 회의 브리핑</div>
           <div class="sb-meet-lbl">회의별</div>
           <div id="sb-meet-list"></div>   <!-- 최신 회의가 위 (js/timeline.js의 renderSbMeetings) -->
         </div>
       </div>
 
-      <div class="sb-item" id="sb-milestones" onclick="sdt('milestones')"><span class="sico">🧭</span> 마일스톤</div>
+      <div class="sb-item" id="sb-milestones" onclick="sdt('milestones')" title="마일스톤"><span class="sico">🧭</span> 마일스톤</div>
 
       <!-- 전체 Action Items 화면은 남아 있지만 메뉴에서는 뺐다 — 담당자별·Task Flow로 충분하다. -->
 
       <!-- 프로젝트가 끝났을 때 누르는 마무리 — 메뉴 바로 아래 크게 -->
-      <button class="sb-wrapup" onclick="openWrapup()">
+      <button class="sb-wrapup" onclick="openWrapup()" title="프로젝트 마무리">
         <span class="sb-wrapup-ico">🎬</span>
         <span><b>프로젝트 마무리</b><small>회의 전체로 회고·경험 정리</small></span>
       </button>
@@ -530,8 +575,8 @@
       <div class="sb-lbl" style="margin-top:auto;">Google Workspace</div>
       <div class="sb-ws" onclick="openMeetScheduler()" title="다음 회의 일정을 잡고 Google Meet 링크를 만들어요"><span class="sico">📹</span> Meet 회의 잡기</div>
       <div class="sb-ws" onclick="exportFromSidebar()" title="보고 있는 회의(없으면 최근 회의)를 Google Docs 회의록으로 만들어요"><span class="sico">📄</span> Docs로 회의록 내보내기</div>
-      <a class="sb-ws" href="https://calendar.google.com/" target="_blank" rel="noopener"><span class="sico">📅</span> Google Calendar</a>
-      <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener"><span class="sico">✨</span> Gemini AI</a>
+      <a class="sb-ws" href="https://calendar.google.com/" target="_blank" rel="noopener" title="Google Calendar"><span class="sico">📅</span> Google Calendar</a>
+      <a class="sb-ws" href="https://gemini.google.com/" target="_blank" rel="noopener" title="Gemini AI"><span class="sico">✨</span> Gemini AI</a>
     </aside>
 
     <!-- 담당: ③ 디자인 — 세부 디테일 (대시보드 안쪽 — 마일스톤 탭만 ④) -->
@@ -722,6 +767,18 @@
   </div>
 </div>
 
+<!-- ── 프로젝트 삭제 확인 모달 ── -->
+<div class="overlay" id="delete-project-overlay" onclick="if(event.target.id==='delete-project-overlay')closeDeleteProject()">
+  <div class="modal-box">
+    <div class="m-ttl">🗑️ 프로젝트를 삭제할까요?</div>
+    <div class="m-desc"><b id="delete-project-name"></b> 프로젝트를 삭제하면<br>회의 이력과 온보딩 결과가 모두 사라지고 되돌릴 수 없어요.</div>
+    <div class="m-btns">
+      <button class="btn-ghost" onclick="closeDeleteProject()">취소</button>
+      <button class="btn-danger" onclick="confirmDeleteProject()">삭제할게요</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <!-- ── PDF.js (온보딩 문서 업로드용) ── -->
@@ -735,12 +792,12 @@
 <script src="js/auth.js"></script>
 <script src="js/router.js"></script>
 <script src="js/projects.js"></script>
-<script src="js/onboarding.js"></script>
+<script src="js/onboarding.js?v=milestoneux14"></script>
 <script src="js/gemini.js"></script>
 <script src="js/stt.js"></script>
 <script src="js/meetings.js"></script>
 <script src="js/dashboard.js"></script>
-<script src="js/milestones.js"></script>
+<script src="js/milestones.js?v=milestoneux14"></script>
 <script src="js/timeline.js"></script>
 <script src="js/wrapup.js"></script>
 <script src="js/google.js"></script>
