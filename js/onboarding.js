@@ -334,7 +334,7 @@ function onboardApproveMilestones(){
 /* ──── 온보딩 전용 Gemini 프롬프트/스키마 ──── */
 async function callGeminiOnboard(track,inputs){
   const today=new Date().toISOString().split('T')[0];
-  return await geminiRequest(onboardPrompt(track,onboardCompactInputs(track,inputs),today), onboardSchema(track), 4096);
+  return await geminiRequest(onboardPrompt(track,onboardCompactInputs(track,inputs),today), onboardSchema(track), 8192);
 }
 function onboardCompactText(value,limit){const text=String(value||'').replace(/\s+/g,' ').trim();if(text.length<=limit)return text;const half=Math.floor(limit/2);return text.slice(0,half)+' … '+text.slice(-half);}
 function onboardCompactInputs(track,inputs){
@@ -571,7 +571,7 @@ function collectOnboardInputs(t){
 function onboardMissingField(t,input){ if(t==='club') return input.threads.length?'': '최소 한 개의 Agenda Thread를 입력해주세요.'; return (t==='team'?input.requirements||input.deliverables:input.guidelines||input.deliverables)?null:'최소 한 가지 핵심 정보를 입력해주세요.'; }
 function onboardBuildProfile(type){ return {idea:['문제 정의','차별성','공모전 의도 부합','논리 검증','실행 가능성'],data_ai:['데이터 품질','방법론 선정 근거','재현성','기술 검증','결과 해석'],marketing:['타깃','채널','핵심 메시지','실행안','성과 지표'],startup_bm:['문제/고객 검증','가치제안','경쟁 분석','수익구조','시장 검증','Q&A 준비'],hackathon:['구현 범위','MVP','핵심 기능','테스트','데모','데모 백업'],design:['요구사항 해석','Concept','Draft/Feedback','Refinement','제출 규격','최종 완성도']}[type]||[]; }
 function onboardPrompt(t,i,today){
-  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 단 하나의 추천 구조로 프로젝트 전체에 핵심 마일스톤을 3~5개만 만드세요. 각 milestone 안에는 실제로 실행할 세부 Task를 2~5개 넣으세요. Task는 담당자가 완료 여부를 판단할 수 있는 크기와 표현으로 만들고, 첫 회의 전에는 담당자를 임의 배정하지 말고 모든 task.assignee를 null로 두세요. 별도의 방법론 추천 단계는 만들지 마세요. milestone.recommendations는 빈 배열로 두세요. 기본 계층 Goal → Deliverable → Milestone → Task는 내부 데이터로 유지하고 Requirement와 Rubric은 관련 Deliverable/Milestone의 검수 기준으로 두세요. 각 Deliverable에 고유한 refKey를 부여하고 relatedDeliverableKeys에는 그 refKey만 넣으세요. 마감일/목표일은 실제 입력을 우선하세요.`;
+  const rules=`오늘은 ${today}입니다. 입력에 없는 필수 요구사항을 만들지 마세요. 단 하나의 추천 구조로 프로젝트 전체에 핵심 마일스톤을 3~5개만 만드세요. 각 milestone 안에는 실제로 실행할 세부 Task를 2~5개 넣으세요. Task는 담당자가 완료 여부를 판단할 수 있는 크기와 표현으로 만들고, definitionOfDone과 checkpoint.criteria는 각각 짧은 한 문장으로 쓰세요. 첫 회의 전에는 담당자를 임의 배정하지 말고 모든 task.assignee를 null로 두세요. 별도의 방법론 추천 단계는 만들지 마세요. milestone.recommendations는 빈 배열로 두세요. 기본 계층 Goal → Deliverable → Milestone → Task는 내부 데이터로 유지하고 Requirement와 Rubric은 관련 Deliverable/Milestone의 검수 기준으로 두세요. 각 Deliverable에 고유한 refKey를 부여하고 relatedDeliverableKeys에는 그 refKey만 넣으세요. 마감일/목표일은 실제 입력을 우선하세요.`;
   if(t==='team') return `대학 팀플 초기 계획을 JSON으로 만드세요. 과제명:${i.name}\nRequirement:${i.requirements}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n중간 마감:${i.midDeadline||'없음'}\nRubric:${i.rubric||'없음'}\n팀원:${i.members||'없음'}\n${rules}`;
   if(t==='contest') return `공모전 초기 계획을 JSON으로 만드세요. 공모전명:${i.name}\n요강:${i.guidelines}\n제출물:${i.deliverables}\n최종 마감:${i.finalDeadline||'없음'}\n심사기준:${i.rubric}\n팀원:${i.members||'없음'}\n유형:${i.contestType}, 강조 Profile:${onboardBuildProfile(i.contestType).join(', ')}\n${rules}\nProfile은 고정 템플릿이 아니며, 실제 요강과 심사기준이 항상 우선입니다. 필요한 milestone에 checkpoint(완료 지점이 아닌 검증 기준)를 넣으세요.`;
   return `동아리 Agenda Thread 초기 계획을 JSON으로 만드세요. 입력:${JSON.stringify(i.threads)}\n${rules}\nnew_event, recurring_event, content, outreach는 mode:'delivery'와 각 Thread 내부 milestones/tasks를 만드세요. operations_decision은 mode:'decision', status:undecided/decided/deferred만 두고 milestones/tasks를 만들지 마세요.`;
